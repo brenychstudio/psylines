@@ -1,0 +1,94 @@
+<button class="site-scroll-top" type="button" data-site-scroll-top data-visible="false" aria-label="Return to top" tabindex="-1">
+  <span class="site-scroll-top__line" aria-hidden="true"></span>
+  Top
+</button>
+
+<script is:inline>
+  (() => {
+    const topButton = document.querySelector("[data-site-scroll-top]");
+    if (!topButton) return;
+
+    if (topButton.parentElement !== document.body) {
+      document.body.appendChild(topButton);
+    }
+
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    let ticking = false;
+
+    const getThreshold = () => Math.max(window.innerHeight * 0.72, 280);
+
+    const getScrollY = () =>
+      window.scrollY ||
+      window.pageYOffset ||
+      document.documentElement.scrollTop ||
+      document.body.scrollTop ||
+      0;
+
+    const getScrollHeight = () =>
+      Math.max(
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight,
+        document.documentElement.offsetHeight,
+        document.body.offsetHeight,
+        document.documentElement.clientHeight,
+      );
+
+    const isSuppressedByOverlay = () => {
+      const root = document.documentElement;
+      return (
+        root.hasAttribute("data-cinematic-transition") ||
+        root.dataset.seriesInspectorOpen === "true" ||
+        root.classList.contains("is-object-inspecting") ||
+        root.classList.contains("is-checkout-loading")
+      );
+    };
+
+    const hasUsefulScrollDepth = () => {
+      return getScrollHeight() - window.innerHeight > Math.max(220, window.innerHeight * 0.28);
+    };
+
+    const updateVisibility = () => {
+      ticking = false;
+      const shouldShow = !isSuppressedByOverlay() && hasUsefulScrollDepth() && getScrollY() > getThreshold();
+      topButton.dataset.visible = shouldShow ? "true" : "false";
+      topButton.tabIndex = shouldShow ? 0 : -1;
+    };
+
+    const requestVisibilityUpdate = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(updateVisibility);
+    };
+
+    topButton.addEventListener("click", () => {
+      window.scrollTo({
+        top: 0,
+        behavior: reducedMotion?.matches ? "auto" : "smooth",
+      });
+    });
+
+    window.addEventListener("scroll", requestVisibilityUpdate, { passive: true });
+    window.addEventListener("resize", requestVisibilityUpdate);
+    window.addEventListener("pageshow", requestVisibilityUpdate);
+
+    if ("ResizeObserver" in window) {
+      const observer = new ResizeObserver(requestVisibilityUpdate);
+      observer.observe(document.documentElement);
+      observer.observe(document.body);
+    }
+
+    if ("MutationObserver" in window) {
+      const rootObserver = new MutationObserver(requestVisibilityUpdate);
+      rootObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["class", "data-cinematic-transition", "data-series-inspector-open"],
+      });
+    }
+
+    window.ArtistStageScrollTop = {
+      refresh: requestVisibilityUpdate,
+    };
+
+    requestVisibilityUpdate();
+  })();
+</script>

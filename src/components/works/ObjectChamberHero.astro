@@ -1,0 +1,101 @@
+---
+import { getSeriesBySlug } from "../../data/site/relations";
+import type { ArtworkMeta } from "../../data/site/artworkMeta";
+import type { ArtworkSeries } from "../../data/site/series";
+import type { WorkItem } from "../../data/site/types";
+import { resolvePublicAsset } from "../../lib/assets/publicAsset";
+import { getResponsivePublicImage } from "../../lib/assets/responsiveImage";
+
+type Props = {
+  work: WorkItem;
+  artworkMeta?: ArtworkMeta;
+  artworkSeries?: ArtworkSeries | null;
+};
+
+const { work, artworkMeta, artworkSeries } = Astro.props as Props;
+
+const relatedSeries = work.series ? getSeriesBySlug(work.series) : null;
+const contextLabel = artworkSeries?.title ?? (artworkMeta ? "Independent Manifestation" : relatedSeries?.title);
+const kickerParts = [
+  "manifestation",
+  artworkMeta?.year ? String(artworkMeta.year) : !artworkMeta ? String(work.year) : null,
+  contextLabel,
+].filter(Boolean);
+const coverSrc = resolvePublicAsset(work.cover);
+const coverImage = getResponsivePublicImage(work.cover, { defaultWidth: 1400 });
+const cinematicTransitionName = `work-${work.slug
+  .toLowerCase()
+  .replace(/[^a-z0-9_-]+/g, "-")
+  .replace(/^-+|-+$/g, "")}`;
+---
+
+<section class="detail-shell object-chamber-v3 is-object-ready is-collector-ready" data-object-chamber data-object-chamber-state="awake">
+  <div class={`detail-hero aspect-${work.aspect}`}>
+    <div class="detail-media-stage" data-object-artwork-stage>
+      <figure class={`detail-media-card object-chamber-surface aspect-${work.aspect}`} data-spatial-artwork>
+        <div class="object-chamber-surface__aura" aria-hidden="true"></div>
+
+        <div
+          class="object-chamber-plane"
+          data-object-physical-plane
+        >
+          {coverSrc ? (
+            <img
+              src={coverImage.src}
+              srcset={coverImage.srcset}
+              sizes="(min-width: 1200px) 46vw, (min-width: 760px) 58vw, 92vw"
+              alt={`${work.title} artwork`}
+              class="detail-media-image object-chamber-media"
+              loading="eager"
+              decoding="async"
+              data-cinematic-cover
+              data-surface-lens-source
+              style={`view-transition-name: ${cinematicTransitionName}; contain: layout paint;`}
+            />
+          ) : (
+            <div
+              class="detail-media-surface object-chamber-media"
+              data-cinematic-cover
+              style={`view-transition-name: ${cinematicTransitionName}; contain: layout paint;`}
+            ></div>
+          )}
+
+          {coverSrc ? (
+            <div class="object-surface-lens" data-surface-lens aria-hidden="true">
+              <span class="object-surface-lens__mark"></span>
+            </div>
+          ) : null}
+
+          {coverSrc ? (
+            <button
+              class="object-surface-lens-toggle"
+              type="button"
+              data-surface-lens-toggle
+              aria-pressed="false"
+              aria-label="Toggle surface inspection lens"
+            >
+              <span class="object-surface-lens-toggle__line" aria-hidden="true"></span>
+              Inspect surface
+            </button>
+          ) : null}
+        </div>
+
+        <figcaption class="detail-media-label object-chamber-label">
+          {coverSrc ? "Object surface" : "Object surface / pending image"}
+        </figcaption>
+      </figure>
+    </div>
+
+    <div class="detail-info-card collector-instrument floating-acquisition-field" data-collector-rail>
+      <div class="collector-instrument__identity">
+        <p class="detail-kicker">
+          {kickerParts.join(" / ")}
+        </p>
+        <h1 class="detail-title">{work.title}</h1>
+        <p class="detail-copy">{work.statement}</p>
+      </div>
+
+      <slot />
+    </div>
+  </div>
+</section>

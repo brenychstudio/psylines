@@ -1,0 +1,150 @@
+---
+import "../styles/global.css";
+import LivingAtmosphereBoot from "../components/living-atmosphere/LivingAtmosphereBoot.astro";
+import LivingAtmosphereOrchestratorBoot from "../components/living-atmosphere/LivingAtmosphereOrchestratorBoot.astro";
+import SiteScrollTop from "../components/navigation/SiteScrollTop.astro";
+import { resolveMood } from "../lib/living-atmosphere/resolveMood";
+import { siteMeta } from "../data/site/seo";
+
+interface Props {
+  title?: string;
+  description?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImage?: string | null;
+  canonicalPath?: string;
+  ogType?: string;
+  noindex?: boolean;
+  hideFooter?: boolean;
+  preloadImages?: string[];
+}
+
+const {
+  title = siteMeta.defaultTitle,
+  description = siteMeta.defaultDescription,
+  ogTitle,
+  ogDescription,
+  ogImage = siteMeta.defaultImage,
+  canonicalPath,
+  ogType = "website",
+  noindex = false,
+  hideFooter = false,
+  preloadImages = [],
+} = Astro.props;
+
+const atmosphereMood = resolveMood(Astro.url.pathname);
+
+const siteUrl = import.meta.env.PUBLIC_SITE_URL?.replace(/\/+$/, "");
+const baseUrl = siteUrl || Astro.url.origin;
+const canonicalUrl = toAbsoluteUrl(canonicalPath ?? Astro.url.pathname, baseUrl);
+const resolvedOgTitle = ogTitle ?? title;
+const resolvedOgDescription = ogDescription ?? description;
+const resolvedOgImage = toAbsoluteUrl(ogImage, baseUrl);
+const pathname = Astro.url.pathname;
+
+const isActive = (href: string) => {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+};
+
+function toAbsoluteUrl(value: string | null | undefined, base: string) {
+  if (!value) return null;
+
+  try {
+    return new URL(value, base).toString();
+  } catch {
+    return null;
+  }
+}
+---
+<!doctype html>
+<html lang="en" data-atmosphere-mood={atmosphereMood} data-atmosphere-route={pathname}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {noindex ? <meta name="robots" content="noindex,follow" /> : null}
+    {canonicalUrl ? <link rel="canonical" href={canonicalUrl} /> : null}
+    {preloadImages.map((image) => <link rel="preload" as="image" href={image} />)}
+
+    <meta property="og:site_name" content={siteMeta.siteName} />
+    <meta property="og:title" content={resolvedOgTitle} />
+    <meta property="og:description" content={resolvedOgDescription} />
+    <meta property="og:type" content={ogType} />
+    {canonicalUrl ? <meta property="og:url" content={canonicalUrl} /> : null}
+    {resolvedOgImage ? <meta property="og:image" content={resolvedOgImage} /> : null}
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={resolvedOgTitle} />
+    <meta name="twitter:description" content={resolvedOgDescription} />
+    {resolvedOgImage ? <meta name="twitter:image" content={resolvedOgImage} /> : null}
+    <script is:inline>
+      (() => {
+        const key = "artist-stage:cinematic-transition";
+
+        try {
+          const payload = JSON.parse(sessionStorage.getItem(key) || "null");
+          const target = payload?.href ? new URL(payload.href, window.location.href) : null;
+          const isFresh = payload?.at && Date.now() - Number(payload.at) < 8000;
+          const isCollectionIndex = /^\/(?:works|series)\/?$/.test(target?.pathname || "");
+
+          if (payload?.mode === "controlled-route" && target?.pathname === window.location.pathname && isFresh && !isCollectionIndex) {
+            document.documentElement.setAttribute("data-cinematic-transition", "arriving");
+
+            window.setTimeout(() => {
+              if (document.documentElement.getAttribute("data-cinematic-transition") === "arriving") {
+                document.documentElement.removeAttribute("data-cinematic-transition");
+              }
+            }, 3200);
+          }
+        } catch {
+          document.documentElement.removeAttribute("data-cinematic-transition");
+        }
+      })();
+    </script>
+    <script src="/scripts/artist-stage-cinematic-transition.js" defer></script>
+  </head>
+  <body>
+    <LivingAtmosphereBoot />
+    <div class="site-shell">
+      <div class="site-artwork-atmosphere-field" data-artwork-atmosphere-field aria-hidden="true"></div>
+      <header class="site-header" data-site-header>
+        <div class="site-header__inner">
+          <a class="site-brand" href="/">ARTIST STAGE</a>
+          <nav class="site-nav" aria-label="Primary navigation">
+            <a href="/" aria-current={isActive("/") ? "page" : undefined}>Home</a>
+            <a href="/series" aria-current={isActive("/series") ? "page" : undefined}>Series</a>
+            <a href="/works" aria-current={isActive("/works") ? "page" : undefined}>Works</a>
+            <a href="/immersive" aria-current={isActive("/immersive") ? "page" : undefined}>Immersive</a>
+            <a href="/artist" aria-current={isActive("/artist") ? "page" : undefined}>Artist</a>
+            <a href="/process" aria-current={isActive("/process") ? "page" : undefined}>Process</a>
+            <a href="/contact" aria-current={isActive("/contact") ? "page" : undefined}>Contact</a>
+          </nav>
+        </div>
+      </header>
+
+      <main>
+        <slot />
+      </main>
+
+      {!hideFooter ? (
+        <footer class="site-footer">
+          <p class="site-footer__line">ARTIST STAGE &mdash; works, editions, and spatial continuations.</p>
+          <nav class="site-footer__links" aria-label="Collector and policy links">
+            <a href="/process">Process</a>
+            <a href="/collectors">Collectors</a>
+            <a href="/policies/shipping">Shipping</a>
+            <a href="/policies/returns">Returns</a>
+            <a href="/policies/privacy">Privacy</a>
+            <a href="/policies/terms">Terms</a>
+            <a href="/contact">Contact</a>
+          </nav>
+        </footer>
+      ) : null}
+
+      <SiteScrollTop />
+    </div>
+    <LivingAtmosphereOrchestratorBoot />
+  </body>
+</html>

@@ -1,0 +1,301 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import AtmosphericBackdropRoot from "../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
+
+const processSteps = [
+  {
+    title: "Select a work",
+    copy: "Move through the works field, series chapters, or index and open the object page for the selected manifestation.",
+  },
+  {
+    title: "Choose the route",
+    copy: "Select original or edition format where available. Each option keeps price, scale, material and certificate context visible.",
+  },
+  {
+    title: "Preview scale",
+    copy: "Use the interior scale preview as a calm reference before continuing. Real AR integration can be added later.",
+  },
+  {
+    title: "Complete acquisition",
+    copy: "Use secure checkout for available works or continue by direct studio contact when context is needed.",
+  },
+];
+
+const trustLinks = [
+  { label: "Shipping", href: "/policies/shipping" },
+  { label: "Returns", href: "/policies/returns" },
+  { label: "Terms", href: "/policies/terms" },
+  { label: "Privacy", href: "/policies/privacy" },
+  { label: "Contact", href: "/contact" },
+];
+---
+<BaseLayout
+  title="Collector Process - ARTIST STAGE"
+  description="Collector process for available works, editions, originals, previews, secure checkout, and direct studio contact."
+  canonicalPath="/collectors"
+>
+  <AtmosphericBackdropRoot />
+
+  <section class="collector-process-field" aria-labelledby="collector-title">
+    <section class="collector-threshold" data-atmosphere-section="collector-threshold">
+      <div class="collector-threshold__copy">
+        <p class="collector-kicker">COLLECTOR PROCESS</p>
+
+        <h1 id="collector-title" class="collector-title">
+          From selected work to collector route.
+        </h1>
+
+        <p class="collector-copy">
+          This page explains the collector process. For direct questions, use Contact.
+        </p>
+
+        <p class="collector-support-note">
+          Available works can be reviewed through their object pages, selected as original
+          or edition, previewed in interior scale, and completed through secure checkout
+          where enabled.
+        </p>
+
+        <nav class="collector-route-signals" aria-label="Collector routes">
+          <a href="/contact">Contact the studio</a>
+          <a href="/works">Enter works field</a>
+          <a href="/works/mt-3">Open MT-3 object</a>
+        </nav>
+      </div>
+
+      <div class="collector-process-register" aria-label="Collector process sequence">
+        {processSteps.map((step, index) => (
+          <article class="collector-process-step">
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <strong>{step.title}</strong>
+            <p>{step.copy}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section class="collector-trust-surfaces" data-atmosphere-section="collector-trust">
+      <div>
+        <p class="collector-kicker">TRUST SURFACES</p>
+        <h2>Trust surfaces</h2>
+      </div>
+
+      <div>
+        <p>
+          Collector-facing pages keep production, shipping, returns and policy context
+          visible without separating acquisition from the work itself.
+        </p>
+
+        <nav class="collector-trust-links" aria-label="Collector policy routes">
+          {trustLinks.map((link) => (
+            <a href={link.href}>{link.label}</a>
+          ))}
+        </nav>
+      </div>
+    </section>
+  </section>
+</BaseLayout>
+
+<style>
+  /* V3-36 - Collector Process Field */
+  .collector-process-field {
+    position: relative;
+    z-index: 1;
+    overflow-x: clip;
+    padding: clamp(6.5rem, 10vw, 9rem) 0 clamp(5rem, 9vw, 8rem);
+  }
+
+  .collector-threshold,
+  .collector-trust-surfaces {
+    width: var(--site-shell-wide);
+    max-width: none;
+    margin-inline: auto;
+  }
+
+  .collector-threshold {
+    min-height: min(760px, calc(100svh - 5rem));
+    display: grid;
+    grid-template-columns: minmax(460px, 0.52fr) minmax(420px, 0.48fr);
+    align-items: center;
+    gap: clamp(3rem, 7vw, 8rem);
+  }
+
+  .collector-kicker {
+    margin: 0 0 1.15rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(235, 240, 232, 0.46);
+  }
+
+  .collector-title {
+    margin: 0;
+    max-width: 11ch;
+    font-size: clamp(4rem, 7vw, 8rem);
+    line-height: 0.9;
+    letter-spacing: 0;
+    font-weight: 300;
+    color: rgba(245, 248, 242, 0.94);
+  }
+
+  .collector-copy,
+  .collector-support-note {
+    max-width: 42rem;
+    color: rgba(235, 240, 232, 0.66);
+    font-size: clamp(1rem, 1.1vw, 1.16rem);
+    line-height: 1.6;
+  }
+
+  .collector-copy {
+    margin-top: 1.3rem;
+  }
+
+  .collector-support-note {
+    margin-top: 0.85rem;
+    color: rgba(235, 240, 232, 0.54);
+  }
+
+  .collector-process-register {
+    border-top: 1px solid rgba(255, 255, 255, 0.065);
+  }
+
+  .collector-process-step {
+    display: grid;
+    grid-template-columns: 3rem minmax(150px, 0.3fr) minmax(0, 0.7fr);
+    gap: 1rem;
+    padding: 1.2rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  }
+
+  .collector-process-step span {
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+    color: rgba(235, 240, 232, 0.36);
+  }
+
+  .collector-process-step strong {
+    color: rgba(245, 248, 242, 0.84);
+    font-weight: 500;
+  }
+
+  .collector-process-step p {
+    margin: 0;
+    color: rgba(235, 240, 232, 0.58);
+    line-height: 1.55;
+  }
+
+  .collector-trust-surfaces {
+    margin-top: clamp(4rem, 8vw, 8rem);
+    padding-top: 1.2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    display: grid;
+    grid-template-columns: minmax(280px, 0.36fr) minmax(0, 0.64fr);
+    gap: clamp(2rem, 6vw, 6rem);
+  }
+
+  .collector-trust-surfaces h2 {
+    margin: 0;
+    font-size: clamp(2.4rem, 4.6vw, 5.4rem);
+    line-height: 0.96;
+    letter-spacing: 0;
+    font-weight: 300;
+    color: rgba(245, 248, 242, 0.9);
+  }
+
+  .collector-trust-surfaces p {
+    margin: 0;
+    max-width: 44rem;
+    color: rgba(235, 240, 232, 0.62);
+    line-height: 1.6;
+  }
+
+  .collector-trust-links {
+    display: grid;
+    gap: 0.85rem;
+    margin-top: 1.2rem;
+  }
+
+  .collector-trust-links a,
+  .collector-route-signals a {
+    color: rgba(245, 248, 242, 0.82);
+    text-decoration: none;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+    padding-bottom: 0.28rem;
+  }
+
+  .collector-trust-links a::after,
+  .collector-route-signals a::after {
+    content: " \2192";
+    opacity: 0.6;
+  }
+
+  .collector-route-signals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem 1.1rem;
+    margin-top: 1.6rem;
+  }
+
+  .collector-route-signals a:hover,
+  .collector-route-signals a:focus-visible,
+  .collector-trust-links a:hover,
+  .collector-trust-links a:focus-visible {
+    color: rgba(245, 248, 242, 0.98);
+    border-color: rgba(245, 248, 242, 0.34);
+  }
+
+  @media (max-width: 900px) {
+    .collector-threshold,
+    .collector-trust-surfaces {
+      grid-template-columns: 1fr;
+      min-height: auto;
+    }
+
+    .collector-title {
+      max-width: 10ch;
+      font-size: clamp(3.25rem, 15vw, 6rem);
+    }
+
+    .collector-process-step {
+      grid-template-columns: 1fr;
+      gap: 0.45rem;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .collector-process-field {
+      padding-top: clamp(5.5rem, 18vw, 6.5rem);
+    }
+
+    .collector-threshold,
+    .collector-trust-surfaces {
+      width: calc(100vw - 1.5rem);
+      max-width: calc(100vw - 1.5rem);
+    }
+
+    .collector-route-signals {
+      display: grid;
+      max-width: 100%;
+    }
+
+    .collector-title {
+      max-width: 7ch;
+      font-size: clamp(3rem, 13vw, 5rem);
+    }
+
+    .collector-copy,
+    .collector-support-note,
+    .collector-process-step p,
+    .collector-trust-surfaces p {
+      max-width: min(21rem, calc(100vw - 2.25rem));
+      overflow-wrap: anywhere;
+    }
+
+    .collector-process-step {
+      max-width: calc(100vw - 1.5rem);
+    }
+  }
+</style>

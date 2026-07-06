@@ -1,0 +1,752 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import AtmosphericBackdropRoot from "../../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
+import ArtworkAtmosphereBridge from "../../components/artwork-atmosphere/ArtworkAtmosphereBridge.astro";
+import { artworkSeries } from "../../data/site/series";
+import { getFlagshipArtworks, getSelectedArtworks } from "../../data/site/artworkCollections";
+import { getWorksIndexContext } from "../../data/site/worksIndex";
+import { resolvePublicAsset } from "../../lib/assets/publicAsset";
+import { getResponsivePublicImage } from "../../lib/assets/responsiveImage";
+
+const worksIndex = getWorksIndexContext({
+  view: Astro.url.searchParams.get("view"),
+  series: Astro.url.searchParams.get("series"),
+  register: Astro.url.searchParams.get("register"),
+  format: Astro.url.searchParams.get("format"),
+  orientation: Astro.url.searchParams.get("orientation"),
+  status: Astro.url.searchParams.get("status"),
+});
+
+const taxonomySmokeCounts = {
+  selected: getSelectedArtworks().length,
+  flagship: getFlagshipArtworks().length,
+};
+void taxonomySmokeCounts;
+
+const orderedSeries = [...artworkSeries].sort((a, b) => a.order - b.order);
+const worksAtmosphereSlug =
+  worksIndex.series?.atmosphereProfile ??
+  worksIndex.fieldWorks[0]?.meta.atmosphereProfile ??
+  worksIndex.fieldWorks[0]?.slug ??
+  "default";
+
+const fieldEntries = worksIndex.fieldWorks.map((work) => ({
+  work,
+  coverSrc: resolvePublicAsset(work.cover),
+  coverImage: getResponsivePublicImage(work.cover, { defaultWidth: 960 }),
+  seriesEntry: work.series,
+}));
+
+const indexEntries = worksIndex.indexWorks.map((work) => ({
+  work,
+  coverSrc: resolvePublicAsset(work.cover),
+  coverImage: getResponsivePublicImage(work.cover, { defaultWidth: 640 }),
+  seriesEntry: work.series,
+}));
+
+const makeWorksHref = (updates: Record<string, string | null>) => {
+  const params = new URLSearchParams(Astro.url.searchParams);
+
+  Object.entries(updates).forEach(([key, value]) => {
+    if (!value) {
+      params.delete(key);
+    } else {
+      params.set(key, value);
+    }
+  });
+
+  const query = params.toString();
+  return query ? `/works?${query}` : "/works";
+};
+
+const filterItems = [
+  {
+    key: "all",
+    label: "All",
+    href: makeWorksHref({
+      register: null,
+      series: null,
+      format: null,
+      orientation: null,
+      status: null,
+    }),
+    isActive:
+      !worksIndex.seriesSlug &&
+      worksIndex.register === "all" &&
+      !Astro.url.searchParams.get("format") &&
+      !Astro.url.searchParams.get("orientation") &&
+      !Astro.url.searchParams.get("status"),
+  },
+  {
+    key: "selected",
+    label: "Selected",
+    href: makeWorksHref({ register: "selected", series: null }),
+    isActive: !worksIndex.seriesSlug && worksIndex.register === "selected",
+  },
+  {
+    key: "flagship",
+    label: "Flagship",
+    href: makeWorksHref({ register: "flagship", series: null }),
+    isActive: !worksIndex.seriesSlug && worksIndex.register === "flagship",
+  },
+  {
+    key: "standalone",
+    label: "Standalone",
+    href: makeWorksHref({ register: "standalone", series: null }),
+    isActive: !worksIndex.seriesSlug && worksIndex.register === "standalone",
+  },
+  ...orderedSeries.map((series) => ({
+    key: series.slug,
+    label: getCycleRegisterLabel(series.slug, series.title),
+    href: makeWorksHref({ series: series.slug, register: null }),
+    isActive: worksIndex.seriesSlug === series.slug && worksIndex.isValidSeries,
+  })),
+];
+
+const fieldHref = makeWorksHref({ view: null });
+const indexHref = makeWorksHref({ view: "index" });
+const hasActiveFilter =
+  worksIndex.isSeriesFiltered ||
+  worksIndex.register !== "all" ||
+  Boolean(Astro.url.searchParams.get("format")) ||
+  Boolean(Astro.url.searchParams.get("orientation")) ||
+  Boolean(Astro.url.searchParams.get("status"));
+
+const worksFieldContext =
+  worksIndex.viewMode === "index"
+    ? "Index mode is the complete archive register for the current context."
+    : "Field mode is a curated visual route through the current context.";
+
+function getAvailabilityLabel(work: { availableAsPrint: boolean; editionCandidate?: boolean }) {
+  if (work.availableAsPrint) return "edition route";
+  if (work.editionCandidate) return "collector route";
+  return "";
+}
+
+function getCycleRegisterLabel(slug: string, title: string) {
+  if (slug === "meta-bodies" || slug === "meta-bodies-inner-structures") return "Meta-Bodies";
+  if (slug === "night-water" || slug === "night-water-moonwater") return "Night Water";
+  if (slug === "studies" || slug === "studies-fragments") return "Studies";
+  return title;
+}
+
+function getManifestationEntryClass(index: number, aspect: string) {
+  const classes = ["manifestation-entry", "works-archive-item", `aspect-${aspect}`];
+
+  if (index === 3 || index === 6) classes.push("manifestation-entry--wide");
+
+  return classes.join(" ");
+}
+---
+
+<BaseLayout
+  title="Works - ARTIST STAGE"
+  description="A curated field of manifestations, studies, editions, and original works."
+  canonicalPath="/works"
+>
+  <AtmosphericBackdropRoot />
+  <ArtworkAtmosphereBridge slug={worksAtmosphereSlug} mode="works" />
+
+  <main
+    class="works-index-shell works-page-shell"
+    data-works-atmosphere-field
+    data-works-view={worksIndex.viewMode}
+    data-works-register={worksIndex.register}
+    data-works-series={worksIndex.series?.slug ?? "all"}
+  >
+    <header class="works-index-header" id="works-curated-header" data-atmosphere-section="works-intro">
+      <p class="eyebrow">WORKS FIELD</p>
+      <div class="works-index-headline-row">
+        <div class="works-index-copy">
+          <h1 class="works-index-title">A field of manifestations, cycles, editions, and original works.</h1>
+          <p class="works-index-text">
+            Move through works as states, surfaces, and collector routes. Field mode opens an authored route; Index mode keeps the archive scannable.
+          </p>
+        </div>
+
+        <div class="works-index-meta" aria-label="Works field register">
+          <p class="works-index-meta-label">FIELD COUNT</p>
+          <p class="works-index-count" id="works-count">{worksIndex.filteredWorks.length}</p>
+          <p class="works-index-meta-label" id="works-count-note">{worksIndex.activeCountLabel}</p>
+          <div class="works-active-register" aria-live="polite">
+            <p class="works-index-meta-label">ACTIVE REGISTER</p>
+            <p class="works-active-register-title" id="works-active-register-title">{worksIndex.activeTitle}</p>
+            <p class="works-active-register-note" id="works-active-register-note">
+              {worksIndex.viewMode === "index" ? "Complete index register" : "Curated field route"}
+            </p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    {worksIndex.isSeriesFiltered && !worksIndex.isValidSeries ? (
+      <aside class="works-active-series-register works-active-series-register--invalid" aria-label="Invalid series register">
+        <p class="works-active-series-kicker">SERIES REGISTER</p>
+
+        <div class="works-active-series-copy">
+          <h2>Series not found.</h2>
+          <p>This works view does not match a confirmed series register.</p>
+          <div class="works-active-series-links">
+            <a href="/series">Open series field</a>
+            <a href="/works">Return to all works</a>
+          </div>
+        </div>
+      </aside>
+    ) : (
+      <aside class="works-active-series-register" aria-label="Active works context">
+        <p class="works-active-series-kicker">
+          {worksIndex.series ? "ACTIVE SERIES REGISTER" : "ACTIVE WORKS REGISTER"}
+        </p>
+
+        <div class="works-active-series-copy">
+          <h2>{worksIndex.activeTitle}</h2>
+          <p>{worksIndex.activeDescription}</p>
+          <div class="works-active-series-meta">
+            <span>{worksIndex.activeCountLabel}</span>
+            <span>{worksIndex.viewMode === "index" ? "Index mode" : "Field mode"}</span>
+          </div>
+          <div class="works-active-series-links">
+            {worksIndex.series ? (
+              <a href={`/series/${worksIndex.series.slug}`}>Open series chapter</a>
+            ) : null}
+            {hasActiveFilter ? (
+              <a href="/works">Clear register</a>
+            ) : null}
+          </div>
+        </div>
+      </aside>
+    )}
+
+    <div class="works-register-controls">
+      <nav class="works-filter-bar" aria-label="Works filters">
+        {filterItems.map((item) => (
+          <a
+            class={`works-filter-btn ${item.isActive ? "is-active" : ""}`}
+            href={item.href}
+            data-filter={item.key}
+          >
+            {item.label}
+          </a>
+        ))}
+      </nav>
+
+      <div class="works-view-rail">
+        <nav class="works-view-toggle" aria-label="Works view mode">
+          <a
+            href={fieldHref}
+            class={`works-view-btn ${worksIndex.viewMode === "field" ? "is-active" : ""}`}
+            data-view="field"
+          >
+            Field
+          </a>
+          <a
+            href={indexHref}
+            class={`works-view-btn ${worksIndex.viewMode === "index" ? "is-active" : ""}`}
+            data-view="index"
+          >
+            Index
+          </a>
+        </nav>
+
+        <p class="works-field-context" id="works-field-context">
+          {worksFieldContext}
+        </p>
+      </div>
+    </div>
+
+    {worksIndex.filteredWorks.length === 0 ? (
+      <section class="works-empty-register" id="works-empty-state">
+        <p class="works-active-series-kicker">EMPTY REGISTER</p>
+        <h2>No confirmed works in this register yet.</h2>
+        <p>This view is prepared for future author-approved works. Return to all works or open the Series field.</p>
+        <div class="works-active-series-links">
+          <a href="/works">Return to all works</a>
+          <a href="/series">Open series field</a>
+        </div>
+      </section>
+    ) : worksIndex.viewMode === "field" ? (
+      <section
+        class="manifestation-field works-archive-grid"
+        id="works-curated-grid"
+        data-grid="curated"
+        data-view-mode="field"
+        data-atmosphere-section="works-field"
+      >
+        {fieldEntries.map(({ work, coverSrc, coverImage, seriesEntry }, index) => {
+          const availabilityLabel = getAvailabilityLabel(work);
+
+          return (
+            <a
+              href={`/works/${work.slug}`}
+              class={getManifestationEntryClass(index, work.aspect)}
+              data-series={seriesEntry?.slug ?? "independent"}
+              data-edition={work.availableAsPrint ? "true" : "false"}
+              data-artwork-slug={work.slug}
+              data-atmosphere-handoff-slug={work.meta.atmosphereProfile || work.slug}
+              data-register-label={seriesEntry ? getCycleRegisterLabel(seriesEntry.slug, seriesEntry.title) : "Independent"}
+            >
+              <div class="manifestation-entry__image works-archive-media">
+                {coverSrc ? (
+                  <img
+                    src={coverImage.src}
+                    srcset={coverImage.srcset}
+                    sizes="(min-width: 1280px) 30vw, (min-width: 760px) 44vw, 92vw"
+                    alt={`${work.title} manifestation surface`}
+                    class="manifestation-entry__img works-archive-image"
+                    loading="lazy"
+                    decoding="async"
+                    data-cinematic-cover
+                  />
+                ) : (
+                  <div class="works-archive-surface" data-cinematic-cover></div>
+                )}
+
+                {availabilityLabel ? (
+                  <div class="manifestation-entry__route works-archive-badge">{availabilityLabel}</div>
+                ) : null}
+              </div>
+
+              <div class="manifestation-entry__signal works-archive-info">
+                <p class="manifestation-entry__kicker works-archive-kicker">
+                  {seriesEntry ? `${getCycleRegisterLabel(seriesEntry.slug, seriesEntry.title)} / ${work.year}` : `Independent / ${work.year}`}
+                </p>
+
+                <h2 class="manifestation-entry__title works-archive-title">{work.title}</h2>
+                <p class="manifestation-entry__statement works-archive-statement">{work.statement}</p>
+              </div>
+            </a>
+          );
+        })}
+      </section>
+    ) : (
+      <section
+        class="works-compact-grid"
+        id="works-compact-grid"
+        data-grid="compact"
+        data-view-mode="index"
+        data-atmosphere-section="works-index"
+      >
+        {indexEntries.map(({ work, coverSrc, coverImage, seriesEntry }) => {
+          const availabilityLabel = getAvailabilityLabel(work);
+
+          return (
+            <a
+              href={`/works/${work.slug}`}
+              class={`works-compact-item aspect-${work.aspect}`}
+              data-series={seriesEntry?.slug ?? "independent"}
+              data-edition={work.availableAsPrint ? "true" : "false"}
+              data-artwork-slug={work.slug}
+              data-atmosphere-handoff-slug={work.meta.atmosphereProfile || work.slug}
+              aria-label={`Enter ${work.title}`}
+            >
+              <div class="works-compact-media">
+                {coverSrc ? (
+                  <img
+                    src={coverImage.src}
+                    srcset={coverImage.srcset}
+                    alt={`${work.title} manifestation surface`}
+                    class="works-compact-image"
+                    loading="lazy"
+                    decoding="async"
+                    data-cinematic-cover
+                    sizes="(min-width: 1500px) 20vw, (min-width: 1260px) 25vw, (min-width: 900px) 33vw, 50vw"
+                  />
+                ) : (
+                  <div class="works-compact-surface" data-cinematic-cover></div>
+                )}
+
+                {availabilityLabel ? (
+                  <div class="works-archive-badge">{availabilityLabel}</div>
+                ) : null}
+              </div>
+
+              <div class="works-compact-meta">
+                <p class="works-compact-year">{work.meta.year ?? work.year}</p>
+                <h2 class="works-compact-title">{work.meta.inventoryNumber ?? work.title}</h2>
+                <p class="works-compact-cycle">
+                  {seriesEntry ? getCycleRegisterLabel(seriesEntry.slug, seriesEntry.title) : "Independent"}
+                </p>
+              </div>
+            </a>
+          );
+        })}
+      </section>
+    )}
+  </main>
+
+  <style>
+    /* V3 Canonical Frame - align Works index to the shared header axis. */
+    .works-index-shell.works-page-shell {
+      box-sizing: border-box;
+      width: 100%;
+      max-width: none;
+      margin-right: 0;
+      margin-left: 0;
+      padding-right: var(--site-frame-gutter);
+      padding-left: var(--site-frame-gutter);
+    }
+
+    .works-page-shell .manifestation-field.works-archive-grid,
+    .works-page-shell .works-empty-register {
+      width: 100%;
+      max-width: none;
+      margin-right: 0;
+      margin-left: 0;
+    }
+
+    /* V3-33 - Works Series-aware Query Register */
+    .works-active-series-register {
+      width: min(960px, 100%);
+      margin: clamp(1.8rem, 4vw, 3.5rem) 0 0;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      display: grid;
+      grid-template-columns: minmax(0, 42rem);
+      justify-content: start;
+      gap: 0.8rem;
+    }
+
+    .works-active-series-kicker {
+      margin: 0;
+      font-size: 0.62rem;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      color: rgba(235, 240, 232, 0.42);
+    }
+
+    .works-active-series-copy h2,
+    .works-empty-register h2 {
+      margin: 0;
+      font-size: clamp(1.8rem, 3.2vw, 3.6rem);
+      line-height: 0.96;
+      letter-spacing: 0;
+      font-weight: 300;
+      color: rgba(245, 248, 242, 0.88);
+    }
+
+    .works-active-series-copy p,
+    .works-empty-register p {
+      margin: 0.65rem 0 0;
+      max-width: 42rem;
+      color: rgba(235, 240, 232, 0.58);
+      line-height: 1.55;
+    }
+
+    .works-active-series-links,
+    .works-empty-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.9rem 1.1rem;
+      margin-top: 1rem;
+    }
+
+    .works-active-series-links a,
+    .works-empty-links a {
+      color: rgba(245, 248, 242, 0.82);
+      text-decoration: none;
+      font-size: 0.68rem;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+      padding-bottom: 0.28rem;
+    }
+
+    /* V3-35 - Works Index Scalability / 100+ Ready */
+    .works-filter-bar a,
+    .works-view-toggle a {
+      text-decoration: none;
+    }
+
+    .works-register-controls {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: clamp(1.25rem, 3vw, 2.5rem);
+      align-items: start;
+      margin-bottom: clamp(2.2rem, 4.5vw, 4rem);
+    }
+
+    .works-filter-bar {
+      padding-top: clamp(1.25rem, 3vw, 2.1rem);
+    }
+
+    .works-view-rail {
+      display: grid;
+      justify-items: end;
+      align-content: start;
+      padding-top: clamp(1.25rem, 3vw, 2.1rem);
+    }
+
+    .works-view-toggle {
+      margin: 0;
+    }
+
+    .works-field-context {
+      width: min(19rem, 100%);
+      max-width: 19rem;
+      margin: 0.75rem 0 0;
+    }
+
+    .works-active-series-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem 1rem;
+      margin-top: 0.85rem;
+      color: rgba(235, 240, 232, 0.42);
+      font-size: 0.66rem;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .works-empty-register {
+      width: min(1400px, calc(100vw - clamp(36px, 6vw, 112px)));
+      margin: clamp(3rem, 6vw, 5rem) auto 0;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .works-page-shell[data-works-view="index"] .works-field-context {
+      margin-bottom: 0;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-register-controls {
+      margin-bottom: clamp(1.8rem, 4vw, 3rem);
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      column-gap: clamp(0.9rem, 1.15vw, 1.25rem);
+      row-gap: clamp(1.45rem, 2vw, 2.15rem);
+      align-items: start;
+      margin-top: clamp(0.7rem, 1.6vw, 1.35rem);
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-media {
+      min-height: 0;
+      max-height: none;
+      aspect-ratio: auto;
+      overflow: visible;
+      background: transparent;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-image {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: contain;
+      object-position: center;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-surface {
+      aspect-ratio: 4 / 5;
+      min-height: 14rem;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-media::after {
+      display: none;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-item {
+      display: grid;
+      gap: 0.48rem;
+      align-content: start;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-meta {
+      gap: 0.08rem;
+      padding-inline: 0;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-title {
+      font-size: clamp(0.9rem, 0.78vw, 1rem);
+      line-height: 1.05;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-year,
+    .works-page-shell[data-works-view="index"] .works-compact-cycle {
+      font-size: 0.58rem;
+      line-height: 1.18;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-archive-badge {
+      left: 0.55rem;
+      bottom: 0.55rem;
+    }
+
+    @media (max-width: 760px) {
+      .works-register-controls {
+        grid-template-columns: 1fr;
+      }
+
+      .works-view-rail {
+        justify-items: start;
+        padding-top: 0;
+      }
+
+      .works-field-context {
+        width: min(38rem, 100%);
+        max-width: 38rem;
+      }
+
+      .works-active-series-register {
+        width: 100%;
+      }
+
+      .works-active-series-links,
+      .works-empty-links {
+        display: grid;
+      }
+    }
+
+    @media (max-width: 1280px) {
+      .works-page-shell[data-works-view="index"] .works-compact-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 960px) {
+      .works-page-shell[data-works-view="index"] .works-compact-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .works-page-shell[data-works-view="index"] .works-compact-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        row-gap: 1.25rem;
+      }
+    }
+
+    /* V3 Wide Viewport Content Scale - rebalance Works controls after canonical frame expansion. */
+    @media (min-width: 1280px) {
+      .works-index-headline-row {
+        grid-template-columns: minmax(760px, 0.62fr) minmax(220px, 0.38fr);
+        gap: clamp(4rem, 7vw, 9rem);
+      }
+
+      .works-index-copy {
+        max-width: 74rem;
+      }
+
+      .works-index-title {
+        max-width: 15ch;
+        font-size: clamp(4rem, 5.35vw, 6rem);
+      }
+
+      .works-index-text {
+        max-width: 58rem;
+        font-size: clamp(1.08rem, 1.12vw, 1.26rem);
+        line-height: 1.58;
+      }
+
+      .works-index-meta {
+        min-width: 15rem;
+        padding-left: 1.55rem;
+      }
+
+      .works-index-meta-label,
+      .works-active-register-note,
+      .works-active-series-kicker,
+      .works-filter-btn,
+      .works-view-btn,
+      .works-field-context,
+      .works-active-series-meta {
+        font-size: 0.74rem;
+      }
+
+      .works-index-count {
+        font-size: clamp(2.25rem, 2.7vw, 3.25rem);
+      }
+
+      .works-active-register-title {
+        font-size: clamp(1rem, 1.04vw, 1.16rem);
+      }
+
+      .works-active-series-register {
+        width: min(1120px, 100%);
+        grid-template-columns: minmax(0, 54rem);
+        margin-top: clamp(2.2rem, 4.5vw, 4rem);
+      }
+
+      .works-active-series-copy h2,
+      .works-empty-register h2 {
+        font-size: clamp(2.3rem, 3.6vw, 4.4rem);
+      }
+
+      .works-active-series-copy p,
+      .works-empty-register p {
+        max-width: 54rem;
+        font-size: clamp(1.05rem, 1.1vw, 1.24rem);
+        line-height: 1.58;
+      }
+
+      .works-active-series-links a,
+      .works-empty-links a {
+        font-size: 0.74rem;
+      }
+
+      .works-register-controls {
+        gap: clamp(2rem, 4vw, 4rem);
+        margin-bottom: clamp(2.6rem, 4.6vw, 4.6rem);
+      }
+
+      .works-filter-bar {
+        gap: 0.45rem clamp(0.9rem, 1.8vw, 1.55rem);
+      }
+
+      .works-field-context {
+        width: min(24rem, 100%);
+        max-width: 24rem;
+        line-height: 1.55;
+      }
+
+      .works-page-shell[data-works-view="index"] .works-compact-grid {
+        column-gap: clamp(1.1rem, 1.35vw, 1.55rem);
+        row-gap: clamp(1.8rem, 2.5vw, 2.75rem);
+      }
+
+      .works-page-shell[data-works-view="index"] .works-compact-title {
+        font-size: clamp(1rem, 0.9vw, 1.18rem);
+      }
+
+      .works-page-shell[data-works-view="index"] .works-compact-year,
+      .works-page-shell[data-works-view="index"] .works-compact-cycle {
+        font-size: 0.66rem;
+      }
+    }
+  </style>
+
+  <style is:global>
+    /* V3-23 Stillness / Idle Presence Field */
+    .manifestation-entry__image {
+      box-shadow:
+        0 28px calc(80px + (var(--presence-depth, 0.42) * 18px)) rgba(0, 0, 0, 0.42),
+        0 0 0 1px rgba(255, 255, 255, 0.025);
+      transition: box-shadow 520ms ease;
+    }
+
+    .manifestation-entry__statement,
+    .manifestation-entry__kicker,
+    .works-index-text,
+    .works-index-meta-label,
+    .works-active-register-note {
+      opacity: var(--presence-secondary-opacity, 1);
+      transition: opacity 420ms ease;
+    }
+
+    /* V3-27 Psychological Atmosphere Tuning */
+    .manifestation-entry__image {
+      box-shadow:
+        0 28px calc(72px + (var(--psychological-density, 0.48) * 26px)) rgba(0, 0, 0, 0.42),
+        0 0 0 1px rgba(255, 255, 255, 0.025);
+    }
+
+    html[data-artwork-atmosphere-state="focused"] .manifestation-entry:hover .manifestation-entry__image,
+    html[data-artwork-atmosphere-state="focused"] .manifestation-entry:focus-within .manifestation-entry__image {
+      filter:
+        saturate(calc(1.02 + (var(--psychological-color-spread, 0.5) * 0.04)))
+        contrast(calc(1.02 + (var(--psychological-focus-pull, 0.42) * 0.03)));
+    }
+  </style>
+</BaseLayout>

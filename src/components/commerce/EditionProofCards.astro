@@ -1,0 +1,47 @@
+---
+import type { ArtworkMeta } from "../../data/site/artworkMeta";
+import type { ArtworkSeries } from "../../data/site/series";
+import type { WorkItem } from "../../data/site/types";
+import type { CommerceProduct } from "../../data/commerce/catalog";
+
+type Props = {
+  work: WorkItem;
+  commerceProduct: CommerceProduct | null;
+  artworkMeta?: ArtworkMeta;
+  artworkSeries?: ArtworkSeries | null;
+};
+
+const { work, artworkMeta, artworkSeries } = Astro.props as Props;
+
+const objectRecordLine = [
+  artworkMeta?.year ? String(artworkMeta.year) : null,
+  artworkMeta?.format,
+  artworkMeta?.orientation,
+].filter(Boolean).join(" / ");
+---
+
+<section class="detail-signal-band object-signal-band" aria-label="Object field signals">
+  <div class="object-signal-item">
+    <span class="detail-kicker">series</span>
+    <strong class="detail-meta-title">{artworkSeries?.title ?? "Independent Manifestation"}</strong>
+    <p class="detail-meta-copy">
+      {artworkSeries?.shortLine ?? "Standalone work within the practice field."}
+    </p>
+  </div>
+
+  <div class="object-signal-item">
+    <span class="detail-kicker">material</span>
+    <strong class="detail-meta-title">{artworkMeta?.paper ?? "Archival paper"}</strong>
+    <p class="detail-meta-copy">
+      {artworkMeta?.mediumLine ?? "Mixed media on archival paper."}
+    </p>
+  </div>
+
+  <div class="object-signal-item">
+    <span class="detail-kicker">object record</span>
+    <strong class="detail-meta-title">{artworkMeta?.inventoryNumber ?? work.title}</strong>
+    <p class="detail-meta-copy">
+      {objectRecordLine || "Record pending author review."}
+    </p>
+  </div>
+</section>

@@ -1,0 +1,524 @@
+.customer-print-ar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483500;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(2, 5, 4, 0.98), rgba(5, 8, 7, 0.88) 42%, rgba(2, 3, 4, 0.98)),
+    linear-gradient(180deg, rgba(15, 20, 14, 0.94), rgba(3, 5, 5, 0.98));
+  color: rgba(247, 241, 231, 0.92);
+  backdrop-filter: blur(18px) saturate(0.88);
+}
+
+.customer-print-ar-backdrop::before,
+.customer-print-ar-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: -18%;
+  pointer-events: none;
+}
+
+.customer-print-ar-backdrop::before {
+  background:
+    radial-gradient(ellipse at 38% 42%, rgba(95, 137, 70, 0.24), transparent 48%),
+    radial-gradient(ellipse at 74% 58%, rgba(111, 82, 46, 0.18), transparent 42%);
+  opacity: 0.76;
+}
+
+.customer-print-ar-backdrop::after {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035), transparent 18%, transparent 82%, rgba(255, 255, 255, 0.026)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 16%, transparent 82%, rgba(0, 0, 0, 0.48));
+  mix-blend-mode: screen;
+  opacity: 0.36;
+}
+
+html.is-print-ar-open .site-header {
+  opacity: 0;
+  pointer-events: none;
+}
+
+html.is-print-ar-open .site-scroll-top {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.customer-print-ar-panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 100svh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: 0 clamp(2rem, 4.8vw, 5.8rem) clamp(1.6rem, 3vw, 3rem);
+  background: transparent;
+  overflow: hidden;
+}
+
+.customer-print-ar-header {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.4rem;
+  padding: clamp(2rem, 4.2svh, 3.8rem) 0 0;
+}
+
+.customer-print-ar-header > div {
+  display: grid;
+  gap: 0.44rem;
+}
+
+.customer-print-ar-eyebrow {
+  font-size: 0.62rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(247, 241, 231, 0.38);
+}
+
+.customer-print-ar-header h2 {
+  margin: 0;
+  font-size: 3.35rem;
+  line-height: 0.94;
+  letter-spacing: 0;
+  font-weight: 400;
+  color: rgba(250, 246, 238, 0.94);
+  text-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+}
+
+.customer-print-ar-body {
+  position: relative;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+  gap: clamp(2rem, 4.8vw, 6.2rem);
+  align-items: stretch;
+  padding-top: clamp(1.3rem, 2.4svh, 2.4rem);
+}
+
+.customer-print-ar-body::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: clamp(1.4rem, 3svh, 2.8rem);
+  height: 1px;
+  background: linear-gradient(90deg, rgba(247, 241, 231, 0.16), transparent 46%, rgba(247, 241, 231, 0.07));
+  pointer-events: none;
+}
+
+.customer-print-ar-canvas {
+  position: relative;
+  min-height: calc(100svh - clamp(9.5rem, 16svh, 13rem));
+  isolation: isolate;
+  overflow: visible;
+  background: transparent;
+}
+
+.customer-print-ar-canvas::before {
+  content: "";
+  position: absolute;
+  inset: 5% 8% 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse at 50% 58%, rgba(98, 139, 74, 0.16), transparent 62%),
+    radial-gradient(ellipse at 50% 88%, rgba(0, 0, 0, 0.56), transparent 64%);
+  pointer-events: none;
+}
+
+.customer-print-ar-summary {
+  align-self: center;
+  position: relative;
+  display: grid;
+  gap: 1.25rem;
+  padding: clamp(1.4rem, 2.4vw, 2.2rem) 0 clamp(1rem, 2vw, 1.6rem) clamp(1.45rem, 2.2vw, 2.2rem);
+  border-left: 1px solid rgba(247, 241, 231, 0.105);
+  background: linear-gradient(90deg, rgba(247, 241, 231, 0.026), transparent 68%);
+}
+
+.customer-print-ar-summary::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 0;
+  width: 1px;
+  height: 28%;
+  background: rgba(247, 241, 231, 0.42);
+  box-shadow: 0 0 28px rgba(139, 179, 101, 0.26);
+  pointer-events: none;
+}
+
+.customer-print-ar-frame-picker {
+  display: grid;
+  gap: 0.72rem;
+}
+
+.customer-print-ar-frame-picker__label,
+.customer-print-ar-summary-row span {
+  font-size: 0.58rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(247, 241, 231, 0.36);
+}
+
+.customer-print-ar-frame-picker__controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.customer-print-ar-frame-pill {
+  appearance: none;
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.52rem;
+  min-height: 2rem;
+  padding: 0.24rem 0 0.48rem;
+  border: 0;
+  border-bottom: 1px solid rgba(247, 241, 231, 0.12);
+  border-radius: 0;
+  background: transparent;
+  color: rgba(247, 241, 231, 0.52);
+  font: inherit;
+  font-size: 0.72rem;
+  line-height: 1.1;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    color 240ms ease,
+    border-color 240ms ease,
+    transform 240ms ease;
+}
+
+.customer-print-ar-frame-pill::before {
+  content: "";
+  width: 0.46rem;
+  height: 0.46rem;
+  border: 1px solid rgba(247, 241, 231, 0.22);
+  background: rgba(16, 18, 16, 0.92);
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.25);
+}
+
+.customer-print-ar-frame-pill[data-frame-preset="white"]::before {
+  background: rgba(226, 219, 202, 0.9);
+}
+
+.customer-print-ar-frame-pill[data-frame-preset="oak"]::before {
+  background: linear-gradient(135deg, rgba(136, 97, 54, 0.96), rgba(194, 154, 93, 0.72));
+}
+
+.customer-print-ar-frame-pill:hover,
+.customer-print-ar-frame-pill:focus-visible {
+  color: rgba(250, 246, 238, 0.9);
+  border-color: rgba(247, 241, 231, 0.28);
+  transform: translate3d(0, -1px, 0);
+  outline: none;
+}
+
+.customer-print-ar-frame-pill--active {
+  color: rgba(250, 246, 238, 0.96);
+  border-color: rgba(247, 241, 231, 0.72);
+}
+
+.customer-print-ar-summary-list {
+  display: grid;
+  border-top: 1px solid rgba(247, 241, 231, 0.095);
+}
+
+.customer-print-ar-summary-row {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 0.7fr) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.86rem 0;
+  border-bottom: 1px solid rgba(247, 241, 231, 0.082);
+}
+
+.customer-print-ar-summary-row strong {
+  justify-self: end;
+  text-align: right;
+  color: rgba(250, 246, 238, 0.82);
+  font-size: 0.92rem;
+  line-height: 1.25;
+  font-weight: 500;
+}
+
+.customer-print-ar-state {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1.05rem 0;
+  border-top: 1px solid rgba(247, 241, 231, 0.13);
+  border-bottom: 1px solid rgba(247, 241, 231, 0.08);
+}
+
+.customer-print-ar-state strong {
+  color: rgba(250, 246, 238, 0.92);
+  font-size: 1.05rem;
+  line-height: 1.1;
+  font-weight: 500;
+}
+
+.customer-print-ar-state p {
+  margin: 0;
+  max-width: 32ch;
+  color: rgba(247, 241, 231, 0.52);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.customer-print-ar-state--ready {
+  border-top-color: rgba(165, 205, 128, 0.34);
+}
+
+.customer-print-ar-state--partial {
+  border-top-color: rgba(221, 192, 132, 0.28);
+}
+
+.customer-print-ar-state--unavailable {
+  border-top-color: rgba(190, 132, 108, 0.28);
+}
+
+.customer-print-ar-note {
+  margin: -0.3rem 0 0;
+  max-width: 34ch;
+  color: rgba(247, 241, 231, 0.44);
+  line-height: 1.58;
+  font-size: 0.78rem;
+}
+
+.customer-print-ar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem 1.1rem;
+  align-items: center;
+  padding-top: 0.1rem;
+}
+
+.customer-print-ar-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.1rem;
+  padding: 0.45rem 0;
+  border: 0;
+  border-bottom: 1px solid rgba(247, 241, 231, 0.2);
+  border-radius: 0;
+  background: transparent;
+  color: rgba(247, 241, 231, 0.58);
+  text-decoration: none;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  transition:
+    color 240ms ease,
+    border-color 240ms ease,
+    transform 240ms ease;
+}
+
+.customer-print-ar-btn:hover,
+.customer-print-ar-btn:focus-visible {
+  color: rgba(250, 246, 238, 0.95);
+  border-color: rgba(247, 241, 231, 0.62);
+  transform: translate3d(0, -1px, 0);
+  outline: none;
+}
+
+.customer-print-ar-btn--primary {
+  color: rgba(250, 246, 238, 0.86);
+  border-color: rgba(165, 205, 128, 0.42);
+}
+
+.customer-print-ar-btn--secondary {
+  border-color: rgba(221, 192, 132, 0.34);
+}
+
+.customer-print-ar-btn--ghost {
+  color: rgba(247, 241, 231, 0.46);
+}
+
+.customer-print-ar-btn--full {
+  justify-self: start;
+  width: auto;
+  margin-top: 0;
+}
+
+.customer-print-ar-header .customer-print-ar-btn {
+  min-width: 4.8rem;
+}
+
+.customer-print-ar-btn[disabled],
+.customer-print-ar-btn[aria-disabled="true"] {
+  opacity: 0.34;
+  cursor: default;
+  pointer-events: none;
+}
+
+.interactive-print-preview-3d,
+.print-ar-preview3d,
+.print-ar-host-scene,
+.print-ar-host-scene--state {
+  width: 100%;
+  height: 100%;
+  min-height: calc(100svh - clamp(9.5rem, 16svh, 13rem));
+  position: relative;
+}
+
+.interactive-print-preview-3d,
+.print-ar-preview3d {
+  border-radius: 0;
+}
+
+.interactive-print-preview-3d canvas,
+.print-ar-host-scene canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.customer-print-ar-canvas .atmospheric-backdrop {
+  background:
+    radial-gradient(ellipse at 50% 52%, rgba(93, 130, 70, 0.2), transparent 55%),
+    radial-gradient(ellipse at 50% 86%, rgba(0, 0, 0, 0.74), transparent 72%),
+    linear-gradient(180deg, rgba(10, 14, 12, 0.72), rgba(2, 4, 4, 0.94));
+}
+
+.customer-print-ar-canvas .atmospheric-backdrop__field {
+  opacity: 0.54;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(144, 178, 110, 0.18), transparent 64%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.18));
+}
+
+.customer-print-ar-canvas .atmospheric-backdrop__drift {
+  opacity: 0.2;
+  background:
+    radial-gradient(ellipse at 34% 34%, rgba(82, 116, 62, 0.36), transparent 52%),
+    radial-gradient(ellipse at 68% 62%, rgba(111, 78, 45, 0.26), transparent 48%);
+}
+
+.customer-print-ar-canvas .atmospheric-backdrop__vignette {
+  background:
+    radial-gradient(ellipse at 50% 48%, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.38) 72%, rgba(0, 0, 0, 0.92) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 18%);
+}
+
+.print-ar-host-note {
+  position: absolute;
+  left: clamp(1rem, 2vw, 2rem);
+  bottom: clamp(1rem, 2vw, 2rem);
+  max-width: 34ch;
+  border: 0;
+  border-left: 1px solid rgba(247, 241, 231, 0.24);
+  border-radius: 0;
+  padding: 0.15rem 0 0.15rem 0.8rem;
+  background: transparent;
+  color: rgba(247, 241, 231, 0.66);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.print-ar-host-note--error {
+  border-color: rgba(190, 132, 108, 0.42);
+  color: rgba(255, 219, 205, 0.86);
+}
+
+@media (max-width: 1100px) {
+  .customer-print-ar-header h2 {
+    font-size: 2.7rem;
+  }
+
+  .customer-print-ar-body {
+    grid-template-columns: minmax(0, 1fr) minmax(17rem, 20rem);
+    gap: 2rem;
+  }
+}
+
+@media (max-width: 860px) {
+  .customer-print-ar-panel {
+    min-height: 100svh;
+    overflow: auto;
+    padding: 0 1.15rem 1.2rem;
+  }
+
+  .customer-print-ar-header {
+    padding-top: 1.35rem;
+  }
+
+  .customer-print-ar-header h2 {
+    font-size: 2.25rem;
+  }
+
+  .customer-print-ar-body {
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+    padding-top: 1rem;
+  }
+
+  .customer-print-ar-body::before {
+    top: 0.7rem;
+  }
+
+  .customer-print-ar-canvas,
+  .interactive-print-preview-3d,
+  .print-ar-preview3d,
+  .print-ar-host-scene,
+  .print-ar-host-scene--state {
+    min-height: 58svh;
+  }
+
+  .customer-print-ar-summary {
+    align-self: stretch;
+    padding: 1rem 0 0;
+    border-left: 0;
+    border-top: 1px solid rgba(247, 241, 231, 0.12);
+    background: transparent;
+  }
+
+  .customer-print-ar-summary::before {
+    top: -1px;
+    left: 0;
+    width: 34%;
+    height: 1px;
+  }
+}
+
+@media (max-width: 560px) {
+  .customer-print-ar-header {
+    gap: 0.8rem;
+  }
+
+  .customer-print-ar-header h2 {
+    font-size: 1.9rem;
+  }
+
+  .customer-print-ar-frame-picker__controls {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+
+  .customer-print-ar-summary-row {
+    grid-template-columns: 1fr;
+    gap: 0.32rem;
+  }
+
+  .customer-print-ar-summary-row strong {
+    justify-self: start;
+    text-align: left;
+  }
+
+  .customer-print-ar-actions {
+    display: grid;
+    align-items: stretch;
+  }
+
+  .customer-print-ar-btn {
+    justify-content: flex-start;
+  }
+}

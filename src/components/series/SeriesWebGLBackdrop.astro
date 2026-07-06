@@ -1,0 +1,337 @@
+<script is:inline>
+  (() => {
+    const SCRIPT_SRC = "/scripts/kool-berk-background.js";
+    const HOST_SELECTOR = "[data-series-webgl-backdrop]";
+    const ROOT_SELECTOR = "[data-series-constellation]";
+
+    const toneTokens = {
+      earth: {
+        palette: { bg: "#071008", deep: "#10170d", accent: "#a6b86e" },
+        atmosphere: { intensity: 0.54, haze: 0.5, beam: 0.26, tint: 0.16, drift: 0.32 },
+        reducedAtmosphere: { intensity: 0.42, haze: 0.36, beam: 0.18, tint: 0.08, drift: 0.02 },
+      },
+      green: {
+        palette: { bg: "#071207", deep: "#10200c", accent: "#91bd5f" },
+        atmosphere: { intensity: 0.56, haze: 0.52, beam: 0.25, tint: 0.17, drift: 0.34 },
+        reducedAtmosphere: { intensity: 0.42, haze: 0.36, beam: 0.17, tint: 0.08, drift: 0.02 },
+      },
+      blue: {
+        palette: { bg: "#060b0f", deep: "#0a1218", accent: "#6a9bab" },
+        atmosphere: { intensity: 0.5, haze: 0.52, beam: 0.28, tint: 0.13, drift: 0.3 },
+        reducedAtmosphere: { intensity: 0.38, haze: 0.38, beam: 0.18, tint: 0.07, drift: 0.02 },
+      },
+      ash: {
+        palette: { bg: "#0a0806", deep: "#17120d", accent: "#b9a276" },
+        atmosphere: { intensity: 0.5, haze: 0.48, beam: 0.22, tint: 0.13, drift: 0.28 },
+        reducedAtmosphere: { intensity: 0.36, haze: 0.32, beam: 0.15, tint: 0.06, drift: 0.02 },
+      },
+      red: {
+        palette: { bg: "#100604", deep: "#1d0a06", accent: "#c06a4f" },
+        atmosphere: { intensity: 0.54, haze: 0.46, beam: 0.24, tint: 0.16, drift: 0.3 },
+        reducedAtmosphere: { intensity: 0.38, haze: 0.3, beam: 0.15, tint: 0.06, drift: 0.02 },
+      },
+      neutral: {
+        palette: { bg: "#080b08", deep: "#11140f", accent: "#aab17d" },
+        atmosphere: { intensity: 0.5, haze: 0.46, beam: 0.22, tint: 0.12, drift: 0.26 },
+        reducedAtmosphere: { intensity: 0.36, haze: 0.3, beam: 0.14, tint: 0.06, drift: 0.02 },
+      },
+    };
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    const loadRuntime = () => {
+      if (window.KoolBerkWebGLBackground) return Promise.resolve();
+
+      const existing = document.querySelector(`script[src="${SCRIPT_SRC}"]`);
+
+      if (existing) {
+        return new Promise((resolve, reject) => {
+          existing.addEventListener("load", resolve, { once: true });
+          existing.addEventListener("error", reject, { once: true });
+        });
+      }
+
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = SCRIPT_SRC;
+        script.async = true;
+        script.dataset.seriesWebglRuntime = "true";
+        script.addEventListener("load", resolve, { once: true });
+        script.addEventListener("error", reject, { once: true });
+        document.head.appendChild(script);
+      });
+    };
+
+    const resolveTone = (root) => {
+      const tone = root.getAttribute("data-active-tone") || "earth";
+      return toneTokens[tone] || toneTokens.earth;
+    };
+
+    const syncHostState = (host, root) => {
+      const computed = window.getComputedStyle(root);
+      const tone = root.getAttribute("data-active-tone") || "earth";
+      const cssVars = ["--series-accent", "--series-glow-x", "--series-glow-y", "--series-pan-x", "--series-pan-y"];
+
+      host.dataset.activeTone = tone;
+
+      cssVars.forEach((name) => {
+        const value = computed.getPropertyValue(name).trim();
+
+        if (value) {
+          host.style.setProperty(name, value);
+        }
+      });
+    };
+
+    const mountBackdrop = () => {
+      const host = document.querySelector(HOST_SELECTOR);
+      const root = document.querySelector(ROOT_SELECTOR);
+
+      if (!host || !root) {
+        return false;
+      }
+
+      if (host.dataset.seriesWebglMounted === "true" || host.dataset.seriesWebglMounting === "true") {
+        return true;
+      }
+
+      if (host.dataset.seriesWebglFailed === "true") {
+        return true;
+      }
+
+      host.dataset.seriesWebglMounting = "true";
+      syncHostState(host, root);
+
+      loadRuntime()
+        .then(() => {
+          if (!window.KoolBerkWebGLBackground || !document.body.contains(host)) return;
+
+          const compactViewport = window.innerWidth < 760;
+          const token = resolveTone(root);
+          let lastPanX = 0;
+          let lastPanY = 0;
+          let motionEnergy = 0;
+          let toneToken = token;
+          let breatheRaf = 0;
+          const background = window.KoolBerkWebGLBackground.mount(host, {
+            preset: {
+              label: "ARTIST STAGE / SERIES",
+              palette: token.palette,
+              atmosphere: reducedMotion.matches || compactViewport ? token.reducedAtmosphere : token.atmosphere,
+            },
+            maxDpr: compactViewport ? 1 : 1.35,
+            pointer: false,
+            reducedMotion: reducedMotion.matches || compactViewport,
+            addHostClass: false,
+            manageContainer: false,
+          });
+
+          const readPan = () => ({
+            x: Number.parseFloat(root.style.getPropertyValue("--series-pan-x")) || 0,
+            y: Number.parseFloat(root.style.getPropertyValue("--series-pan-y")) || 0,
+          });
+
+          const applyAtmosphere = (energy = motionEnergy) => {
+            const shouldReduce = reducedMotion.matches || window.innerWidth < 760;
+            const base = shouldReduce ? toneToken.reducedAtmosphere : toneToken.atmosphere;
+
+            background.setAtmosphere({
+              intensity: Math.min(0.82, base.intensity + energy * 0.18),
+              haze: Math.min(0.78, base.haze + energy * 0.16),
+              beam: Math.min(0.62, base.beam + energy * 0.1),
+              tint: Math.min(0.28, base.tint + energy * 0.05),
+              drift: shouldReduce ? base.drift : Math.min(0.58, base.drift + energy * 0.22),
+            });
+            background.setReducedMotion(shouldReduce);
+          };
+
+          const applyTone = () => {
+            syncHostState(host, root);
+            toneToken = resolveTone(root);
+            background.setPalette(toneToken.palette);
+            applyAtmosphere();
+          };
+
+          const breathe = () => {
+            motionEnergy *= 0.92;
+            host.style.setProperty("--series-motion-energy", motionEnergy.toFixed(3));
+            applyAtmosphere();
+
+            if (motionEnergy > 0.01) {
+              breatheRaf = window.requestAnimationFrame(breathe);
+            } else {
+              breatheRaf = 0;
+            }
+          };
+
+          const requestBreathe = () => {
+            if (!breatheRaf) {
+              breatheRaf = window.requestAnimationFrame(breathe);
+            }
+          };
+
+          const observer = new MutationObserver((mutations) => {
+            syncHostState(host, root);
+
+            const pan = readPan();
+            const distance = Math.hypot(pan.x - lastPanX, pan.y - lastPanY);
+            lastPanX = pan.x;
+            lastPanY = pan.y;
+            motionEnergy = Math.max(motionEnergy * 0.72, Math.min(distance / 120, 1));
+            host.style.setProperty("--series-motion-energy", motionEnergy.toFixed(3));
+            applyAtmosphere();
+            requestBreathe();
+
+            if (mutations.some((mutation) => mutation.attributeName === "data-active-tone")) {
+              applyTone();
+            }
+          });
+          observer.observe(root, { attributes: true, attributeFilter: ["data-active-tone", "style"] });
+
+          const handleMotionChange = () => applyTone();
+          const handlePageHide = () => {
+            observer.disconnect();
+            reducedMotion.removeEventListener?.("change", handleMotionChange);
+            if (breatheRaf) window.cancelAnimationFrame(breatheRaf);
+            background.destroy();
+            delete host.dataset.seriesWebglMounted;
+          };
+
+          reducedMotion.addEventListener?.("change", handleMotionChange);
+          window.addEventListener("pagehide", handlePageHide, { once: true });
+
+          host.dataset.seriesWebglMounted = "true";
+          root.dataset.seriesWebglLive = "true";
+          delete host.dataset.seriesWebglMounting;
+          applyTone();
+        })
+        .catch((error) => {
+          host.dataset.seriesWebglFailed = "true";
+          delete host.dataset.seriesWebglMounting;
+          console.warn("Series WebGL backdrop could not mount.", error);
+        });
+
+      return true;
+    };
+
+    const start = () => {
+      if (mountBackdrop()) return;
+
+      const observer = new MutationObserver(() => {
+        if (mountBackdrop()) observer.disconnect();
+      });
+
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+      window.setTimeout(() => observer.disconnect(), 8000);
+    };
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", start, { once: true });
+    } else {
+      start();
+    }
+  })();
+</script>
+
+<style is:global>
+  .series-webgl-backdrop {
+    --series-accent: rgba(167, 190, 117, 0.44);
+    --series-glow-x: 50%;
+    --series-glow-y: 44%;
+    --series-pan-x: 0px;
+    --series-pan-y: 0px;
+    --series-motion-energy: 0;
+    position: fixed;
+    inset: var(--site-header-height, 3.25rem) 0 0;
+    z-index: 1;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0.68;
+    filter: saturate(0.7) contrast(1.02) brightness(0.9);
+    mix-blend-mode: normal;
+    background:
+      radial-gradient(ellipse at 26% 38%, rgba(166, 184, 110, 0.22), transparent 32rem),
+      radial-gradient(ellipse at 68% 54%, rgba(76, 98, 56, 0.28), transparent 36rem),
+      linear-gradient(112deg, rgba(3, 7, 5, 0.72), rgba(16, 28, 14, 0.6) 48%, rgba(3, 7, 5, 0.86));
+    background-size: 118% 118%, 124% 124%, 100% 100%;
+    transform: translate3d(calc(var(--series-pan-x) * -0.012), calc(var(--series-pan-y) * -0.012), 0);
+    animation: seriesWebglFallbackDrift 28s ease-in-out infinite alternate;
+    transition:
+      opacity 900ms cubic-bezier(0.16, 1, 0.3, 1),
+      filter 900ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .series-webgl-backdrop::before,
+  .series-webgl-backdrop::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .series-webgl-backdrop::before {
+    background:
+      radial-gradient(ellipse at 50% 48%, rgba(12, 28, 12, 0), rgba(3, 6, 5, 0.1) 68%, rgba(3, 6, 5, 0.58) 100%),
+      linear-gradient(90deg, rgba(4, 7, 6, 0.42), rgba(4, 7, 6, 0.02) 42%, rgba(4, 7, 6, 0.32) 100%);
+  }
+
+  .series-webgl-backdrop::after {
+    background:
+      radial-gradient(circle at var(--series-glow-x) var(--series-glow-y), var(--series-accent), transparent 34rem),
+      linear-gradient(180deg, rgba(2, 4, 4, 0.18), rgba(2, 4, 4, 0.68));
+    opacity: calc(0.18 + (var(--series-motion-energy) * 0.14));
+    mix-blend-mode: soft-light;
+  }
+
+  .series-webgl-backdrop canvas {
+    opacity: 1;
+    z-index: 1 !important;
+  }
+
+  .series-webgl-backdrop[data-active-tone="blue"] {
+    opacity: 0.62;
+    filter: saturate(0.62) contrast(1) brightness(0.84);
+  }
+
+  .series-webgl-backdrop[data-active-tone="red"] {
+    opacity: 0.66;
+    filter: saturate(0.76) contrast(1.02) brightness(0.88);
+  }
+
+  .series-webgl-backdrop[data-active-tone="ash"] {
+    opacity: 0.62;
+    filter: saturate(0.54) contrast(1) brightness(0.86);
+  }
+
+  @media (max-width: 900px) {
+    .series-webgl-backdrop {
+      opacity: 0.36;
+      filter: saturate(0.62) contrast(0.98) brightness(0.84);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .series-webgl-backdrop {
+      opacity: 0.28;
+      transform: none;
+      animation: none;
+    }
+  }
+
+  @keyframes seriesWebglFallbackDrift {
+    0% {
+      background-position:
+        44% 48%,
+        55% 52%,
+        0 0;
+    }
+
+    100% {
+      background-position:
+        54% 42%,
+        46% 58%,
+        0 0;
+    }
+  }
+</style>

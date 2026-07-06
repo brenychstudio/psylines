@@ -1,0 +1,123 @@
+---
+import type { CommerceOption } from "../../data/commerce/catalog";
+import type { WorkItem } from "../../data/site/types";
+import { getResponsivePublicImage } from "../../lib/assets/responsiveImage";
+
+type Props = {
+  work: WorkItem;
+  coverSrc: string | null;
+  defaultCommerceOption: CommerceOption | null;
+  previewDimensions?: string;
+  previewPriceLabel?: string;
+  previewRouteLabel?: string;
+  previewKind?: "original" | "print";
+  previewSizeKey?: string;
+};
+
+const {
+  work,
+  coverSrc,
+  defaultCommerceOption,
+  previewDimensions,
+  previewPriceLabel,
+  previewRouteLabel,
+  previewKind,
+  previewSizeKey,
+} = Astro.props as Props;
+const coverImage = getResponsivePublicImage(coverSrc, { defaultWidth: 960 });
+
+const routeLabel =
+  previewRouteLabel ??
+  (defaultCommerceOption?.type === "original" ? "Original work" : "Edition print");
+
+const inspectOrientation =
+  work.aspect === "landscape" ? "landscape" : work.aspect === "square" ? "square" : "portrait";
+
+const defaultPreviewKind =
+  previewKind ?? (defaultCommerceOption?.type === "original" ? "original" : "print");
+const defaultPreviewSizeKey = previewSizeKey ?? defaultCommerceOption?.sizeKey ?? "original";
+const previewDimensionsLabel = previewDimensions ?? defaultCommerceOption?.dimensions ?? work.dimensions;
+const previewPrice = previewPriceLabel ?? (defaultCommerceOption ? `EUR ${defaultCommerceOption.priceEUR}` : "Shared on request");
+---
+
+<section
+  class={`inspect-field-stage aspect-${work.aspect}`}
+  data-interior-preview-panel
+  data-inspect-spatial-layer
+  data-inspect-orientation={inspectOrientation}
+  data-preview-kind={defaultPreviewKind}
+  data-preview-size-key={defaultPreviewSizeKey}
+  hidden
+  aria-label="Interior scale preview"
+>
+  <div class="inspect-field-veil" aria-hidden="true"></div>
+
+  <div class="inspect-field-object" data-inspect-shell data-inspect-focus-target>
+    <div class="inspect-field-heading">
+      <p class="inspect-field-kicker">Interior scale</p>
+      <h3 class="inspect-field-title">Interior scale preview</h3>
+    </div>
+
+    <div class="inspect-artwork-stage" data-inspect-wall-field>
+      <div class="inspect-field-line" aria-hidden="true"></div>
+
+      <div class={`inspect-artwork-object aspect-${work.aspect}`} data-inspect-artwork-object>
+        {coverSrc ? (
+          <img
+            src={coverImage.src}
+            srcset={coverImage.srcset}
+            sizes="(min-width: 980px) 32vw, 80vw"
+            alt={`${work.title} interior scale preview`}
+            loading="eager"
+            decoding="async"
+            data-interior-preview-image
+          />
+        ) : null}
+      </div>
+    </div>
+  </div>
+
+  <aside class="inspect-floating-context">
+    <p class="inspect-context-copy">
+      A scale reference for the selected collector route. Final framing, wall light, and room context may vary.
+    </p>
+
+    <div class="inspect-meta-grid">
+      <div>
+        <span>Format</span>
+        <strong data-interior-preview-size>
+          {previewDimensionsLabel}
+        </strong>
+      </div>
+
+      <div>
+        <span>Price</span>
+        <strong data-interior-preview-price>
+          {previewPrice}
+        </strong>
+      </div>
+
+      <div>
+        <span>Route</span>
+        <strong data-interior-preview-route>{routeLabel}</strong>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="inspect-field-return"
+      data-interior-preview-close
+    >
+      Return to collector route
+    </button>
+  </aside>
+
+  <button
+    type="button"
+    class="inspect-field-close"
+    data-interior-preview-close
+    aria-label="Close preview"
+  >
+    &times;
+  </button>
+</section>

@@ -1,0 +1,816 @@
+---
+import type { PrintProduct } from "../../data/site/types";
+import { getResponsivePublicImage } from "../../lib/assets/responsiveImage";
+
+type Props = {
+  title: string;
+  year: number;
+  cycleTitle: string;
+  statement: string;
+  coverSrc: string | null;
+  routeType: "edition" | "inquiry";
+  print: PrintProduct | null;
+};
+
+const {
+  title,
+  year,
+  cycleTitle,
+  statement,
+  coverSrc,
+  routeType,
+  print,
+} = Astro.props as Props;
+
+const coverImage = getResponsivePublicImage(coverSrc, { defaultWidth: 960 });
+
+const routeLabel =
+  routeType === "edition" ? "Edition available" : "Original inquiry";
+
+const mainCtaLabel =
+  routeType === "edition" ? "Reserve edition" : "Request acquisition";
+
+const contextCopy =
+  routeType === "edition"
+    ? "This collector route gives a quieter acquisition layer for the work, including edition structure, material details, dispatch timing, and future AR preview access."
+    : "This work currently moves through direct collector inquiry rather than a dedicated edition route. Use this layer to express interest and open the acquisition conversation.";
+---
+
+<div class="collector-sheet-root" id="collector-sheet-root" aria-hidden="true">
+  <button
+    type="button"
+    class="collector-sheet-backdrop"
+    data-close-collector
+    aria-label="Close collector sheet"
+  ></button>
+
+  <aside
+    class="collector-sheet-panel"
+    id="collector-sheet-panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="collector-sheet-title"
+  >
+    <div class="collector-sheet-shell">
+      <header class="collector-sheet-header">
+        <div class="collector-sheet-header-copy">
+          <p class="collector-sheet-kicker">collector access layer</p>
+          <h2 class="collector-sheet-title" id="collector-sheet-title">{title}</h2>
+          <p class="collector-sheet-route">{routeLabel}</p>
+        </div>
+
+        <button
+          type="button"
+          class="collector-sheet-close"
+          data-close-collector
+          aria-label="Close collector sheet"
+        >
+          <span>Close</span>
+        </button>
+      </header>
+
+      <div class="collector-sheet-body">
+        <section class="collector-sheet-visual-column">
+          <div class="collector-sheet-preview-stage">
+            <div class="collector-sheet-preview-wrap">
+              {coverSrc ? (
+                <>
+                  <img
+                    src={coverImage.src}
+                    srcset={coverImage.srcset}
+                    sizes="(min-width: 980px) 34vw, 82vw"
+                    alt={`${title} artwork preview`}
+                    class="collector-sheet-preview-image"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div class="collector-sheet-preview-frame"></div>
+                </>
+              ) : (
+                <div class="collector-sheet-preview-surface"></div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section class="collector-sheet-info-column">
+          <div class="collector-info-card collector-info-top">
+            <div class="collector-identity-grid">
+              <div class="collector-identity-item">
+                <span class="collector-meta-label">cycle</span>
+                <span class="collector-meta-value">{cycleTitle}</span>
+              </div>
+
+              <div class="collector-identity-item">
+                <span class="collector-meta-label">year</span>
+                <span class="collector-meta-value">{year}</span>
+              </div>
+
+              <div class="collector-identity-item">
+                <span class="collector-meta-label">route</span>
+                <span class="collector-meta-value">{routeLabel}</span>
+              </div>
+            </div>
+          </div>
+
+          {routeType === "edition" && print ? (
+            <>
+              <div class="collector-info-card">
+                <p class="collector-section-label">collector context</p>
+                <p class="collector-sheet-copy">{contextCopy}</p>
+                <p class="collector-sheet-copy is-muted">{statement}</p>
+              </div>
+
+              <div class="collector-info-card">
+                <p class="collector-section-label">edition structure</p>
+
+                <div class="collector-spec-grid">
+                  <div class="collector-spec-row">
+                    <span class="collector-meta-label">edition</span>
+                    <span class="collector-meta-value">{print.edition}</span>
+                  </div>
+
+                  <div class="collector-spec-row">
+                    <span class="collector-meta-label">paper</span>
+                    <span class="collector-meta-value">{print.paper}</span>
+                  </div>
+
+                  <div class="collector-spec-row">
+                    <span class="collector-meta-label">certificate</span>
+                    <span class="collector-meta-value">{print.certificate}</span>
+                  </div>
+
+                  <div class="collector-spec-row">
+                    <span class="collector-meta-label">lead time</span>
+                    <span class="collector-meta-value">{print.leadTime}</span>
+                  </div>
+
+                  <div class="collector-spec-row">
+                    <span class="collector-meta-label">shipping</span>
+                    <span class="collector-meta-value">{print.shippingNote}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="collector-info-card">
+                <p class="collector-section-label">size / format</p>
+
+                <div class="collector-size-picker" data-size-picker>
+                  <div class="collector-size-tabs">
+                    {print.options.map((option, index) => (
+                      <button
+                        type="button"
+                        class={`collector-size-tab ${index === 0 ? "is-selected" : ""}`}
+                        data-size-label={option.label}
+                        data-size-dimensions={option.dimensions}
+                        data-size-price={`EUR ${option.priceEUR}`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div class="collector-size-display">
+                    <div class="collector-size-display-main">
+                      <span class="collector-meta-label">selected format</span>
+                      <span class="collector-size-display-value" data-size-dimensions-display>
+                        {print.options[0]?.dimensions}
+                      </span>
+                    </div>
+
+                    <div class="collector-size-display-price-wrap">
+                      <span class="collector-meta-label">price</span>
+                      <span class="collector-size-display-value is-price" data-size-price-display>
+                        EUR {print.options[0]?.priceEUR}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div class="collector-info-card">
+                <p class="collector-section-label">collector context</p>
+                <p class="collector-sheet-copy">{contextCopy}</p>
+                <p class="collector-sheet-copy is-muted">{statement}</p>
+              </div>
+
+              <div class="collector-info-card">
+                <p class="collector-section-label">inquiry route</p>
+
+                <div class="collector-spec-grid">
+                  <div class="collector-spec-row">
+                    <span class="collector-meta-label">availability</span>
+                    <span class="collector-meta-value">Shared on request</span>
+                  </div>
+
+                  <div class="collector-spec-row">
+                    <span class="collector-meta-label">format</span>
+                    <span class="collector-meta-value">Original work / collector discussion</span>
+                  </div>
+
+                  <div class="collector-spec-row">
+                    <span class="collector-meta-label">presentation</span>
+                    <span class="collector-meta-value">Framing and placement can be discussed through inquiry</span>
+                  </div>
+
+                  <div class="collector-spec-row">
+                    <span class="collector-meta-label">next step</span>
+                    <span class="collector-meta-value">Open acquisition conversation with the studio</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          <div class="collector-info-card collector-info-bottom">
+            <p class="collector-section-label">next step</p>
+
+            <div class="collector-sheet-actions is-primary">
+              <a href="/immersive" class="collector-ghost-btn">Preview in interior</a>
+              <a href="/contact" class="collector-primary-btn">
+                {routeType === "edition" ? "Buy edition" : "Buy / inquire"}
+              </a>
+              <button type="button" class="collector-ghost-btn" data-close-collector>Back to artwork</button>
+            </div>
+
+            <p class="collector-sheet-note">
+              AR as a confidence tool for placement and scale.
+            </p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script is:inline>
+  const root = document.getElementById("collector-sheet-root");
+  const panel = document.getElementById("collector-sheet-panel");
+  const openButtons = Array.from(document.querySelectorAll("[data-open-collector]"));
+  const closeButtons = Array.from(document.querySelectorAll("[data-close-collector]"));
+  const collectorParam = "collector";
+
+  function getUrl() {
+    return new URL(window.location.href);
+  }
+
+  function isCollectorOpen() {
+    const url = getUrl();
+    return url.searchParams.get(collectorParam) === "1";
+  }
+
+  function setCollectorState(open, push = true) {
+    const url = getUrl();
+
+    if (open) {
+      url.searchParams.set(collectorParam, "1");
+    } else {
+      url.searchParams.delete(collectorParam);
+    }
+
+    if (push) {
+      window.history.pushState({}, "", url);
+    } else {
+      window.history.replaceState({}, "", url);
+    }
+
+    syncCollectorFromUrl();
+  }
+
+  function syncCollectorFromUrl() {
+    const open = isCollectorOpen();
+
+    if (!root || !panel) return;
+
+    root.classList.toggle("is-open", open);
+    root.setAttribute("aria-hidden", open ? "false" : "true");
+    document.body.classList.toggle("collector-sheet-open", open);
+  }
+
+  openButtons.forEach((button) => {
+    button.addEventListener("click", () => setCollectorState(true, true));
+  });
+
+  closeButtons.forEach((button) => {
+    button.addEventListener("click", () => setCollectorState(false, true));
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && isCollectorOpen()) {
+      setCollectorState(false, true);
+    }
+  });
+
+  window.addEventListener("popstate", syncCollectorFromUrl);
+
+  const sizePickers = Array.from(document.querySelectorAll("[data-size-picker]"));
+
+  sizePickers.forEach((picker) => {
+    const tabs = Array.from(picker.querySelectorAll(".collector-size-tab"));
+    const dimensionsDisplay = picker.querySelector("[data-size-dimensions-display]");
+    const priceDisplay = picker.querySelector("[data-size-price-display]");
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        tabs.forEach((entry) => entry.classList.remove("is-selected"));
+        tab.classList.add("is-selected");
+
+        if (dimensionsDisplay) {
+          dimensionsDisplay.textContent = tab.dataset.sizeDimensions ?? "";
+        }
+
+        if (priceDisplay) {
+          priceDisplay.textContent = tab.dataset.sizePrice ?? "";
+        }
+      });
+    });
+  });
+
+  syncCollectorFromUrl();
+</script>
+
+<style>
+  :global(body.collector-sheet-open) {
+    overflow: hidden;
+  }
+
+  .collector-sheet-root {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    pointer-events: none;
+  }
+
+  .collector-sheet-root.is-open {
+    pointer-events: auto;
+  }
+
+  .collector-sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    padding: 0;
+    background:
+      radial-gradient(circle at center, rgba(10, 12, 18, 0.18), rgba(3, 5, 8, 0.86)),
+      linear-gradient(180deg, rgba(3, 5, 8, 0.46), rgba(3, 5, 8, 0.9));
+    backdrop-filter: none;
+    opacity: 0;
+    transition: opacity 220ms ease;
+    cursor: pointer;
+  }
+
+  .collector-sheet-root.is-open .collector-sheet-backdrop {
+    opacity: 1;
+  }
+
+  .collector-sheet-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: min(70rem, calc(100vw - 4rem));
+    height: min(56rem, calc(100vh - 0.8rem));
+    background:
+      linear-gradient(180deg, rgba(12, 15, 21, 0.96), rgba(7, 9, 14, 0.99));
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow:
+      0 28px 80px rgba(0, 0, 0, 0.46),
+      0 4px 24px rgba(0, 0, 0, 0.24),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    backdrop-filter: none;
+    transform: translate(-50%, -48%) scale(0.985);
+    opacity: 0;
+    transition:
+      transform 240ms ease,
+      opacity 240ms ease;
+    overflow: hidden;
+  }
+
+  .collector-sheet-root.is-open .collector-sheet-panel {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+
+  .collector-sheet-shell {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100%;
+    padding: 0.72rem 0.78rem 0.78rem;
+  }
+
+  .collector-sheet-header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 0.65rem;
+    padding-bottom: 0.38rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+  }
+
+  .collector-sheet-kicker,
+  .collector-section-label,
+  .collector-meta-label {
+    margin: 0;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(244, 241, 234, 0.34);
+  }
+
+  .collector-sheet-title {
+    margin: 0.08rem 0 0;
+    max-width: none;
+    font-size: clamp(1.65rem, 2vw, 2.2rem);
+    line-height: 0.94;
+    letter-spacing: -0.04em;
+    color: rgba(244, 241, 234, 0.96);
+    white-space: nowrap;
+  }
+
+  .collector-sheet-route {
+    margin: 0.14rem 0 0;
+    font-size: 0.76rem;
+    color: rgba(244, 241, 234, 0.56);
+  }
+
+  .collector-sheet-close {
+    appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.055);
+    background: rgba(255, 255, 255, 0.016);
+    color: rgba(244, 241, 234, 0.66);
+    border-radius: 999px;
+    padding: 0.42rem 0.62rem;
+    font: inherit;
+    cursor: pointer;
+    transition:
+      border-color 180ms ease,
+      background 180ms ease,
+      color 180ms ease;
+  }
+
+  .collector-sheet-close:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.038);
+    color: rgba(244, 241, 234, 0.88);
+  }
+
+  .collector-sheet-body {
+    display: grid;
+    grid-template-columns: minmax(34rem, 1.18fr) minmax(24rem, 0.78fr);
+    gap: 0.82rem;
+    min-height: 0;
+    padding-top: 0.5rem;
+  }
+
+  .collector-sheet-visual-column {
+    display: block;
+    min-height: 0;
+  }
+
+  .collector-sheet-preview-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    height: 100%;
+    padding: 0;
+    background:
+      radial-gradient(circle at 28% 20%, rgba(202, 191, 255, 0.022), transparent 28%),
+      linear-gradient(180deg, rgba(255,255,255,0.004), rgba(255,255,255,0.001));
+  }
+
+  .collector-sheet-preview-wrap {
+    position: relative;
+    width: min(100%, 30rem);
+    height: 100%;
+    max-height: 100%;
+    aspect-ratio: 4 / 5;
+  }
+
+  .collector-sheet-preview-image,
+  .collector-sheet-preview-surface {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center center;
+  }
+
+  .collector-sheet-preview-frame {
+    position: absolute;
+    inset: 0.16rem;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    pointer-events: none;
+  }
+
+  .collector-sheet-copy {
+    margin: 0.24rem 0 0;
+    max-width: 30rem;
+    color: rgba(244, 241, 234, 0.62);
+    line-height: 1.36;
+    font-size: 0.86rem;
+  }
+
+  .collector-sheet-copy.is-muted {
+    color: rgba(244, 241, 234, 0.44);
+  }
+
+  .collector-sheet-info-column {
+    display: grid;
+    grid-template-rows: auto auto auto 1fr;
+    gap: 0.46rem;
+    min-height: 0;
+  }
+
+  .collector-info-card {
+    border: 1px solid rgba(255, 255, 255, 0.035);
+    background: rgba(255, 255, 255, 0.008);
+    padding: 0.68rem 0.72rem;
+  }
+
+  .collector-info-bottom {
+    display: grid;
+    gap: 0.5rem;
+    align-content: end;
+  }
+
+  .collector-identity-grid {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .collector-identity-item,
+  .collector-spec-row {
+    display: grid;
+    grid-template-columns: 4.2rem minmax(0, 1fr);
+    gap: 0.48rem;
+    align-items: start;
+  }
+
+  .collector-meta-value {
+    color: rgba(244, 241, 234, 0.86);
+    line-height: 1.38;
+    font-size: 0.9rem;
+  }
+
+  .collector-spec-grid {
+    display: grid;
+    gap: 0.3rem;
+    margin-top: 0.38rem;
+  }
+
+  .collector-size-picker {
+    display: grid;
+    gap: 0.42rem;
+    margin-top: 0.38rem;
+  }
+
+  .collector-size-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.34rem;
+  }
+
+  .collector-size-tab {
+    appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.048);
+    background: rgba(255, 255, 255, 0.012);
+    color: rgba(244, 241, 234, 0.72);
+    border-radius: 999px;
+    padding: 0.42rem 0.66rem;
+    font: inherit;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition:
+      border-color 180ms ease,
+      background 180ms ease,
+      color 180ms ease;
+  }
+
+  .collector-size-tab:hover {
+    border-color: rgba(255, 255, 255, 0.09);
+    color: rgba(244, 241, 234, 0.88);
+  }
+
+  .collector-size-tab.is-selected {
+    border-color: rgba(255, 255, 255, 0.085);
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(244, 241, 234, 0.92);
+  }
+
+  .collector-size-display {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-top: 0.16rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.028);
+  }
+
+  .collector-size-display-main,
+  .collector-size-display-price-wrap {
+    display: grid;
+    gap: 0.16rem;
+  }
+
+  .collector-size-display-value {
+    color: rgba(244, 241, 234, 0.74);
+    font-size: 0.86rem;
+  }
+
+  .collector-size-display-value.is-price {
+    color: rgba(244, 241, 234, 0.97);
+    font-size: 1.06rem;
+    letter-spacing: -0.025em;
+  }
+
+  .collector-actions-block {
+    display: grid;
+    gap: 0.12rem;
+  }
+
+  .collector-sheet-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.48rem;
+    margin-top: 0.26rem;
+  }
+
+  .collector-sheet-actions.is-primary {
+    margin-top: 0.26rem;
+  }
+
+  .collector-primary-btn,
+  .collector-ghost-btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.3rem;
+    padding: 0.6rem 0.86rem;
+    border-radius: 999px;
+    text-decoration: none;
+    font-size: 0.77rem;
+    transition:
+      border-color 180ms ease,
+      background 180ms ease,
+      color 180ms ease,
+      opacity 180ms ease;
+  }
+
+  .collector-primary-btn {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(244, 241, 234, 0.92);
+    color: rgba(11, 14, 18, 0.96);
+  }
+
+  .collector-primary-btn:hover {
+    opacity: 0.94;
+  }
+
+  .collector-ghost-btn {
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.018);
+    color: rgba(244, 241, 234, 0.76);
+  }
+
+  .collector-ghost-btn:hover {
+    border-color: rgba(255, 255, 255, 0.09);
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(244, 241, 234, 0.88);
+  }
+
+  .collector-sheet-note {
+    margin: 0.14rem 0 0;
+    color: rgba(244, 241, 234, 0.42);
+    line-height: 1.34;
+    font-size: 0.8rem;
+  }
+
+  @media (max-width: 1180px) {
+    .collector-sheet-panel {
+      width: min(66rem, calc(100vw - 2.5rem));
+      height: min(50rem, calc(100vh - 1.8rem));
+    }
+
+    .collector-sheet-body {
+      grid-template-columns: minmax(25rem, 1.04fr) minmax(23rem, 0.84fr);
+      gap: 0.82rem;
+    }
+
+    .collector-sheet-title {
+      font-size: clamp(1.55rem, 2vw, 1.95rem);
+    }
+
+    .collector-sheet-preview-wrap {
+      width: min(100%, 25rem);
+    }
+  }
+
+  @media (max-width: 980px) {
+    .collector-sheet-panel {
+      width: min(44rem, calc(100vw - 2rem));
+      height: min(44rem, calc(100vh - 2rem));
+    }
+
+    .collector-sheet-shell {
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .collector-sheet-body {
+      grid-template-columns: 1fr;
+      gap: 0.9rem;
+    }
+
+    .collector-sheet-preview-stage {
+      height: auto;
+      min-height: auto;
+      padding: 0;
+    }
+
+    .collector-sheet-preview-wrap {
+      width: min(100%, 18rem);
+      aspect-ratio: 4 / 5;
+      margin: 0 auto;
+      max-height: none;
+    }
+
+    .collector-sheet-preview-image,
+    .collector-sheet-preview-surface {
+      width: 100%;
+      height: 100%;
+    }
+
+    .collector-sheet-info-column {
+      display: block;
+    }
+
+    .collector-info-card {
+      margin-bottom: 0.8rem;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .collector-sheet-panel {
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      border: 0;
+      box-shadow: none;
+      transform: translateY(2%);
+      opacity: 0;
+    }
+
+    .collector-sheet-root.is-open .collector-sheet-panel {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .collector-sheet-shell {
+      display: block;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 0.9rem 0.9rem 1.1rem;
+    }
+
+    .collector-sheet-title {
+      font-size: clamp(1.5rem, 8vw, 1.9rem);
+      white-space: normal;
+    }
+
+    .collector-sheet-body {
+      display: block;
+      padding-top: 0.72rem;
+    }
+
+    .collector-sheet-preview-wrap {
+      width: min(100%, 16rem);
+      aspect-ratio: 4 / 5;
+      margin: 0 auto;
+    }
+
+    .collector-identity-item,
+    .collector-spec-row {
+      grid-template-columns: 1fr;
+      gap: 0.14rem;
+    }
+
+    .collector-size-display {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.3rem;
+    }
+
+    .collector-sheet-actions {
+      flex-direction: column;
+    }
+
+    .collector-primary-btn,
+    .collector-ghost-btn {
+      width: 100%;
+    }
+  }
+</style>

@@ -1,0 +1,67 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import AtmosphericBackdropRoot from "../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
+
+const sessionId = Astro.url.searchParams.get("session_id");
+---
+<BaseLayout title="Thank you for your purchase | Artist Stage" description="Checkout confirmation">
+  <AtmosphericBackdropRoot />
+
+  <section class="page-hero success-shell">
+    <p class="eyebrow">collector checkout</p>
+    <h1 class="page-title">Thank you for your purchase</h1>
+    <p class="page-copy">
+      Your order has been received. You will get a confirmation email from Stripe and follow-up production details from the studio.
+    </p>
+
+    <div class="success-card">
+      <p>1. Payment confirmation arrives first in your inbox.</p>
+      <p>2. Production starts within 3-7 business days for prints.</p>
+      <p>3. Dispatch and tracking details are shared as soon as the order ships.</p>
+      <p>4. For special requests, use the contact lane with your order context.</p>
+      {sessionId ? <p class="success-session">Session ID: {sessionId}</p> : null}
+    </div>
+
+    <div class="btn-row">
+      <a href="/works" class="btn-primary">Back to works</a>
+      <a href="/contact" class="btn-secondary">Contact studio</a>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .success-shell {
+    position: relative;
+    z-index: 2;
+    max-width: 62rem;
+  }
+
+  .success-shell .page-title {
+    max-width: 16ch;
+  }
+
+  .success-card {
+    margin-top: 1.2rem;
+    display: grid;
+    gap: 0.55rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1.25rem;
+    padding: 1rem 1.1rem;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)),
+      rgba(9, 11, 17, 0.32);
+  }
+
+  .success-card p {
+    margin: 0;
+    color: rgba(231, 234, 240, 0.78);
+    line-height: 1.6;
+  }
+
+  .success-session {
+    margin-top: 0.25rem;
+    font-size: 0.8rem;
+    color: rgba(231, 234, 240, 0.56);
+    word-break: break-all;
+  }
+</style>

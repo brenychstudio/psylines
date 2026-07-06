@@ -1,0 +1,164 @@
+---
+import type { WorkItem } from "../../data/site/types";
+import { resolvePublicAsset } from "../../lib/assets/publicAsset";
+import { getResponsivePublicImage } from "../../lib/assets/responsiveImage";
+
+type Props = {
+  relatedWorks: WorkItem[];
+};
+
+const { relatedWorks } = Astro.props as Props;
+const adjacentWorks = relatedWorks.map((entry) => ({
+  ...entry,
+  coverSrc: resolvePublicAsset(entry.cover),
+  coverImage: getResponsivePublicImage(entry.cover, { defaultWidth: 640 }),
+}));
+---
+
+{adjacentWorks.length > 0 ? (
+  <section class="adjacent-section adjacent-trace-field" aria-labelledby="adjacent-title">
+    <div class="adjacent-head adjacent-trace-head">
+      <div>
+        <p class="adjacent-kicker">same field</p>
+        <h2 id="adjacent-title" class="adjacent-title">
+          Adjacent traces
+        </h2>
+      </div>
+
+      <p class="adjacent-copy">
+        Related states held as quiet traces from the same cycle. Scroll sideways to continue the field.
+      </p>
+    </div>
+
+    <div class="adjacent-grid adjacent-trace-strip" data-adjacent-carousel aria-label="Related works carousel">
+      {adjacentWorks.map((entry) => (
+        <a href={`/works/${entry.slug}`} class="adjacent-card adjacent-trace-link">
+          <div class="adjacent-image-shell adjacent-trace-image">
+            {entry.coverSrc ? (
+              <img
+                src={entry.coverImage.src}
+                srcset={entry.coverImage.srcset}
+                sizes="(min-width: 980px) 18vw, (min-width: 620px) 34vw, 86vw"
+                alt={`${entry.title} artwork`}
+                loading="lazy"
+                decoding="async"
+              />
+            ) : (
+              <div class="adjacent-image-surface"></div>
+            )}
+          </div>
+
+          <div class="adjacent-meta">
+            <span class="adjacent-relation">field trace</span>
+
+            <div class="adjacent-name-row">
+              <p class="adjacent-name">{entry.title}</p>
+              <span class="adjacent-year">{entry.year}</span>
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+) : null}
+
+<script is:inline>
+  (() => {
+    const rails = document.querySelectorAll("[data-adjacent-carousel]");
+
+    rails.forEach((rail) => {
+      if (rail.dataset.carouselBound === "true") return;
+      rail.dataset.carouselBound = "true";
+
+      let isPointerDown = false;
+      let hasDragged = false;
+      let suppressNextClick = false;
+      let startX = 0;
+      let startY = 0;
+      let startScrollLeft = 0;
+      let activePointerId = null;
+      const dragThreshold = 14;
+
+      rail.addEventListener(
+        "wheel",
+        (event) => {
+          if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+
+          event.preventDefault();
+          rail.scrollBy({
+            left: event.deltaY,
+            behavior: "smooth",
+          });
+        },
+        { passive: false },
+      );
+
+      rail.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0 && event.pointerType === "mouse") return;
+
+        isPointerDown = true;
+        hasDragged = false;
+        startX = event.clientX;
+        startY = event.clientY;
+        startScrollLeft = rail.scrollLeft;
+        activePointerId = event.pointerId;
+        rail.classList.add("is-pointer-down");
+      });
+
+      rail.addEventListener("pointermove", (event) => {
+        if (!isPointerDown) return;
+
+        const deltaX = event.clientX - startX;
+        const deltaY = event.clientY - startY;
+        const isIntentionalHorizontalDrag =
+          Math.abs(deltaX) > dragThreshold &&
+          Math.abs(deltaX) > Math.abs(deltaY) * 1.2;
+
+        if (!hasDragged && isIntentionalHorizontalDrag) {
+          hasDragged = true;
+          suppressNextClick = true;
+          rail.classList.add("is-dragging");
+          rail.setPointerCapture?.(activePointerId);
+        }
+
+        if (hasDragged) {
+          event.preventDefault();
+          rail.scrollLeft = startScrollLeft - deltaX;
+        }
+      });
+
+      const finishDrag = (event) => {
+        if (!isPointerDown) return;
+
+        isPointerDown = false;
+        activePointerId = null;
+        rail.classList.remove("is-pointer-down");
+
+        if (event.pointerId && rail.hasPointerCapture?.(event.pointerId)) {
+          rail.releasePointerCapture?.(event.pointerId);
+        }
+
+        window.setTimeout(() => {
+          rail.classList.remove("is-dragging");
+          hasDragged = false;
+        }, 120);
+      };
+
+      rail.addEventListener("pointerup", finishDrag);
+      rail.addEventListener("pointercancel", finishDrag);
+      rail.addEventListener("pointerleave", finishDrag);
+
+      rail.addEventListener(
+        "click",
+        (event) => {
+          if (!suppressNextClick) return;
+
+          event.preventDefault();
+          event.stopPropagation();
+          suppressNextClick = false;
+        },
+        true,
+      );
+    });
+  })();
+</script>

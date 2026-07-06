@@ -1,0 +1,207 @@
+---
+import ArtistStageXRViewport from "../../xr-experiences/artist-stage/ArtistStageXRViewport.jsx";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Field of Manifestation — XR Experience</title>
+    <meta
+      name="description"
+      content="A full immersive XR route for Meta-Bodies."
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #04050a;
+        color: rgba(244, 246, 252, 0.92);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body {
+        position: relative;
+      }
+
+      .experience-shell {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        background:
+          radial-gradient(circle at 18% 16%, rgba(84, 97, 193, 0.14), transparent 28%),
+          radial-gradient(circle at 78% 70%, rgba(77, 115, 196, 0.08), transparent 34%),
+          linear-gradient(180deg, #05060a 0%, #05060a 100%);
+      }
+
+      .experience-runtime {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .experience-actions {
+        position: absolute;
+        top: 18px;
+        right: 18px;
+        z-index: 20;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+      }
+
+      .experience-actions a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 2.6rem;
+        padding: 0.72rem 0.92rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(8, 10, 15, 0.42);
+        backdrop-filter: none;
+        color: rgba(241, 243, 248, 0.82);
+        text-decoration: none;
+        transition:
+          transform 180ms ease,
+          border-color 180ms ease,
+          background 180ms ease,
+          color 180ms ease;
+      }
+
+      .experience-actions a:hover {
+        transform: translateY(-1px);
+        border-color: rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(247, 248, 252, 0.96);
+      }
+
+      .experience-meta {
+        position: absolute;
+        top: 18px;
+        left: 18px;
+        z-index: 20;
+        display: grid;
+        gap: 0.28rem;
+        padding: 0.78rem 0.92rem;
+        border-radius: 1.15rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(8, 10, 15, 0.34);
+        backdrop-filter: none;
+        max-width: 340px;
+        pointer-events: none;
+      }
+
+      .experience-kicker {
+        margin: 0;
+        font-size: 0.62rem;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: rgba(229, 232, 242, 0.46);
+      }
+
+      .experience-title {
+        margin: 0;
+        font-size: 1rem;
+        line-height: 1.32;
+        color: rgba(246, 248, 252, 0.92);
+      }
+
+      .experience-copy {
+        margin: 0;
+        font-size: 0.78rem;
+        line-height: 1.42;
+        color: rgba(231, 234, 240, 0.64);
+      }
+
+      .experience-footer {
+        position: absolute;
+        left: 18px;
+        bottom: 18px;
+        z-index: 20;
+        display: grid;
+        gap: 0.18rem;
+        padding: 0.72rem 0.88rem;
+        border-radius: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(8, 10, 15, 0.34);
+        backdrop-filter: none;
+        pointer-events: none;
+      }
+
+      .experience-footer-static {
+        font-size: 0.72rem;
+        line-height: 1.35;
+        color: rgba(231, 234, 240, 0.52);
+      }
+
+      .experience-footer-cue {
+        font-size: 0.68rem;
+        line-height: 1.35;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgba(235, 238, 246, 0.68);
+      }
+
+      @media (max-width: 900px) {
+        .experience-meta {
+          max-width: calc(100% - 36px);
+        }
+
+        .experience-actions {
+          top: auto;
+          right: auto;
+          left: 18px;
+          bottom: 72px;
+        }
+
+        .experience-footer {
+          max-width: calc(100% - 36px);
+          border-radius: 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="experience-shell">
+      <div class="experience-runtime">
+        <ArtistStageXRViewport client:load />
+      </div>
+
+      <div class="experience-meta">
+        <p class="experience-kicker">field of manifestation / xr</p>
+        <p class="experience-title">MT-3 — authored threshold scene</p>
+        <p class="experience-copy">
+          A dark manifestation field where the work appears as signal, residue, and unstable presence.
+        </p>
+      </div>
+
+      <div class="experience-actions">
+        <a href="/works/mt-3">Return to MT-3</a>
+        <a href="/immersive">Exit field</a>
+      </div>
+
+      <div class="experience-footer">
+        <span class="experience-footer-static">
+          On supported WebXR devices, use the VR button to enter immersive mode.
+        </span>
+        <span class="experience-footer-cue">
+          Wait. Let the field surface.
+        </span>
+      </div>
+    </main>
+  </body>
+</html>

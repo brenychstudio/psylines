@@ -1,0 +1,64 @@
+---
+import { moodStops } from "../../lib/living-atmosphere/moodStops";
+import { resolveMood } from "../../lib/living-atmosphere/resolveMood";
+
+const initialMood = resolveMood(Astro.url.pathname);
+const initialTokens = moodStops[initialMood];
+---
+
+<script is:inline define:vars={{ initialMood, initialTokens, moodStops }}>
+  (function () {
+    if (typeof document === "undefined") return;
+
+    var root = document.documentElement;
+
+    function applyMood(moodId, options) {
+      var tokens = moodStops[moodId];
+
+      if (!tokens) return;
+
+      root.dataset.atmosphereMood = moodId;
+
+      if (options && options.route === true) {
+        root.removeAttribute("data-atmosphere-override");
+      } else {
+        root.dataset.atmosphereOverride = "true";
+      }
+
+      Object.keys(tokens).forEach(function (tokenName) {
+        root.style.setProperty(tokenName, tokens[tokenName]);
+      });
+    }
+
+    window.ArtistStageAtmosphere = {
+      setMood: function (moodId) {
+        applyMood(moodId);
+      },
+    };
+
+    window.addEventListener("artist-stage:atmosphere:set", function (event) {
+      var mood = event && event.detail ? event.detail.mood : "";
+      applyMood(mood);
+    });
+
+    root.dataset.atmosphereMood = initialMood;
+
+    Object.keys(initialTokens).forEach(function (tokenName) {
+      root.style.setProperty(tokenName, initialTokens[tokenName]);
+    });
+  })();
+</script>
+
+<script>
+  import { initLivingAtmosphere } from "../../lib/living-atmosphere/initLivingAtmosphere";
+
+  if (document.documentElement.dataset.atmosphereOverride !== "true") {
+    initLivingAtmosphere();
+  }
+
+  window.addEventListener("popstate", () => {
+    if (document.documentElement.dataset.atmosphereOverride !== "true") {
+      initLivingAtmosphere();
+    }
+  });
+</script>

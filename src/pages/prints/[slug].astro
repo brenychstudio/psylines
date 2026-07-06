@@ -1,0 +1,141 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import AtmosphericBackdropRoot from "../../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
+import {
+  getAllPrints,
+  getAllWorks,
+  getPrintBySlug,
+} from "../../data/site/relations";
+import { resolvePublicAsset } from "../../lib/assets/publicAsset";
+import { getResponsivePublicImage } from "../../lib/assets/responsiveImage";
+
+export async function getStaticPaths() {
+  return getAllPrints().map((item) => ({
+    params: { slug: item.slug },
+  }));
+}
+
+const slug = Astro.params.slug;
+
+if (!slug) {
+  throw new Error("Missing print slug");
+}
+
+const print = getPrintBySlug(slug);
+
+if (!print) {
+  throw new Error(`Print not found for slug: ${slug}`);
+}
+
+const relatedWork = getAllWorks().find((entry) => entry.slug === print.artworkSlug) ?? null;
+const coverSrc = relatedWork ? resolvePublicAsset(relatedWork.cover) : null;
+const coverImage = relatedWork ? getResponsivePublicImage(relatedWork.cover, { defaultWidth: 1400 }) : null;
+---
+<BaseLayout
+  title={`${print.title} - Print Edition - ARTIST STAGE`}
+  description={`${print.edition} / ${print.paper} / ${print.leadTime}`}
+  canonicalPath={`/prints/${print.slug}`}
+  noindex={true}
+>
+  <AtmosphericBackdropRoot />
+
+  <section class="detail-shell">
+    <div class={`detail-hero aspect-${print.aspect}`}>
+      <div class={`detail-media-card aspect-${print.aspect}`}>
+        {coverSrc ? (
+          <>
+            <img
+              src={coverImage?.src ?? coverSrc}
+              srcset={coverImage?.srcset}
+              sizes="(min-width: 980px) 46vw, 92vw"
+              alt={`${print.title} print edition`}
+              class="detail-media-image"
+              loading="eager"
+              decoding="async"
+            />
+            <div class="detail-media-overlay"></div>
+          </>
+        ) : (
+          <div class="detail-media-surface"></div>
+        )}
+
+        <div class="detail-media-frame"></div>
+        <div class="detail-media-label">
+          {coverSrc ? "Print edition / real image slot" : "Print edition / premium placeholder surface"}
+        </div>
+      </div>
+
+      <div class="detail-info-card">
+        <p class="detail-kicker">print edition</p>
+        <h1 class="detail-title">{print.title}</h1>
+        <p class="detail-copy">
+          {print.edition} / {print.paper} / {print.certificate}
+        </p>
+
+        <div class="detail-chip-row">
+          <span class="detail-chip">{print.paper}</span>
+          <span class="detail-chip">{print.leadTime}</span>
+          <span class="detail-chip">{print.certificate}</span>
+          <span class="detail-chip">{print.aspect}</span>
+        </div>
+
+        <div class="btn-row">
+          <a href="/contact" class="btn-primary">Buy / inquire</a>
+          {relatedWork ? (
+            <a href={`/works/${relatedWork.slug}`} class="btn-secondary">Open related work</a>
+          ) : (
+            <a href="/prints" class="btn-secondary">Back to prints</a>
+          )}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="notice-strip">
+    <div class="notice-card">
+      <h2 class="notice-title">Acquisition note</h2>
+      <p class="notice-copy">
+        Use the dedicated collector route for this print to move from visual edition browsing into a more structured purchase-oriented inquiry.
+      </p>
+    </div>
+  </section>
+
+  <section class="detail-grid">
+    <article class="detail-meta-card">
+      <p class="detail-kicker">production</p>
+      <h2 class="detail-meta-title">{print.paper}</h2>
+      <p class="detail-meta-copy">{print.leadTime}</p>
+    </article>
+
+    <article class="detail-meta-card">
+      <p class="detail-kicker">certificate</p>
+      <h2 class="detail-meta-title">Collector documentation</h2>
+      <p class="detail-meta-copy">{print.certificate}</p>
+    </article>
+
+    <article class="detail-cta-card">
+      <p class="detail-kicker">shipping</p>
+      <h2 class="detail-meta-title">Dispatch note</h2>
+      <p class="detail-meta-copy">{print.shippingNote}</p>
+    </article>
+  </section>
+
+  <section class="related-strip">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">size options</p>
+        <h2 class="section-title">Edition formats and prices</h2>
+      </div>
+    </div>
+
+    <div class="price-grid">
+      {print.options.map((option) => (
+        <article class="price-row">
+          <p class="price-label">{option.label}</p>
+          <h3 class="price-title">{option.dimensions}</h3>
+          <p class="price-copy">EUR {option.priceEUR}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+</BaseLayout>

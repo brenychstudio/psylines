@@ -1,0 +1,162 @@
+---
+type FeaturedWorkItem = {
+  title: string;
+  slug: string;
+  year: number;
+  statement: string;
+  coverSrc: string | null;
+  seriesTitle?: string;
+};
+
+type CycleEntry = {
+  slug: string;
+  title: string;
+  description: string;
+};
+
+type Props = {
+  primaryWork: FeaturedWorkItem | null;
+  cycleEntries: CycleEntry[];
+};
+
+const { primaryWork, cycleEntries } = Astro.props as Props;
+---
+
+<section class="home-featured-strip">
+  <div class="home-featured-strip-head">
+    <div>
+      <p class="home-featured-strip-kicker">featured routes</p>
+      <h2 class="home-featured-strip-title">Primary entries into the field</h2>
+    </div>
+  </div>
+
+  <div class="home-featured-strip-grid">
+    {primaryWork ? (
+      <a href={`/works/${primaryWork.slug}`} class="home-featured-card is-work">
+        <div class="home-featured-card-copy">
+          <p class="home-featured-card-kicker">anchor work</p>
+          <h3 class="home-featured-card-title">{primaryWork.title}</h3>
+          <p class="home-featured-card-text">{primaryWork.statement}</p>
+          <span class="home-featured-card-link">Open work</span>
+        </div>
+      </a>
+    ) : null}
+
+    {cycleEntries.map((entry) => (
+      <a href={`/series/${entry.slug}`} class="home-featured-card is-cycle">
+        <div class="home-featured-card-copy">
+          <p class="home-featured-card-kicker">cycle field</p>
+          <h3 class="home-featured-card-title">{entry.title}</h3>
+          <p class="home-featured-card-text">{entry.description}</p>
+          <span class="home-featured-card-link">Enter cycle</span>
+        </div>
+      </a>
+    ))}
+  </div>
+</section>
+
+<style>
+  .home-featured-strip {
+    position: relative;
+    z-index: 2;
+    margin: 0 auto;
+    max-width: 88rem;
+    padding: 0 1.5rem 2.2rem;
+  }
+
+  .home-featured-strip-head {
+    margin-bottom: 1rem;
+  }
+
+  .home-featured-strip-kicker,
+  .home-featured-card-kicker {
+    margin: 0;
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgba(244, 241, 234, 0.48);
+  }
+
+  .home-featured-strip-title {
+    margin: 0.5rem 0 0;
+    font-size: clamp(1.7rem, 3.4vw, 2.4rem);
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: rgba(244, 241, 234, 0.96);
+  }
+
+  .home-featured-strip-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) repeat(2, minmax(0, 0.9fr));
+    gap: 1rem;
+  }
+
+  .home-featured-card {
+    display: block;
+    min-height: 13rem;
+    border: 1px solid rgba(255,255,255,0.055);
+    background: rgba(255,255,255,0.02);
+    padding: 1rem 1rem 1.05rem;
+    transition:
+      transform 180ms ease,
+      border-color 180ms ease,
+      background 180ms ease;
+  }
+
+  .home-featured-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255,255,255,0.085);
+    background: rgba(255,255,255,0.03);
+  }
+
+  .home-featured-card-copy {
+    display: grid;
+    align-content: space-between;
+    min-height: 100%;
+  }
+
+  .home-featured-card-title {
+    margin: 0.55rem 0 0;
+    max-width: 16ch;
+    font-size: clamp(1.5rem, 2.6vw, 2rem);
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+    color: rgba(244, 241, 234, 0.96);
+  }
+
+  .home-featured-card-text {
+    margin: 0.8rem 0 0;
+    color: rgba(244, 241, 234, 0.68);
+    line-height: 1.62;
+    font-size: 0.93rem;
+    max-width: 30rem;
+  }
+
+  .home-featured-card-link {
+    margin-top: 1rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(244, 241, 234, 0.72);
+  }
+
+  .home-featured-card.is-work {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.026), rgba(255,255,255,0.012));
+  }
+
+  @media (max-width: 980px) {
+    .home-featured-strip-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .home-featured-card {
+      min-height: auto;
+    }
+
+    .home-featured-card-copy {
+      min-height: auto;
+      gap: 0.75rem;
+    }
+  }
+</style>

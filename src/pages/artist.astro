@@ -1,0 +1,1226 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import AtmosphericBackdropRoot from "../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
+import {
+  bodyManifestationProcess,
+  bodyManifestationSteps,
+} from "../data/site/process";
+import { getResponsivePublicImage } from "../lib/assets/responsiveImage";
+
+const artistTracePrimary = getResponsivePublicImage("/images/works/p-1.jpg", { defaultWidth: 960 });
+const artistTraceSecondary = getResponsivePublicImage("/artworks/test-painting-2/mt-5.jpg", { defaultWidth: 640 });
+const artistTraceGhost = getResponsivePublicImage("/artworks/test-painting-2/mt-3.jpg", { defaultWidth: 640 });
+const artistStatementTrace = getResponsivePublicImage("/artworks/test-painting-2/mt-2.jpg", { defaultWidth: 960 });
+const artistMethodRows = bodyManifestationSteps.slice(0, 4);
+
+const practiceSignals = [
+  {
+    title: "Body as signal",
+    copy: "The figure is found inside the line field before it becomes identity or pose.",
+  },
+  {
+    title: "Surface as membrane",
+    copy: "Fixed charcoal, acrylic medium, color, and paper keep the first trace active.",
+  },
+  {
+    title: "Line as inner route",
+    copy: "Final structures replace anatomy with routes, codes, fractures, and memory traces.",
+  },
+];
+
+const cycleRows = [
+  {
+    title: "Meta-Bodies",
+    copy: "Figures beyond identity, emerging through structure, pressure, and internal routes.",
+  },
+  {
+    title: "Night Water",
+    copy: "A quieter field of reflection, lunar atmosphere, and submerged signals.",
+  },
+  {
+    title: "Studies",
+    copy: "Fragments, raw material logic, and early states of manifestation.",
+  },
+];
+
+const trustRows = [
+  {
+    title: "Original works",
+    copy: "One-of-one works from the studio practice.",
+  },
+  {
+    title: "Limited edition prints",
+    copy: "Selected formats prepared as editions within the collector route.",
+  },
+  {
+    title: "Certificate context",
+    copy: "Signed and documented for collector records.",
+  },
+  {
+    title: "Production route",
+    copy: "Produced after checkout with clear handling and shipping context.",
+  },
+];
+---
+
+<BaseLayout
+  title="Artist - ARTIST STAGE"
+  description="A practice of bodies, signals, residue, unstable presence, original works, and collector editions."
+  canonicalPath="/artist"
+>
+  <AtmosphericBackdropRoot />
+
+  <main class="artist-practice-field">
+    <section class="artist-threshold artist-spine-threshold" aria-labelledby="artist-threshold-title" data-atmosphere-section="artist-threshold">
+      <div class="artist-threshold-copy artist-spine-copy">
+        <p class="artist-kicker">ARTIST / PRACTICE FIELD</p>
+        <h1 class="artist-title" id="artist-threshold-title">
+          A practice of bodies, signals, residue, and unstable presence.
+        </h1>
+        <p class="artist-copy artist-copy--lead">
+          The works move between drawing, body-memory, abstraction, and spatial manifestation. They are not portraits or representations, but states of presence translated through line, pressure, surface, and atmosphere.
+        </p>
+
+        <nav class="artist-route-row artist-route-signals" aria-label="Artist routes">
+          <a href="/works">Enter works field</a>
+          <a href="/process">Open process</a>
+          <a href="/works/mt-3">Open collector route</a>
+          <a href="/contact">Contact</a>
+        </nav>
+      </div>
+
+      <div class="artist-practice-traces artist-practice-trace-field" aria-hidden="true">
+        <div class="artist-trace artist-trace--primary artist-trace--main">
+          <img src={artistTracePrimary.src} srcset={artistTracePrimary.srcset} sizes="(min-width: 980px) 28vw, 72vw" alt="" loading="lazy" decoding="async" />
+        </div>
+        <div class="artist-trace artist-trace--secondary artist-trace--crop">
+          <img src={artistTraceSecondary.src} srcset={artistTraceSecondary.srcset} sizes="(min-width: 980px) 18vw, 42vw" alt="" loading="lazy" decoding="async" />
+        </div>
+        <div class="artist-trace artist-trace--ghost">
+          <img src={artistTraceGhost.src} srcset={artistTraceGhost.srcset} sizes="(min-width: 980px) 16vw, 38vw" alt="" loading="lazy" decoding="async" />
+        </div>
+      </div>
+    </section>
+
+    <section class="artist-statement-field artist-statement-spine" aria-labelledby="artist-statement-title" data-atmosphere-section="artist-statement">
+      <p class="artist-kicker artist-section-kicker">STATEMENT FIELD</p>
+      <div class="statement-spine-grid">
+        <h2 class="artist-section-title" id="artist-statement-title">Not figures. Manifestations.</h2>
+        <div class="artist-statement-copy statement-spine-copy">
+          <p>
+            These forms can appear human-like, yet they are not defined by anatomy or identity. The body is treated as a temporary surface: a place where pressure, memory, structure, and signal become visible.
+          </p>
+          <p>
+            Each work records a state rather than a pose: tension, density, collapse, transition, or return. The image remains partial by design.
+          </p>
+          <figure class="statement-trace">
+            <img src={artistStatementTrace.src} srcset={artistStatementTrace.srcset} sizes="(min-width: 980px) 32vw, 86vw" alt="" loading="lazy" decoding="async" />
+            <figcaption>line / pressure / unresolved body-state</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="artist-method-route" aria-labelledby="artist-method-title" data-atmosphere-section="artist-practice">
+      <div class="artist-method-head">
+        <p class="artist-kicker">METHOD ROUTE</p>
+        <h2 class="artist-section-title" id="artist-method-title">The body is found inside the line field.</h2>
+        <p class="artist-copy artist-method-copy">
+          {bodyManifestationProcess.shortDefinition}
+        </p>
+        <nav class="artist-route-row" aria-label="Process route">
+          <a href="/process">Read the full process</a>
+        </nav>
+      </div>
+
+      <div class="artist-method-list">
+        {artistMethodRows.map((step, index) => (
+          <div class="artist-method-row">
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <strong>{step.title}</strong>
+            <p>{step.copy}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section class="artist-practice-logic" aria-labelledby="artist-logic-title" data-atmosphere-section="artist-practice">
+      <div class="artist-band-head">
+        <p class="artist-kicker">PRACTICE LOGIC</p>
+        <h2 class="practice-logic-title" id="artist-logic-title">How the work holds presence.</h2>
+      </div>
+
+      <div class="artist-signal-band practice-signal-list">
+        {practiceSignals.map((item, index) => (
+          <div class="artist-signal practice-signal-row">
+            <span class="practice-signal-index">{String(index + 1).padStart(2, "0")}</span>
+            <strong>{item.title}</strong>
+            <p>{item.copy}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section class="artist-cycle-register artist-register-section" aria-labelledby="artist-register-title" data-atmosphere-section="artist-practice">
+      <div>
+        <p class="artist-kicker">CYCLE REGISTER</p>
+        <h2 class="artist-register-title" id="artist-register-title">Recurring fields, not catalogue categories.</h2>
+      </div>
+
+      <div class="artist-register-list">
+        {cycleRows.map((item) => (
+          <a class="artist-register-row" href="/works">
+            <span>{item.title}</span>
+            <p>{item.copy}</p>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section class="artist-material-route" aria-labelledby="artist-material-title" data-atmosphere-section="artist-material">
+      <div class="artist-material-head">
+        <p class="artist-kicker">MATERIAL ROUTE</p>
+        <h2 class="artist-section-title" id="artist-material-title">Prepared as collector-facing objects.</h2>
+        <p class="artist-copy">
+          Original works and selected editions are prepared as collector-facing objects. Prints are produced as pigment prints on archival fine-art paper, signed and accompanied by certificate context where applicable.
+        </p>
+      </div>
+
+      <div class="artist-trust-list">
+        {trustRows.map((item) => (
+          <div class="artist-trust-row">
+            <strong>{item.title}</strong>
+            <p>{item.copy}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section class="artist-collector-handoff" aria-labelledby="artist-handoff-title" data-atmosphere-section="artist-material">
+      <div>
+        <p class="artist-kicker">COLLECTOR HANDOFF</p>
+        <h2 id="artist-handoff-title">The collector route stays close to the work.</h2>
+      </div>
+
+      <div class="artist-handoff-copy">
+        <p>
+          Each available work can be reviewed through its object page, selected as original or edition, previewed in interior context, and completed through secure checkout or direct inquiry where needed.
+        </p>
+        <nav class="artist-route-row" aria-label="Collector handoff routes">
+          <a href="/works">Enter available works</a>
+          <a href="/contact">Collector inquiry</a>
+        </nav>
+      </div>
+    </section>
+  </main>
+</BaseLayout>
+
+<style>
+  /* V3 Artist - Practice Field Refoundation Pass 01 */
+  .artist-practice-field {
+    position: relative;
+    z-index: 1;
+    padding: clamp(6.5rem, 10vw, 9rem) 0 clamp(5rem, 9vw, 8rem);
+  }
+
+  .artist-practice-field::before {
+    content: "";
+    position: absolute;
+    inset: 2rem 0 auto;
+    z-index: -1;
+    height: min(52rem, 80svh);
+    background:
+      radial-gradient(circle at 22% 22%, rgba(235, 240, 232, 0.055), transparent 30rem),
+      radial-gradient(circle at 68% 24%, rgba(204, 171, 116, 0.12), transparent 34rem),
+      linear-gradient(180deg, rgba(5, 8, 7, 0), rgba(5, 8, 7, 0.34));
+    pointer-events: none;
+  }
+
+  .artist-threshold,
+  .artist-statement-field,
+  .artist-method-route,
+  .artist-practice-logic,
+  .artist-cycle-register,
+  .artist-material-route,
+  .artist-collector-handoff {
+    width: var(--site-shell-wide);
+    max-width: none;
+    margin-inline: auto;
+  }
+
+  .artist-threshold {
+    position: relative;
+    min-height: min(720px, calc(100svh - 4.5rem));
+    display: grid;
+    grid-template-columns: minmax(420px, 0.58fr) minmax(360px, 0.42fr);
+    align-items: center;
+    gap: clamp(3rem, 7vw, 8rem);
+  }
+
+  .artist-threshold-copy {
+    max-width: 56rem;
+  }
+
+  .artist-kicker {
+    margin: 0 0 1.2rem;
+    font-size: 0.68rem;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    color: rgba(235, 240, 232, 0.46);
+    font-weight: 700;
+  }
+
+  .artist-title {
+    margin: 0;
+    max-width: 13.5ch;
+    font-size: clamp(3.45rem, 5.8vw, 6.15rem);
+    line-height: 0.93;
+    letter-spacing: 0;
+    font-weight: 300;
+    color: rgba(245, 248, 242, 0.94);
+  }
+
+  .artist-copy,
+  .artist-statement-copy p,
+  .artist-handoff-copy p {
+    max-width: 44rem;
+    margin: 0;
+    font-size: clamp(1rem, 1.1vw, 1.16rem);
+    line-height: 1.62;
+    color: rgba(235, 240, 232, 0.66);
+  }
+
+  .artist-copy--lead {
+    margin-top: 1.35rem;
+  }
+
+  .artist-route-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.15rem;
+    margin-top: 1.55rem;
+  }
+
+  .artist-route-row a {
+    display: inline-flex;
+    min-height: 2.5rem;
+    align-items: center;
+    border-bottom: 1px solid rgba(235, 240, 232, 0.18);
+    color: rgba(245, 248, 242, 0.82);
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0;
+    transition:
+      border-color 180ms ease,
+      color 180ms ease,
+      transform 180ms ease;
+  }
+
+  .artist-route-row a::after {
+    content: "->";
+    margin-left: 0.48rem;
+    color: rgba(178, 207, 146, 0.58);
+  }
+
+  .artist-route-row a:hover {
+    transform: translateY(-1px);
+    border-color: rgba(178, 207, 146, 0.5);
+    color: rgba(245, 248, 242, 0.96);
+  }
+
+  .artist-practice-traces {
+    position: relative;
+    min-height: min(70svh, 720px);
+    isolation: isolate;
+  }
+
+  .artist-trace {
+    position: absolute;
+    filter: saturate(0.92) contrast(0.97);
+  }
+
+  .artist-trace img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    box-shadow:
+      0 32px 90px rgba(0, 0, 0, 0.48),
+      0 0 0 1px rgba(255, 255, 255, 0.02);
+  }
+
+  .artist-trace--primary {
+    width: min(30vw, 470px);
+    right: 7%;
+    top: 13%;
+    opacity: 0.9;
+  }
+
+  .artist-trace--secondary {
+    width: min(17vw, 250px);
+    left: 2%;
+    bottom: 12%;
+    opacity: 0.12;
+  }
+
+  .artist-statement-field {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.34fr) minmax(0, 0.66fr);
+    gap: clamp(2rem, 6vw, 6rem);
+    align-items: start;
+    padding-top: clamp(3.5rem, 8vw, 7rem);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    scroll-margin-top: 6rem;
+  }
+
+  .artist-section-title,
+  .artist-band-head h2,
+  .artist-collector-handoff h2 {
+    margin: 0;
+    max-width: 12ch;
+    font-size: clamp(2.55rem, 4.8vw, 5.8rem);
+    line-height: 0.95;
+    letter-spacing: 0;
+    font-weight: 300;
+    color: rgba(245, 248, 242, 0.9);
+  }
+
+  #artist-statement-title,
+  #artist-material-title {
+    scroll-margin-top: 7rem;
+  }
+
+  #artist-logic-title,
+  #artist-method-title,
+  #artist-handoff-title {
+    scroll-margin-top: 7rem;
+  }
+
+  .artist-statement-copy {
+    display: grid;
+    gap: 1.05rem;
+    padding-top: 0.24rem;
+  }
+
+  .artist-practice-logic {
+    margin-top: clamp(5rem, 9vw, 8rem);
+  }
+
+  .artist-method-route {
+    display: grid;
+    grid-template-columns: minmax(300px, 0.4fr) minmax(0, 0.6fr);
+    gap: clamp(2rem, 6vw, 6rem);
+    align-items: start;
+    margin-top: clamp(4rem, 8vw, 7rem);
+    padding-top: clamp(1.8rem, 3vw, 2.4rem);
+    border-top: 1px solid rgba(255, 255, 255, 0.065);
+    scroll-margin-top: 7rem;
+  }
+
+  .artist-method-head {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .artist-method-copy {
+    margin-top: 0;
+  }
+
+  .artist-method-list {
+    border-top: 1px solid rgba(255, 255, 255, 0.065);
+  }
+
+  .artist-method-row {
+    display: grid;
+    grid-template-columns: 4rem minmax(170px, 0.3fr) minmax(0, 0.7fr);
+    gap: 1rem;
+    padding: 1.05rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  }
+
+  .artist-method-row span {
+    color: rgba(235, 240, 232, 0.36);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .artist-method-row strong {
+    color: rgba(245, 248, 242, 0.84);
+    font-size: clamp(1rem, 1.25vw, 1.22rem);
+    font-weight: 500;
+  }
+
+  .artist-method-row p {
+    margin: 0;
+    color: rgba(235, 240, 232, 0.56);
+    line-height: 1.58;
+  }
+
+  .artist-band-head {
+    display: grid;
+    gap: 0.2rem;
+    max-width: 52rem;
+  }
+
+  .artist-signal-band {
+    margin-top: clamp(2.2rem, 4vw, 3.6rem);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .artist-signal {
+    padding: 1.25rem clamp(0.8rem, 2vw, 1.4rem);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .artist-signal:first-child {
+    padding-left: 0;
+  }
+
+  .artist-signal:last-child {
+    border-right: 0;
+  }
+
+  .artist-signal span {
+    display: block;
+    margin-bottom: 0.45rem;
+    font-size: 0.62rem;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    color: rgba(235, 240, 232, 0.42);
+  }
+
+  .artist-signal strong {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: clamp(1.05rem, 1.4vw, 1.35rem);
+    color: rgba(245, 248, 242, 0.85);
+    font-weight: 500;
+  }
+
+  .artist-signal p {
+    margin: 0;
+    max-width: 22rem;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: rgba(235, 240, 232, 0.56);
+  }
+
+  .artist-register-section {
+    margin-top: clamp(5rem, 10vw, 9rem);
+    display: grid;
+    grid-template-columns: minmax(260px, 0.34fr) minmax(0, 0.66fr);
+    gap: clamp(2rem, 6vw, 6rem);
+  }
+
+  .artist-register-title {
+    margin: 0;
+    max-width: 10ch;
+    font-size: clamp(2.2rem, 4.5vw, 5rem);
+    line-height: 0.95;
+    letter-spacing: 0;
+    font-weight: 300;
+    color: rgba(245, 248, 242, 0.9);
+  }
+
+  .artist-register-list {
+    border-top: 1px solid rgba(255, 255, 255, 0.065);
+  }
+
+  .artist-register-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.28fr) minmax(0, 0.72fr);
+    gap: 1rem;
+    padding: 1.1rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .artist-register-row span,
+  .artist-trust-row strong {
+    color: rgba(245, 248, 242, 0.84);
+    font-size: clamp(1rem, 1.35vw, 1.25rem);
+    font-weight: 500;
+  }
+
+  .artist-register-row p,
+  .artist-trust-row p {
+    margin: 0;
+    color: rgba(235, 240, 232, 0.56);
+    line-height: 1.6;
+  }
+
+  .artist-register-row:hover span {
+    color: rgba(245, 248, 242, 0.96);
+  }
+
+  .artist-material-route {
+    margin-top: clamp(5rem, 10vw, 9rem);
+    display: grid;
+    grid-template-columns: minmax(300px, 0.42fr) minmax(0, 0.58fr);
+    gap: clamp(2rem, 7vw, 7rem);
+    align-items: start;
+    scroll-margin-top: 6rem;
+  }
+
+  .artist-material-head {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .artist-trust-list {
+    border-top: 1px solid rgba(255, 255, 255, 0.065);
+  }
+
+  .artist-trust-row {
+    display: grid;
+    grid-template-columns: minmax(170px, 0.36fr) minmax(0, 0.64fr);
+    gap: 1rem;
+    padding: 1.05rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  }
+
+  .artist-collector-handoff {
+    margin-top: clamp(5rem, 10vw, 9rem);
+    display: grid;
+    grid-template-columns: minmax(300px, 0.44fr) minmax(0, 0.56fr);
+    gap: clamp(2rem, 7vw, 7rem);
+    align-items: start;
+    padding-top: clamp(1.8rem, 3vw, 2.4rem);
+    border-top: 1px solid rgba(255, 255, 255, 0.075);
+  }
+
+  .artist-handoff-copy {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  @media (max-width: 1100px) {
+    .artist-threshold {
+      grid-template-columns: minmax(0, 0.52fr) minmax(320px, 0.48fr);
+      gap: clamp(2rem, 5vw, 4rem);
+    }
+
+    .artist-title {
+      font-size: clamp(3.4rem, 6.2vw, 5.4rem);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .artist-practice-field {
+      padding-top: clamp(5.75rem, 16vw, 7rem);
+    }
+
+    .artist-threshold,
+    .artist-statement-field,
+    .artist-method-route,
+    .artist-register-section,
+    .artist-material-route,
+    .artist-collector-handoff {
+      grid-template-columns: 1fr;
+      min-height: auto;
+    }
+
+    .artist-title {
+      max-width: 9.5ch;
+      font-size: clamp(3.25rem, 15vw, 6rem);
+      line-height: 0.9;
+    }
+
+    .artist-practice-traces {
+      min-height: auto;
+      display: grid;
+      place-items: center;
+    }
+
+    .artist-trace {
+      position: static;
+    }
+
+    .artist-trace--primary {
+      width: min(82vw, 460px);
+    }
+
+    .artist-trace--secondary {
+      display: none;
+    }
+
+    .artist-signal-band {
+      grid-template-columns: 1fr;
+    }
+
+    .artist-signal {
+      padding-left: 0;
+      border-right: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+    }
+
+    .artist-register-row,
+    .artist-method-row,
+    .artist-trust-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .artist-threshold,
+    .artist-statement-field,
+    .artist-method-route,
+    .artist-practice-logic,
+    .artist-cycle-register,
+    .artist-material-route,
+    .artist-collector-handoff {
+      width: min(100% - 20px, 1460px);
+    }
+
+    .artist-title {
+      font-size: clamp(2.78rem, 13.5vw, 3.75rem);
+    }
+
+    .artist-section-title,
+    .artist-band-head h2,
+    .artist-register-title,
+    .artist-collector-handoff h2 {
+      max-width: 100%;
+      font-size: clamp(2rem, 9vw, 3rem);
+    }
+
+    .artist-route-row {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .artist-route-row a {
+      width: 100%;
+    }
+  }
+
+  /* V3 Artist - Pass 15: Statement Spine + Practice Traces */
+  .artist-practice-field {
+    padding-top: clamp(6.25rem, 9vw, 8rem);
+  }
+
+  .artist-spine-threshold,
+  .artist-statement-spine,
+  .artist-method-route,
+  .artist-practice-logic,
+  .artist-cycle-register,
+  .artist-material-route,
+  .artist-collector-handoff {
+    width: min(1460px, calc(100vw - clamp(36px, 6vw, 112px)));
+    margin-inline: auto;
+  }
+
+  .artist-spine-threshold {
+    min-height: min(720px, calc(100svh - 5rem));
+    grid-template-columns: minmax(520px, 0.64fr) minmax(320px, 0.36fr);
+    align-items: center;
+    gap: clamp(2.5rem, 6vw, 7rem);
+  }
+
+  .artist-spine-copy {
+    position: relative;
+    z-index: 2;
+    max-width: 62rem;
+  }
+
+  .artist-title {
+    max-width: 13ch;
+    font-size: clamp(3.65rem, 6vw, 6.7rem);
+    line-height: 0.92;
+    letter-spacing: 0;
+  }
+
+  .artist-copy--lead {
+    max-width: 46rem;
+  }
+
+  .artist-practice-trace-field {
+    position: relative;
+    min-height: min(58svh, 610px);
+    isolation: isolate;
+  }
+
+  .artist-practice-trace-field .artist-trace {
+    position: absolute;
+    pointer-events: none;
+  }
+
+  .artist-practice-trace-field .artist-trace img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    box-shadow:
+      0 32px 90px rgba(0, 0, 0, 0.46),
+      0 0 0 1px rgba(255, 255, 255, 0.018);
+  }
+
+  .artist-trace--main {
+    width: min(20vw, 300px);
+    right: 18%;
+    top: 18%;
+    opacity: 0.66;
+  }
+
+  .artist-trace--crop {
+    width: min(18vw, 240px);
+    left: 3%;
+    bottom: 15%;
+    opacity: 0.22;
+    overflow: hidden;
+    aspect-ratio: 4 / 3;
+    transform: translateX(-8%) rotate(-1.5deg);
+  }
+
+  .artist-trace--crop img {
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 28%;
+  }
+
+  .artist-trace--ghost {
+    width: min(14vw, 180px);
+    right: 0;
+    bottom: 8%;
+    opacity: 0.12;
+  }
+
+  .artist-statement-spine {
+    display: block;
+    margin-top: clamp(2.5rem, 5vw, 4.5rem);
+    padding-top: clamp(2.7rem, 5vw, 4.5rem);
+    border-top: 1px solid rgba(255, 255, 255, 0.055);
+  }
+
+  .artist-statement-spine .artist-section-kicker {
+    margin-bottom: clamp(1.2rem, 2vw, 1.8rem);
+  }
+
+  .statement-spine-grid {
+    display: grid;
+    grid-template-columns: minmax(340px, 0.45fr) minmax(420px, 0.55fr);
+    gap: clamp(2rem, 5vw, 5rem);
+    align-items: start;
+  }
+
+  .statement-spine-grid h2 {
+    margin: 0;
+    max-width: 10.5ch;
+    font-size: clamp(2.75rem, 5vw, 5.45rem);
+    line-height: 0.94;
+    letter-spacing: 0;
+    font-weight: 300;
+  }
+
+  .statement-spine-copy {
+    max-width: 46rem;
+    display: grid;
+    gap: 1rem;
+    padding-top: 0.15rem;
+    font-size: clamp(1rem, 1.1vw, 1.16rem);
+    line-height: 1.65;
+    color: rgba(235, 240, 232, 0.66);
+  }
+
+  .statement-spine-copy p {
+    margin: 0;
+  }
+
+  .statement-trace {
+    width: min(18rem, 42vw);
+    margin: clamp(1.2rem, 3vw, 2rem) 0 0 auto;
+  }
+
+  .statement-trace img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    object-position: 50% 30%;
+    opacity: 0.38;
+    box-shadow:
+      0 24px 70px rgba(0, 0, 0, 0.42),
+      0 0 0 1px rgba(255, 255, 255, 0.025);
+  }
+
+  .statement-trace figcaption {
+    margin-top: 0.55rem;
+    color: rgba(235, 240, 232, 0.36);
+    font-size: 0.64rem;
+    line-height: 1.35;
+    text-transform: uppercase;
+  }
+
+  .artist-practice-logic {
+    margin-top: clamp(3.5rem, 7vw, 6.25rem);
+  }
+
+  .artist-band-head {
+    max-width: 44rem;
+  }
+
+  .practice-logic-title {
+    max-width: 12ch;
+    font-size: clamp(2.55rem, 4.6vw, 5.1rem);
+    line-height: 0.96;
+    letter-spacing: 0;
+    font-weight: 300;
+  }
+
+  .practice-signal-list {
+    margin-top: clamp(1.8rem, 3.6vw, 3rem);
+    display: block;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .practice-signal-row {
+    display: grid;
+    grid-template-columns: 4rem minmax(180px, 0.28fr) minmax(0, 0.72fr);
+    gap: 1rem;
+    padding: 1.05rem 0;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .practice-signal-index {
+    margin: 0;
+    font-size: 0.62rem;
+    letter-spacing: 0;
+    color: rgba(235, 240, 232, 0.34);
+  }
+
+  .practice-signal-row strong {
+    margin: 0;
+    color: rgba(245, 248, 242, 0.84);
+    font-size: clamp(1rem, 1.2vw, 1.18rem);
+  }
+
+  .practice-signal-row p {
+    margin: 0;
+    max-width: 34rem;
+    color: rgba(235, 240, 232, 0.56);
+  }
+
+  .artist-register-section,
+  .artist-method-route,
+  .artist-material-route,
+  .artist-collector-handoff {
+    margin-top: clamp(4rem, 8vw, 7rem);
+  }
+
+  .artist-register-title,
+  .artist-material-route .artist-section-title,
+  .artist-collector-handoff h2 {
+    max-width: 11ch;
+    font-size: clamp(2.45rem, 4.4vw, 5rem);
+    line-height: 0.96;
+    letter-spacing: 0;
+  }
+
+  .artist-material-route {
+    grid-template-columns: minmax(300px, 0.4fr) minmax(0, 0.6fr);
+  }
+
+  .artist-trust-row,
+  .artist-register-row {
+    padding-block: 0.95rem;
+  }
+
+  .artist-collector-handoff {
+    padding-top: clamp(1.4rem, 2.5vw, 2rem);
+  }
+
+  @media (max-width: 1100px) {
+    .artist-spine-threshold {
+      grid-template-columns: minmax(0, 0.58fr) minmax(280px, 0.42fr);
+    }
+
+    .artist-title {
+      font-size: clamp(3.35rem, 6.4vw, 5.6rem);
+    }
+
+    .artist-trace--main {
+      width: min(23vw, 290px);
+      right: 10%;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .artist-spine-threshold {
+      grid-template-columns: 1fr;
+      min-height: auto;
+    }
+
+    .artist-title {
+      max-width: 9.5ch;
+      font-size: clamp(3.1rem, 14vw, 5.5rem);
+    }
+
+    .artist-practice-trace-field {
+      min-height: auto;
+      display: grid;
+      place-items: center;
+    }
+
+    .artist-practice-trace-field .artist-trace {
+      position: static;
+    }
+
+    .artist-trace--main {
+      width: min(76vw, 390px);
+      opacity: 0.58;
+    }
+
+    .artist-trace--crop,
+    .artist-trace--ghost {
+      display: none;
+    }
+
+    .statement-spine-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .statement-trace {
+      width: min(18rem, 74vw);
+      margin-left: 0;
+    }
+
+    .practice-signal-row {
+      grid-template-columns: 1fr;
+      gap: 0.45rem;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .artist-title {
+      font-size: clamp(2.68rem, 13vw, 3.55rem);
+    }
+
+    .artist-spine-threshold,
+    .artist-statement-spine,
+    .artist-method-route,
+    .artist-practice-logic,
+    .artist-cycle-register,
+    .artist-material-route,
+    .artist-collector-handoff {
+      width: min(100% - 20px, 1460px);
+    }
+  }
+
+  /* V3-23 Stillness / Idle Presence Field */
+  .artist-practice-trace-field .artist-trace {
+    opacity: calc(0.16 + (var(--presence-stillness, 0) * 0.04));
+    transition: opacity 520ms ease;
+  }
+
+  .artist-trace--main {
+    opacity: calc(0.58 + (var(--presence-stillness, 0) * 0.05));
+  }
+
+  .artist-register-list,
+  .artist-statement-copy,
+  .artist-band-copy,
+  .artist-material-copy {
+    opacity: calc(0.82 + (var(--presence-calm, 0.42) * 0.12));
+    transition: opacity 520ms ease;
+  }
+
+  /* V3 Canonical Frame - align Artist page to the shared header axis. */
+  .artist-practice-field {
+    box-sizing: border-box;
+    width: 100%;
+    padding-right: var(--site-frame-gutter);
+    padding-left: var(--site-frame-gutter);
+  }
+
+  .artist-threshold,
+  .artist-statement-field,
+  .artist-method-route,
+  .artist-practice-logic,
+  .artist-cycle-register,
+  .artist-material-route,
+  .artist-collector-handoff,
+  .artist-spine-threshold,
+  .artist-statement-spine {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  @media (max-width: 560px) {
+    .artist-threshold,
+    .artist-statement-field,
+    .artist-method-route,
+    .artist-practice-logic,
+    .artist-cycle-register,
+    .artist-material-route,
+    .artist-collector-handoff,
+    .artist-spine-threshold,
+    .artist-statement-spine {
+      width: 100%;
+    }
+  }
+
+  /* V3 Wide Viewport Content Scale - rebalance Artist after canonical frame expansion. */
+  @media (min-width: 1280px) {
+    .artist-spine-threshold {
+      min-height: min(720px, calc(100svh - 4.25rem));
+      grid-template-columns: minmax(620px, 0.46fr) minmax(640px, 0.54fr);
+      gap: clamp(5rem, 8vw, 10rem);
+    }
+
+    .artist-threshold-copy {
+      max-width: 68rem;
+    }
+
+    .artist-kicker {
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+    }
+
+    .artist-title {
+      max-width: 13ch;
+      font-size: clamp(4rem, 5.7vw, 6.9rem);
+      line-height: 0.92;
+    }
+
+    .artist-copy,
+    .artist-statement-copy p,
+    .artist-handoff-copy p {
+      font-size: clamp(1.1rem, 1.14vw, 1.3rem);
+      line-height: 1.58;
+    }
+
+    .artist-copy--lead {
+      max-width: 50rem;
+      margin-top: 1.45rem;
+    }
+
+    .artist-route-row a {
+      font-size: 0.74rem;
+    }
+
+    .artist-practice-trace-field {
+      min-height: min(58svh, 640px);
+    }
+
+    .artist-trace--main {
+      width: min(24vw, 420px);
+      right: 10%;
+      top: 14%;
+      opacity: calc(0.66 + (var(--presence-stillness, 0) * 0.05));
+    }
+
+    .artist-trace--crop {
+      width: min(20vw, 330px);
+      left: 9%;
+      bottom: 18%;
+      opacity: 0.24;
+    }
+
+    .artist-trace--ghost {
+      width: min(16vw, 260px);
+      right: 1%;
+      bottom: 8%;
+    }
+
+    .artist-statement-spine {
+      margin-top: clamp(3rem, 5vw, 5rem);
+      padding-top: clamp(3.2rem, 5.5vw, 5rem);
+    }
+
+    .statement-spine-grid {
+      grid-template-columns: minmax(520px, 0.42fr) minmax(620px, 0.58fr);
+      gap: clamp(5rem, 8vw, 10rem);
+    }
+
+    .statement-spine-grid h2 {
+      max-width: 11ch;
+      font-size: clamp(3.4rem, 5.2vw, 6.5rem);
+    }
+
+    .statement-spine-copy {
+      max-width: 56rem;
+      font-size: clamp(1.1rem, 1.14vw, 1.3rem);
+      line-height: 1.58;
+    }
+
+    .statement-trace {
+      width: min(26rem, 24vw);
+    }
+
+    .artist-practice-logic {
+      margin-top: clamp(4.5rem, 7vw, 7rem);
+    }
+
+    .artist-band-head {
+      max-width: 60rem;
+    }
+
+    .practice-logic-title {
+      font-size: clamp(3.4rem, 5vw, 6.2rem);
+    }
+
+    .practice-signal-row {
+      grid-template-columns: 5rem minmax(260px, 0.25fr) minmax(0, 0.75fr);
+      gap: clamp(1.25rem, 2.5vw, 3rem);
+      padding: 1.35rem 0;
+    }
+
+    .practice-signal-row strong {
+      font-size: clamp(1.18rem, 1.35vw, 1.55rem);
+    }
+
+    .practice-signal-row p {
+      max-width: 46rem;
+      font-size: clamp(1.03rem, 1.08vw, 1.22rem);
+    }
+
+    .artist-register-section,
+    .artist-method-route,
+    .artist-material-route,
+    .artist-collector-handoff {
+      grid-template-columns: minmax(520px, 0.38fr) minmax(620px, 0.62fr);
+      gap: clamp(5rem, 8vw, 10rem);
+      margin-top: clamp(5rem, 8vw, 7.5rem);
+    }
+
+    .artist-register-title,
+    .artist-method-route .artist-section-title,
+    .artist-material-route .artist-section-title,
+    .artist-collector-handoff h2 {
+      max-width: 11.5ch;
+      font-size: clamp(3.3rem, 5vw, 6.3rem);
+    }
+
+    .artist-register-row,
+    .artist-method-row,
+    .artist-trust-row {
+      grid-template-columns: minmax(260px, 0.28fr) minmax(0, 0.72fr);
+      gap: clamp(1.5rem, 3vw, 3.5rem);
+      padding: 1.25rem 0;
+    }
+
+    .artist-register-row span,
+    .artist-method-row strong,
+    .artist-trust-row strong {
+      font-size: clamp(1.08rem, 1.25vw, 1.42rem);
+    }
+
+    .artist-register-row p,
+    .artist-method-row p,
+    .artist-trust-row p,
+    .artist-handoff-copy p {
+      max-width: 52rem;
+      font-size: clamp(1.02rem, 1.08vw, 1.22rem);
+    }
+  }
+</style>

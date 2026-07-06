@@ -1,0 +1,102 @@
+---
+type Props = {
+  closingNote: string;
+  worksHref?: string;
+  artistHref?: string;
+  editionsHref?: string;
+  nextCycleHref?: string;
+  nextCycleLabel?: string;
+};
+
+const {
+  closingNote,
+  worksHref = "/works",
+  artistHref = "/artist",
+  editionsHref = "/prints",
+  nextCycleHref,
+  nextCycleLabel = "Open next cycle",
+} = Astro.props as Props;
+---
+
+<section class="cycle-closing">
+  <div class="cycle-closing-card cycle-closing-note">
+    <p class="cycle-closing-kicker">cycle note</p>
+    <p class="cycle-closing-text">{closingNote}</p>
+  </div>
+
+  <div class="cycle-closing-card">
+    <p class="cycle-closing-kicker">routes</p>
+    <div class="cycle-closing-actions">
+      <a href={worksHref} class="cycle-closing-btn is-primary">Back to works</a>
+      <a href={artistHref} class="cycle-closing-btn">Artist statement</a>
+      <a href={editionsHref} class="cycle-closing-btn">Editions</a>
+      {nextCycleHref ? <a href={nextCycleHref} class="cycle-closing-btn">{nextCycleLabel}</a> : null}
+    </div>
+  </div>
+</section>
+
+<style>
+  .cycle-closing {
+    position: relative;
+    z-index: 2;
+    margin: 0 auto;
+    max-width: 88rem;
+    padding: 0 1.5rem 4rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.8fr);
+    gap: 1rem;
+  }
+
+  .cycle-closing-card {
+    border: 1px solid rgba(255,255,255,0.055);
+    background: rgba(255,255,255,0.02);
+    padding: 1rem 1.05rem;
+  }
+
+  .cycle-closing-kicker {
+    margin: 0;
+    font-size: 0.72rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgba(244, 241, 234, 0.5);
+  }
+
+  .cycle-closing-text {
+    margin: 0.75rem 0 0;
+    max-width: 42rem;
+    color: rgba(244, 241, 234, 0.72);
+    line-height: 1.72;
+    font-size: 0.96rem;
+  }
+
+  .cycle-closing-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+    margin-top: 0.8rem;
+  }
+
+  .cycle-closing-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0.78rem 1rem;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    color: rgba(244, 241, 234, 0.9);
+    font-size: 0.88rem;
+  }
+
+  .cycle-closing-btn.is-primary {
+    background: rgba(255,255,255,0.92);
+    color: #0a0c10;
+    border-color: transparent;
+  }
+
+  @media (max-width: 980px) {
+    .cycle-closing {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

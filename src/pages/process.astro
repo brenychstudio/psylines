@@ -1,0 +1,684 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import AtmosphericBackdropRoot from "../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
+import CinematicIdleField from "../components/cinematic/CinematicIdleField.astro";
+import {
+  bodyManifestationMaterials,
+  bodyManifestationMetadata,
+  bodyManifestationPrinciples,
+  bodyManifestationProcess,
+  bodyManifestationSteps,
+  whisperXrProcessLinks,
+} from "../data/site/process";
+import { getResponsivePublicImage } from "../lib/assets/responsiveImage";
+
+const processPrimary = getResponsivePublicImage("/artworks/test-painting-2/mt-3.jpg", { defaultWidth: 1400 });
+const processTrace = getResponsivePublicImage("/artworks/test-painting-2/mt-2.jpg", { defaultWidth: 960 });
+const processStructure = getResponsivePublicImage("/artworks/test-painting-2/mt-5.jpg", { defaultWidth: 960 });
+const processStudy = getResponsivePublicImage("/images/works/p-1.jpg", { defaultWidth: 960 });
+
+const preloadImages = [processPrimary.src, processTrace.src, processStructure.src].filter(Boolean);
+const metadataRows = Object.entries(bodyManifestationMetadata);
+---
+
+<BaseLayout
+  title="Process - ARTIST STAGE"
+  description="The Body Manifestation Process behind Meta-Bodies: charcoal gesture, fixed trace, acrylic membrane, color field and inner structure."
+  canonicalPath="/process"
+  preloadImages={preloadImages}
+>
+  <AtmosphericBackdropRoot />
+  <CinematicIdleField />
+
+  <main
+    class="process-method-field"
+    data-cinematic-idle-root
+    data-cinematic-idle-delay="5600"
+    data-cinematic-idle-reduced-delay="9000"
+  >
+    <section class="process-threshold" aria-labelledby="process-title" data-atmosphere-section="process-threshold">
+      <div class="process-threshold__copy">
+        <p class="process-kicker" data-cinematic-idle="detail">{bodyManifestationProcess.eyebrow}</p>
+        <h1 id="process-title" data-cinematic-idle="anchor">{bodyManifestationProcess.headline}</h1>
+        <p class="process-lead" data-cinematic-idle="voice">{bodyManifestationProcess.lead}</p>
+        <p class="process-formula" data-cinematic-idle="detail">{bodyManifestationProcess.publicFormula}</p>
+
+        <nav class="process-route-row" aria-label="Process routes" data-cinematic-idle="line">
+          <a href="#process-sequence">Seven stages</a>
+          <a href="#process-materials">Material stack</a>
+          <a href="/artist">Artist field</a>
+          <a href="/works">Works field</a>
+        </nav>
+      </div>
+
+      <div class="process-visual-field" aria-label="Process image field">
+        <figure class="process-visual process-visual--primary" data-cinematic-idle="image">
+          <img
+            src={processPrimary.src}
+            srcset={processPrimary.srcset}
+            sizes="(min-width: 1300px) 30vw, (min-width: 760px) 48vw, 82vw"
+            alt="Meta-Bodies work showing a green body manifestation and charcoal line structure"
+            loading="eager"
+            fetchpriority="high"
+            decoding="async"
+          />
+          <figcaption>manifested body / color field</figcaption>
+        </figure>
+
+        <figure class="process-visual process-visual--trace" data-cinematic-idle="trace">
+          <img
+            src={processTrace.src}
+            srcset={processTrace.srcset}
+            sizes="(min-width: 1300px) 18vw, (min-width: 760px) 28vw, 54vw"
+            alt="Meta-Bodies detail with red field and charcoal structure"
+            loading="eager"
+            decoding="async"
+          />
+          <figcaption>fixed trace / pressure</figcaption>
+        </figure>
+
+        <figure class="process-visual process-visual--structure" data-cinematic-idle="trace">
+          <img
+            src={processStructure.src}
+            srcset={processStructure.srcset}
+            sizes="(min-width: 1300px) 16vw, (min-width: 760px) 24vw, 50vw"
+            alt="Meta-Bodies work with internal body structure"
+            loading="eager"
+            decoding="async"
+          />
+          <figcaption>inner route</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="process-canon" aria-labelledby="process-canon-title" data-atmosphere-section="process-canon">
+      <div>
+        <p class="process-kicker" data-cinematic-idle="detail">Method canon</p>
+        <h2 id="process-canon-title" data-cinematic-idle="anchor">A work begins as a field before it becomes a body.</h2>
+      </div>
+
+      <div class="process-canon__copy">
+        <p data-cinematic-idle="voice">{bodyManifestationProcess.shortDefinition}</p>
+        <p data-cinematic-idle="voice">
+          The process is not a neutral studio technique. It repeats the central logic of Meta-Bodies:
+          body as state, surface as memory, color as field, and line as internal route.
+        </p>
+      </div>
+    </section>
+
+    <section class="process-sequence" id="process-sequence" aria-labelledby="process-sequence-title" data-atmosphere-section="process-sequence">
+      <div class="process-section-head">
+        <p class="process-kicker" data-cinematic-idle="detail">Process sequence</p>
+        <h2 id="process-sequence-title" data-cinematic-idle="anchor">Seven stages of manifestation.</h2>
+      </div>
+
+      <div class="process-step-list">
+        {bodyManifestationSteps.map((step, index) => (
+          <article class="process-step-row" data-cinematic-idle="line" data-cinematic-idle-order={String(index / bodyManifestationSteps.length)}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <strong>{step.title}</strong>
+            <em>{step.label}</em>
+            <p>{step.copy}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section class="process-materials" id="process-materials" aria-labelledby="process-materials-title" data-atmosphere-section="process-materials">
+      <div class="process-materials__head">
+        <p class="process-kicker" data-cinematic-idle="detail">Material stack</p>
+        <h2 id="process-materials-title" data-cinematic-idle="anchor">Material is not support. It is the route of appearance.</h2>
+        <p data-cinematic-idle="voice">{bodyManifestationProcess.compactFormula}</p>
+      </div>
+
+      <div class="process-material-list">
+        {bodyManifestationMaterials.map((item, index) => (
+          <div class="process-material-row" data-cinematic-idle="line" data-cinematic-idle-order={String(index / bodyManifestationMaterials.length)}>
+            <strong>{item.material}</strong>
+            <p>{item.role}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section class="process-difference" aria-labelledby="process-difference-title" data-atmosphere-section="process-difference">
+      <div class="process-difference__image" data-cinematic-idle="image">
+        <img
+          src={processStudy.src}
+          srcset={processStudy.srcset}
+          sizes="(min-width: 1200px) 28vw, (min-width: 760px) 42vw, 84vw"
+          alt="Artwork trace showing charcoal and painted body field"
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+
+      <div class="process-difference__copy">
+        <p class="process-kicker" data-cinematic-idle="detail">Public language</p>
+        <h2 id="process-difference-title" data-cinematic-idle="anchor">Not copied. Manifested.</h2>
+        <p data-cinematic-idle="voice">
+          These works do not describe a human body from the outside. They register the moment
+          when an inner state receives a temporary bodily form.
+        </p>
+
+        <div class="process-principle-list">
+          {bodyManifestationPrinciples.map((item, index) => (
+            <div class="process-principle-row" data-cinematic-idle="line" data-cinematic-idle-order={String(index / bodyManifestationPrinciples.length)}>
+              <strong>{item.title}</strong>
+              <p>{item.copy}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="process-records" aria-labelledby="process-records-title" data-atmosphere-section="process-records">
+      <div>
+        <p class="process-kicker" data-cinematic-idle="detail">Work detail / COA</p>
+        <h2 id="process-records-title" data-cinematic-idle="anchor">Collector records need calm technical language.</h2>
+      </div>
+
+      <div class="process-records__body">
+        <p data-cinematic-idle="voice">
+          The public site can remain atmospheric, but object pages, certificates and gallery dossiers
+          should carry precise process language: medium, paper, reference policy, surface layer,
+          color field, and final line.
+        </p>
+
+        <dl class="process-metadata-list">
+          {metadataRows.map(([key, value], index) => (
+            <div data-cinematic-idle="line" data-cinematic-idle-order={String(index / metadataRows.length)}>
+              <dt>{key.replace(/([A-Z])/g, " $1").toLowerCase()}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
+
+    <section class="process-xr" aria-labelledby="process-xr-title" data-atmosphere-section="process-xr">
+      <div class="process-xr__head">
+        <p class="process-kicker" data-cinematic-idle="detail">WhisperXR bridge</p>
+        <h2 id="process-xr-title" data-cinematic-idle="anchor">The digital layer should extend the method, not replace it.</h2>
+        <p data-cinematic-idle="voice">
+          WhisperXR should not show a finished 3D figure immediately. It should translate the studio
+          method into space: gesture field, slow reveal, membrane, color atmosphere, inner routes,
+          and residue.
+        </p>
+      </div>
+
+      <div class="process-xr-list">
+        {whisperXrProcessLinks.map((item, index) => (
+          <div class="process-xr-row" data-cinematic-idle="line" data-cinematic-idle-order={String(index / whisperXrProcessLinks.length)}>
+            <strong>{item.physical}</strong>
+            <p>{item.spatial}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  </main>
+</BaseLayout>
+
+<style>
+  .process-method-field {
+    position: relative;
+    z-index: 1;
+    box-sizing: border-box;
+    width: 100%;
+    overflow-x: clip;
+    padding: clamp(6.4rem, 9vw, 8.6rem) var(--site-frame-gutter) clamp(5rem, 9vw, 8rem);
+  }
+
+  .process-method-field::before {
+    content: "";
+    position: absolute;
+    inset: 4rem 0 auto;
+    z-index: -1;
+    height: min(58rem, 82svh);
+    background:
+      radial-gradient(circle at 24% 34%, rgba(181, 205, 145, 0.14), transparent 33rem),
+      radial-gradient(circle at 68% 42%, rgba(150, 96, 72, 0.22), transparent 36rem),
+      linear-gradient(180deg, rgba(5, 8, 7, 0), rgba(5, 8, 7, 0.36));
+    pointer-events: none;
+  }
+
+  .process-threshold,
+  .process-canon,
+  .process-sequence,
+  .process-materials,
+  .process-difference,
+  .process-records,
+  .process-xr {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    margin-inline: 0;
+  }
+
+  .process-sequence,
+  .process-materials {
+    scroll-margin-top: 6rem;
+  }
+
+  .process-threshold {
+    min-height: min(780px, calc(100svh - 4.25rem));
+    display: grid;
+    grid-template-columns: minmax(560px, 0.44fr) minmax(680px, 0.56fr);
+    align-items: center;
+    gap: clamp(4rem, 7vw, 9rem);
+  }
+
+  .process-threshold__copy {
+    max-width: 68rem;
+  }
+
+  .process-kicker {
+    margin: 0 0 1.1rem;
+    color: rgba(235, 240, 232, 0.48);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .process-threshold h1,
+  .process-canon h2,
+  .process-section-head h2,
+  .process-materials h2,
+  .process-difference h2,
+  .process-records h2,
+  .process-xr h2 {
+    margin: 0;
+    color: rgba(245, 248, 242, 0.94);
+    font-weight: 300;
+    letter-spacing: 0;
+  }
+
+  .process-threshold h1 {
+    max-width: 12ch;
+    font-size: clamp(4rem, 6vw, 7.4rem);
+    line-height: 0.92;
+  }
+
+  .process-lead,
+  .process-canon__copy p,
+  .process-materials__head p,
+  .process-difference__copy > p,
+  .process-records__body > p,
+  .process-xr__head p {
+    max-width: 54rem;
+    margin: 1.35rem 0 0;
+    color: rgba(235, 240, 232, 0.66);
+    font-size: clamp(1.08rem, 1.14vw, 1.3rem);
+    line-height: 1.58;
+  }
+
+  .process-formula {
+    width: fit-content;
+    max-width: 100%;
+    margin: 1.4rem 0 0;
+    padding-top: 0.8rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(198, 216, 170, 0.78);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+  }
+
+  .process-route-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.15rem;
+    margin-top: 1.65rem;
+  }
+
+  .process-route-row a {
+    display: inline-flex;
+    min-height: 2.5rem;
+    align-items: center;
+    border-bottom: 1px solid rgba(235, 240, 232, 0.18);
+    color: rgba(245, 248, 242, 0.82);
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    text-decoration: none;
+    letter-spacing: 0;
+    transition:
+      border-color 180ms ease,
+      color 180ms ease,
+      transform 180ms ease;
+  }
+
+  .process-route-row a::after {
+    content: "->";
+    margin-left: 0.48rem;
+    color: rgba(178, 207, 146, 0.58);
+  }
+
+  .process-route-row a:hover,
+  .process-route-row a:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(178, 207, 146, 0.5);
+    color: rgba(245, 248, 242, 0.96);
+  }
+
+  .process-visual-field {
+    position: relative;
+    min-height: min(68svh, 720px);
+    isolation: isolate;
+  }
+
+  .process-visual {
+    position: absolute;
+    margin: 0;
+  }
+
+  .process-visual img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    box-shadow:
+      0 46px 130px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.03);
+  }
+
+  .process-visual figcaption {
+    margin-top: 0.58rem;
+    color: rgba(235, 240, 232, 0.38);
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1.25;
+    text-transform: uppercase;
+  }
+
+  .process-visual--primary {
+    width: min(31vw, 560px);
+    left: 26%;
+    top: 4%;
+    z-index: 2;
+  }
+
+  .process-visual--trace {
+    width: min(18vw, 310px);
+    left: 0;
+    top: 28%;
+    z-index: 1;
+    opacity: 0.52;
+    transform: rotate(-1.5deg);
+  }
+
+  .process-visual--structure {
+    width: min(16vw, 270px);
+    right: 5%;
+    bottom: 5%;
+    z-index: 3;
+    opacity: 0.42;
+    transform: rotate(1.4deg);
+  }
+
+  .process-canon,
+  .process-materials,
+  .process-records,
+  .process-xr {
+    display: grid;
+    grid-template-columns: minmax(420px, 0.42fr) minmax(620px, 0.58fr);
+    gap: clamp(4rem, 7vw, 9rem);
+    align-items: start;
+    margin-top: clamp(4rem, 7vw, 7rem);
+    padding-top: clamp(2rem, 4vw, 3.2rem);
+    border-top: 1px solid rgba(255, 255, 255, 0.065);
+  }
+
+  .process-canon h2,
+  .process-section-head h2,
+  .process-materials h2,
+  .process-difference h2,
+  .process-records h2,
+  .process-xr h2 {
+    max-width: 12ch;
+    font-size: clamp(3.1rem, 4.8vw, 6.2rem);
+    line-height: 0.96;
+  }
+
+  .process-canon__copy {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .process-canon__copy p {
+    margin-top: 0;
+  }
+
+  .process-sequence {
+    margin-top: clamp(5rem, 8vw, 8rem);
+  }
+
+  .process-section-head {
+    max-width: 62rem;
+  }
+
+  .process-step-list {
+    margin-top: clamp(2.2rem, 4vw, 3.4rem);
+    border-top: 1px solid rgba(255, 255, 255, 0.065);
+  }
+
+  .process-step-row {
+    display: grid;
+    grid-template-columns: 5rem minmax(260px, 0.25fr) minmax(150px, 0.16fr) minmax(0, 0.59fr);
+    gap: clamp(1rem, 2.3vw, 2.6rem);
+    align-items: start;
+    padding: 1.15rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  }
+
+  .process-step-row span,
+  .process-step-row em {
+    color: rgba(235, 240, 232, 0.38);
+    font-size: 0.64rem;
+    font-style: normal;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 1.35;
+    text-transform: uppercase;
+  }
+
+  .process-step-row strong,
+  .process-material-row strong,
+  .process-principle-row strong,
+  .process-xr-row strong {
+    color: rgba(245, 248, 242, 0.86);
+    font-size: clamp(1.08rem, 1.28vw, 1.48rem);
+    font-weight: 500;
+    line-height: 1.25;
+  }
+
+  .process-step-row p,
+  .process-material-row p,
+  .process-principle-row p,
+  .process-xr-row p,
+  .process-metadata-list dd {
+    margin: 0;
+    color: rgba(235, 240, 232, 0.58);
+    font-size: clamp(0.98rem, 1vw, 1.12rem);
+    line-height: 1.58;
+  }
+
+  .process-material-list,
+  .process-xr-list {
+    border-top: 1px solid rgba(255, 255, 255, 0.065);
+  }
+
+  .process-material-row,
+  .process-xr-row {
+    display: grid;
+    grid-template-columns: minmax(210px, 0.3fr) minmax(0, 0.7fr);
+    gap: 1.2rem;
+    padding: 1.05rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  }
+
+  .process-difference {
+    display: grid;
+    grid-template-columns: minmax(420px, 0.38fr) minmax(620px, 0.62fr);
+    gap: clamp(4rem, 7vw, 9rem);
+    align-items: center;
+    margin-top: clamp(5rem, 9vw, 9rem);
+    padding-top: clamp(2rem, 4vw, 3.2rem);
+    border-top: 1px solid rgba(255, 255, 255, 0.065);
+  }
+
+  .process-difference__image {
+    width: min(34vw, 520px);
+    opacity: 0.54;
+  }
+
+  .process-difference__image img {
+    display: block;
+    width: 100%;
+    height: auto;
+    box-shadow:
+      0 38px 110px rgba(0, 0, 0, 0.46),
+      0 0 0 1px rgba(255, 255, 255, 0.025);
+  }
+
+  .process-principle-list {
+    margin-top: clamp(1.6rem, 3vw, 2.4rem);
+    border-top: 1px solid rgba(255, 255, 255, 0.065);
+  }
+
+  .process-principle-row {
+    display: grid;
+    grid-template-columns: minmax(190px, 0.26fr) minmax(0, 0.74fr);
+    gap: 1.2rem;
+    padding: 1.05rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  }
+
+  .process-records__body {
+    display: grid;
+    gap: clamp(1.5rem, 3vw, 2.4rem);
+  }
+
+  .process-records__body > p {
+    margin-top: 0;
+  }
+
+  .process-metadata-list {
+    margin: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.065);
+  }
+
+  .process-metadata-list div {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.28fr) minmax(0, 0.72fr);
+    gap: 1rem;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  }
+
+  .process-metadata-list dt {
+    color: rgba(235, 240, 232, 0.38);
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 1080px) {
+    .process-threshold,
+    .process-canon,
+    .process-materials,
+    .process-difference,
+    .process-records,
+    .process-xr {
+      grid-template-columns: 1fr;
+    }
+
+    .process-threshold {
+      min-height: auto;
+    }
+
+    .process-visual-field {
+      min-height: 520px;
+    }
+
+    .process-visual--primary {
+      width: min(54vw, 520px);
+      left: 24%;
+    }
+
+    .process-visual--trace {
+      width: min(30vw, 290px);
+    }
+
+    .process-visual--structure {
+      width: min(28vw, 260px);
+    }
+
+    .process-difference__image {
+      width: min(62vw, 520px);
+    }
+  }
+
+  @media (max-width: 760px) {
+    .process-method-field {
+      padding-top: clamp(5.8rem, 16vw, 7rem);
+      padding-right: var(--site-frame-gutter-mobile);
+      padding-left: var(--site-frame-gutter-mobile);
+    }
+
+    .process-threshold h1,
+    .process-canon h2,
+    .process-section-head h2,
+    .process-materials h2,
+    .process-difference h2,
+    .process-records h2,
+    .process-xr h2 {
+      max-width: 100%;
+      font-size: clamp(2.55rem, 12vw, 4.2rem);
+    }
+
+    .process-route-row {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .process-route-row a {
+      width: 100%;
+    }
+
+    .process-visual-field {
+      min-height: auto;
+      display: grid;
+      gap: 0.8rem;
+    }
+
+    .process-visual {
+      position: static;
+      width: min(100%, 460px);
+      transform: none;
+    }
+
+    .process-visual--trace,
+    .process-visual--structure {
+      display: none;
+    }
+
+    .process-step-row,
+    .process-material-row,
+    .process-principle-row,
+    .process-xr-row,
+    .process-metadata-list div {
+      grid-template-columns: 1fr;
+      gap: 0.45rem;
+    }
+
+    .process-step-row {
+      padding-block: 1rem;
+    }
+  }
+</style>

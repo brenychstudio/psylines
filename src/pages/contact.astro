@@ -1,0 +1,654 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import AtmosphericBackdropRoot from "../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
+import {
+  buildCollectorInquiryMailto,
+  readCollectorInquiryPrefill,
+} from "../lib/contactInquiry";
+
+const studioEmail = "info@brenych.com";
+const inquiryPrefill = readCollectorInquiryPrefill(Astro.url.searchParams);
+const mailtoHref = buildCollectorInquiryMailto(studioEmail, inquiryPrefill);
+const inquirySummaryParts = [
+  inquiryPrefill?.inventoryNumber ?? inquiryPrefill?.workTitle ?? null,
+  inquiryPrefill?.seriesTitle ?? null,
+  inquiryPrefill?.routeLabel ?? null,
+].filter(Boolean);
+const inquiryWorkHref = inquiryPrefill?.workSlug ? `/works/${inquiryPrefill.workSlug}` : null;
+const inquirySeriesHref = inquiryPrefill?.seriesSlug ? `/series/${inquiryPrefill.seriesSlug}` : null;
+
+const studioLinks = [
+  { label: "Instagram", href: "https://www.instagram.com/psy.lines/" },
+  { label: "YouTube", href: "https://www.youtube.com/@PSYLINES" },
+  { label: "TikTok", href: "https://www.tiktok.com/@psylines" },
+];
+---
+<BaseLayout
+  title="Contact - ARTIST STAGE"
+  description="Direct studio contact for collector inquiries, curatorial conversations, commissions, press, and broader studio dialogue."
+  canonicalPath="/contact"
+>
+  <AtmosphericBackdropRoot />
+
+  <section class="contact-direct-field" aria-labelledby="contact-title">
+    <section class="contact-direct-threshold" data-atmosphere-section="contact-threshold">
+      <div class="contact-direct-copy">
+        <p class="contact-kicker">CONTACT / STUDIO ROUTE</p>
+
+        <h1 id="contact-title">Contact the studio.</h1>
+
+        <p>
+          For collector inquiries, curatorial conversations, gallery context, commissions,
+          press, or studio dialogue.
+        </p>
+
+        <p class="contact-secondary-note">
+          For available works, start from the selected object page when possible. For broader
+          context, send a direct studio message.
+        </p>
+
+        <nav class="contact-route-links" aria-label="Contact route signals">
+          <a href="/works">View works</a>
+          <a href="/series">Open series field</a>
+          <a href="/collectors">Collector process</a>
+        </nav>
+      </div>
+
+      <section class="contact-direct" aria-label="Direct contact">
+        <p class="contact-kicker">DIRECT CONTACT</p>
+
+        {inquiryPrefill ? (
+          <div class="contact-prefill-note" aria-label="Current inquiry context">
+            <p class="contact-kicker">CURRENT COLLECTOR CONTEXT</p>
+            <p class="contact-prefill-summary">
+              {inquirySummaryParts.join(" / ")}
+            </p>
+
+            <div class="contact-prefill-meta">
+              {inquiryPrefill.formatLabel ? <span>Format: {inquiryPrefill.formatLabel}</span> : null}
+              {inquiryPrefill.dimensions ? <span>Dimensions: {inquiryPrefill.dimensions}</span> : null}
+              {inquiryPrefill.priceLabel ? <span>Price: {inquiryPrefill.priceLabel}</span> : null}
+            </div>
+
+            <nav class="contact-prefill-links" aria-label="Return routes">
+              {inquiryWorkHref ? <a href={inquiryWorkHref}>Return to work</a> : null}
+              {inquirySeriesHref ? <a href={inquirySeriesHref}>Open series chapter</a> : null}
+              <a href="/works">Works field</a>
+            </nav>
+          </div>
+        ) : null}
+
+        <h2>Email</h2>
+
+        <a class="contact-email" href={mailtoHref}>
+          {studioEmail}
+        </a>
+
+        <div class="contact-direct-actions">
+          <a href={mailtoHref}>Open mail</a>
+          <button type="button" data-copy-email={studioEmail}>Copy email</button>
+        </div>
+
+        <div class="contact-direct-meta">
+          <p class="contact-kicker">STUDIO CHANNELS</p>
+          <nav class="contact-social-links" aria-label="Studio channels">
+            {studioLinks.map((link) => (
+              <a href={link.href} target="_blank" rel="noreferrer">{link.label}</a>
+            ))}
+          </nav>
+        </div>
+      </section>
+    </section>
+
+    <section class="contact-context-grid" data-atmosphere-section="contact-context">
+      <section class="contact-contexts" aria-label="Inquiry contexts">
+        <p class="contact-kicker">MESSAGE CONTEXT</p>
+
+        <div class="contact-context-row">
+          <h2>Collector inquiry</h2>
+          <p>
+            For originals, editions, availability, shipping, certificate context, or
+            acquisition questions.
+          </p>
+        </div>
+
+        <div class="contact-context-row">
+          <h2>Curatorial / gallery</h2>
+          <p>
+            For exhibitions, institutional context, presentation requests, or gallery
+            dialogue.
+          </p>
+        </div>
+
+        <div class="contact-context-row">
+          <h2>Studio / press</h2>
+          <p>
+            For collaborations, press, commissions, or broader studio communication.
+          </p>
+        </div>
+      </section>
+
+      <section class="contact-message-guide" aria-label="What to include">
+        <p class="contact-kicker">INCLUDE WHEN RELEVANT</p>
+
+        <ul>
+          <li>Work title or series</li>
+          <li>Original / edition / format interest</li>
+          <li>Shipping country or region</li>
+          <li>Curatorial, gallery, press, or project context</li>
+          <li>Preferred response route</li>
+        </ul>
+      </section>
+    </section>
+
+    <section class="contact-work-note" aria-label="Work acquisition note" data-atmosphere-section="contact-work-route">
+      <div>
+        <p class="contact-kicker">WORK ROUTE</p>
+        <h2>Start from the selected work.</h2>
+      </div>
+
+      <div>
+        <p>
+          Available works carry their own object context, selected format, interior scale
+          preview, and secure checkout route where enabled.
+        </p>
+
+        <div class="contact-route-links">
+          <a href="/works">View works</a>
+          <a href="/works/mt-3">Open MT-3 object</a>
+          <a href="/collectors">Collector process</a>
+        </div>
+      </div>
+    </section>
+  </section>
+</BaseLayout>
+
+<script is:inline>
+  (() => {
+    const copyButtons = document.querySelectorAll("[data-copy-email]");
+    if (!copyButtons.length) return;
+
+    copyButtons.forEach((button) => {
+      button.addEventListener("click", async () => {
+        const email = button.getAttribute("data-copy-email");
+        if (!email) return;
+
+        try {
+          await navigator.clipboard.writeText(email);
+          const original = button.textContent;
+          button.textContent = "Email copied";
+          window.setTimeout(() => {
+            button.textContent = original || "Copy email";
+          }, 1600);
+        } catch {
+          const original = button.textContent;
+          button.textContent = "Copy manually";
+          window.setTimeout(() => {
+            button.textContent = original || "Copy email";
+          }, 1600);
+        }
+      });
+    });
+  })();
+</script>
+
+<style>
+  /* V3-36R - Contact Clarity + Direct Communication Route */
+  .contact-direct-field {
+    padding: clamp(6.5rem, 10vw, 9rem) 0 clamp(5rem, 9vw, 8rem);
+    position: relative;
+    isolation: isolate;
+    overflow-x: clip;
+  }
+
+  .contact-direct-field::before {
+    content: "";
+    position: fixed;
+    inset: -18vmax;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 22% 32%, rgba(132, 140, 122, 0.13), transparent 38%),
+      radial-gradient(circle at 72% 46%, rgba(108, 112, 108, 0.12), transparent 42%),
+      radial-gradient(circle at 42% 82%, rgba(70, 74, 68, 0.12), transparent 56%);
+    filter: none;
+    opacity: 0.82;
+  }
+
+  .contact-direct-threshold,
+  .contact-context-grid,
+  .contact-work-note {
+    width: var(--site-shell-wide);
+    max-width: none;
+    margin-inline: auto;
+  }
+
+  .contact-direct-threshold {
+    min-height: min(680px, calc(100svh - 5rem));
+    display: grid;
+    grid-template-columns: minmax(460px, 0.52fr) minmax(360px, 0.48fr);
+    align-items: center;
+    gap: clamp(3rem, 7vw, 8rem);
+  }
+
+  .contact-kicker {
+    margin: 0 0 1.1rem;
+    color: rgba(235, 240, 232, 0.46);
+    font-size: 0.68rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+
+  .contact-direct-copy h1 {
+    margin: 0;
+    max-width: 9ch;
+    color: rgba(245, 248, 242, 0.94);
+    font-size: clamp(4.2rem, 7.6vw, 8.8rem);
+    line-height: 0.9;
+    letter-spacing: 0;
+    font-weight: 300;
+  }
+
+  .contact-direct-copy p {
+    max-width: 42rem;
+    margin: 1.25rem 0 0;
+    color: rgba(235, 240, 232, 0.66);
+    font-size: clamp(1rem, 1.1vw, 1.16rem);
+    line-height: 1.6;
+  }
+
+  .contact-secondary-note {
+    color: rgba(235, 240, 232, 0.54);
+  }
+
+  .contact-route-links,
+  .contact-direct-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem 1.1rem;
+    margin-top: 1.3rem;
+  }
+
+  .contact-route-links a,
+  .contact-direct-actions a,
+  .contact-direct-actions button,
+  .contact-work-note a,
+  .contact-social-links a {
+    appearance: none;
+    border: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+    padding: 0 0 0.28rem;
+    background: transparent;
+    color: rgba(245, 248, 242, 0.82);
+    text-decoration: none;
+    font: inherit;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .contact-route-links a::after,
+  .contact-direct-actions a::after,
+  .contact-prefill-links a::after,
+  .contact-work-note a::after {
+    content: " \2192";
+    opacity: 0.62;
+  }
+
+  .contact-direct {
+    position: relative;
+    padding: clamp(1.4rem, 3vw, 2.4rem) 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  }
+
+  .contact-direct::before {
+    content: "";
+    position: absolute;
+    inset: -20% -12%;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 40% 34%, rgba(235, 240, 232, 0.06), transparent 42%),
+      radial-gradient(circle at 68% 64%, rgba(120, 128, 112, 0.12), transparent 52%);
+    filter: none;
+    opacity: 0.8;
+  }
+
+  .contact-direct h2 {
+    margin: 0;
+    color: rgba(245, 248, 242, 0.72);
+    font-size: clamp(1.4rem, 2vw, 2.4rem);
+    line-height: 1;
+    font-weight: 400;
+  }
+
+  .contact-prefill-note {
+    display: grid;
+    gap: 0.8rem;
+    margin: 0 0 1.4rem;
+    padding: 0.2rem 0 1.15rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+  }
+
+  .contact-prefill-summary {
+    margin: 0;
+    color: rgba(245, 248, 242, 0.88);
+    font-size: clamp(1rem, 1.25vw, 1.32rem);
+    line-height: 1.4;
+  }
+
+  .contact-prefill-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem 0.95rem;
+    color: rgba(235, 240, 232, 0.56);
+    font-size: 0.76rem;
+    line-height: 1.45;
+  }
+
+  .contact-prefill-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem 1.1rem;
+  }
+
+  .contact-prefill-links a {
+    appearance: none;
+    border: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+    padding: 0 0 0.28rem;
+    background: transparent;
+    color: rgba(245, 248, 242, 0.82);
+    text-decoration: none;
+    font: inherit;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .contact-email {
+    display: inline-block;
+    margin-top: 0.75rem;
+    color: rgba(245, 248, 242, 0.94);
+    font-size: clamp(1.35rem, 2.6vw, 3rem);
+    line-height: 1.1;
+    letter-spacing: 0;
+    text-decoration: none;
+  }
+
+  .contact-direct-meta {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.045);
+  }
+
+  .contact-social-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem 1rem;
+  }
+
+  .contact-context-grid {
+    margin-top: clamp(4rem, 8vw, 7rem);
+    display: grid;
+    grid-template-columns: minmax(320px, 0.58fr) minmax(280px, 0.42fr);
+    gap: clamp(2rem, 6vw, 6rem);
+    padding-top: 1.2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .contact-contexts,
+  .contact-message-guide {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .contact-context-row {
+    display: grid;
+    grid-template-columns: minmax(150px, 0.34fr) minmax(0, 0.66fr);
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+  }
+
+  .contact-context-row h2 {
+    margin: 0;
+    color: rgba(245, 248, 242, 0.84);
+    font-size: clamp(1rem, 1.3vw, 1.35rem);
+  }
+
+  .contact-context-row p {
+    margin: 0;
+    color: rgba(235, 240, 232, 0.58);
+    line-height: 1.55;
+  }
+
+  .contact-message-guide ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.055);
+  }
+
+  .contact-message-guide li {
+    padding: 0.85rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+    color: rgba(235, 240, 232, 0.62);
+  }
+
+  .contact-work-note {
+    margin-top: clamp(4rem, 8vw, 7rem);
+    display: grid;
+    grid-template-columns: minmax(280px, 0.36fr) minmax(0, 0.64fr);
+    gap: clamp(2rem, 6vw, 6rem);
+    padding-top: 1.2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .contact-work-note h2 {
+    margin: 0;
+    max-width: 11ch;
+    color: rgba(245, 248, 242, 0.9);
+    font-size: clamp(2.4rem, 4.8vw, 5.4rem);
+    line-height: 0.96;
+    letter-spacing: 0;
+    font-weight: 300;
+  }
+
+  .contact-work-note p {
+    margin: 0;
+    max-width: 44rem;
+    color: rgba(235, 240, 232, 0.62);
+    line-height: 1.6;
+  }
+
+  .contact-route-links a:hover,
+  .contact-route-links a:focus-visible,
+  .contact-direct-actions a:hover,
+  .contact-direct-actions a:focus-visible,
+  .contact-direct-actions button:hover,
+  .contact-direct-actions button:focus-visible,
+  .contact-prefill-links a:hover,
+  .contact-prefill-links a:focus-visible,
+  .contact-work-note a:hover,
+  .contact-work-note a:focus-visible,
+  .contact-social-links a:hover,
+  .contact-social-links a:focus-visible,
+  .contact-email:hover,
+  .contact-email:focus-visible {
+    color: rgba(245, 248, 242, 0.98);
+    border-color: rgba(245, 248, 242, 0.34);
+  }
+
+  .contact-route-links a:focus-visible,
+  .contact-direct-actions a:focus-visible,
+  .contact-direct-actions button:focus-visible,
+  .contact-social-links a:focus-visible,
+  .contact-email:focus-visible {
+    outline: 1px solid rgba(245, 248, 242, 0.34);
+    outline-offset: 8px;
+  }
+
+  @media (max-width: 900px) {
+    .contact-direct-threshold,
+    .contact-context-grid,
+    .contact-work-note {
+      grid-template-columns: 1fr;
+      min-height: auto;
+    }
+
+    .contact-direct-copy h1 {
+      max-width: 9ch;
+      font-size: clamp(3.5rem, 16vw, 6.4rem);
+    }
+
+    .contact-context-row {
+      grid-template-columns: 1fr;
+      gap: 0.4rem;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .contact-route-links,
+    .contact-direct-actions,
+    .contact-social-links {
+      display: grid;
+    }
+
+    .contact-direct-threshold,
+    .contact-context-grid,
+    .contact-work-note {
+      width: calc(100vw - 1.5rem);
+      max-width: calc(100vw - 1.5rem);
+    }
+
+    .contact-email {
+      font-size: clamp(1.2rem, 6vw, 1.8rem);
+      overflow-wrap: anywhere;
+    }
+  }
+
+  /* V3 Canonical Frame - align Contact page to the shared header axis. */
+  .contact-direct-field {
+    box-sizing: border-box;
+    width: 100%;
+    padding-right: var(--site-frame-gutter);
+    padding-left: var(--site-frame-gutter);
+  }
+
+  .contact-direct-threshold,
+  .contact-context-grid,
+  .contact-work-note {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  @media (max-width: 520px) {
+    .contact-direct-threshold,
+    .contact-context-grid,
+    .contact-work-note {
+      width: 100%;
+      max-width: none;
+    }
+  }
+
+  /* V3 Wide Viewport Content Scale - rebalance the expanded contact frame. */
+  @media (min-width: 1280px) {
+    .contact-direct-threshold {
+      min-height: min(720px, calc(100svh - 4.5rem));
+      grid-template-columns: minmax(560px, 0.48fr) minmax(560px, 0.52fr);
+      gap: clamp(5rem, 9vw, 11rem);
+    }
+
+    .contact-kicker {
+      font-size: 0.74rem;
+      letter-spacing: 0.24em;
+    }
+
+    .contact-direct-copy h1 {
+      max-width: 10ch;
+      font-size: clamp(5.2rem, 7.9vw, 9.8rem);
+      line-height: 0.88;
+    }
+
+    .contact-direct-copy p {
+      max-width: 48rem;
+      margin-top: 1.35rem;
+      font-size: clamp(1.12rem, 1.16vw, 1.34rem);
+      line-height: 1.55;
+    }
+
+    .contact-route-links a,
+    .contact-direct-actions a,
+    .contact-direct-actions button,
+    .contact-work-note a,
+    .contact-social-links a {
+      font-size: 0.74rem;
+    }
+
+    .contact-direct {
+      padding-block: clamp(2.25rem, 3.8vw, 3.8rem);
+    }
+
+    .contact-direct h2 {
+      font-size: clamp(1.8rem, 2.35vw, 3rem);
+    }
+
+    .contact-email {
+      margin-top: 0.85rem;
+      font-size: clamp(2rem, 3vw, 3.7rem);
+    }
+
+    .contact-direct-meta {
+      margin-top: 2rem;
+      padding-top: 1.35rem;
+    }
+
+    .contact-context-grid {
+      grid-template-columns: minmax(620px, 0.58fr) minmax(420px, 0.42fr);
+      gap: clamp(4rem, 7vw, 9rem);
+      margin-top: clamp(4rem, 7vw, 6rem);
+      padding-top: 1.7rem;
+    }
+
+    .contact-context-row {
+      grid-template-columns: minmax(220px, 0.32fr) minmax(0, 0.68fr);
+      gap: clamp(1.5rem, 3vw, 3rem);
+      padding: 1.35rem 0;
+    }
+
+    .contact-context-row h2 {
+      font-size: clamp(1.2rem, 1.55vw, 1.8rem);
+    }
+
+    .contact-context-row p,
+    .contact-message-guide li,
+    .contact-work-note p {
+      font-size: clamp(1.03rem, 1.08vw, 1.22rem);
+    }
+
+    .contact-message-guide li {
+      padding: 1.05rem 0;
+    }
+
+    .contact-work-note {
+      min-height: min(520px, 60svh);
+      grid-template-columns: minmax(520px, 0.42fr) minmax(560px, 0.58fr);
+      gap: clamp(4rem, 7vw, 9rem);
+      align-items: start;
+      margin-top: clamp(4.5rem, 8vw, 7rem);
+      padding-top: 1.7rem;
+    }
+
+    .contact-work-note h2 {
+      max-width: 10ch;
+      font-size: clamp(3.4rem, 5.6vw, 6.7rem);
+    }
+  }
+</style>

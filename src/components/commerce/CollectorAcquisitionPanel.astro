@@ -1,0 +1,616 @@
+---
+import {
+  getCommerceOptionMaterialLine,
+  getCommerceOptionProofLine,
+  getCommerceOptionTypeLabel,
+  type CommerceOption,
+  type CommerceProduct,
+} from "../../data/commerce/catalog";
+import type { ArtworkMeta } from "../../data/site/artworkMeta";
+import type { ArtworkSeries } from "../../data/site/series";
+import type { WorkItem } from "../../data/site/types";
+import { buildCollectorInquiryHref } from "../../lib/contactInquiry";
+
+type Props = {
+  work: WorkItem;
+  commerceProduct: CommerceProduct | null;
+  defaultCommerceOption: CommerceOption | null;
+  defaultOptionTypeLabel: string;
+  defaultOptionProofLine: string;
+  defaultOptionMaterialLine: string;
+  printOptions: CommerceOption[];
+  originalOption: CommerceOption | null;
+  artworkMeta?: ArtworkMeta;
+  artworkSeries?: ArtworkSeries | null;
+};
+
+const {
+  work,
+  commerceProduct,
+  defaultCommerceOption,
+  defaultOptionTypeLabel,
+  defaultOptionProofLine,
+  defaultOptionMaterialLine,
+  printOptions,
+  originalOption,
+  artworkMeta,
+  artworkSeries,
+} = Astro.props as Props;
+
+function getCompactProofLine(option: CommerceOption | null, fallback: string) {
+  if (!option) return fallback;
+
+  if (option.type === "original") {
+    return "signed - certificate included";
+  }
+
+  const edition = option.editionSize ? `edition of ${option.editionSize}` : option.editionNumberLabel;
+  const parts = [
+    edition,
+    option.signed ? "signed" : null,
+    option.certificateIncluded ? "certificate" : null,
+  ].filter(Boolean);
+
+  return parts.join(" - ") || fallback;
+}
+
+function getCompactMaterialLine(option: CommerceOption | null, fallback: string) {
+  if (!option) return fallback;
+  if (option.type === "original") return "original surface";
+  if (option.paper?.toLowerCase().includes("archival")) return "pigment print / archival paper";
+  return option.printMethod && option.paper ? `${option.printMethod} / ${option.paper}` : fallback;
+}
+
+const defaultCompactProofLine = getCompactProofLine(defaultCommerceOption, defaultOptionProofLine);
+const defaultCompactMaterialLine = getCompactMaterialLine(defaultCommerceOption, defaultOptionMaterialLine);
+const hasCommerceRoute = Boolean(commerceProduct && defaultCommerceOption);
+const availabilityStatus = artworkMeta?.acquisitionStatus ?? (hasCommerceRoute ? "available" : "inquiry");
+const canCheckout = hasCommerceRoute && !["reserved", "sold", "not_for_sale"].includes(availabilityStatus);
+const hasPreviewRoute = Boolean(artworkMeta?.dimensions ?? work.dimensions);
+
+const inventoryNumber = artworkMeta?.inventoryNumber ?? work.title;
+const contextLabel = artworkSeries?.title ?? "Independent Manifestation";
+const recordParts = [
+  inventoryNumber,
+  artworkMeta?.year ? String(artworkMeta.year) : null,
+  contextLabel,
+].filter(Boolean);
+
+const mediumLine =
+  artworkMeta?.mediumLine ??
+  "Mixed media on archival paper.";
+
+const formatDetails = [
+  artworkMeta?.format,
+  artworkMeta?.dimensions,
+  artworkMeta?.orientation,
+].filter(Boolean).join(" / ");
+
+const materialsLine = artworkMeta?.materials?.length
+  ? artworkMeta.materials.join(", ")
+  : "";
+
+const processLayerLine = [
+  artworkMeta?.primaryGesture,
+  artworkMeta?.surfaceLayer,
+  artworkMeta?.colorLayer,
+  artworkMeta?.finalLine,
+].filter(Boolean).join(" / ");
+
+function getAvailabilityLabel(status: typeof availabilityStatus) {
+  switch (status) {
+    case "available":
+      return "Available";
+    case "reserved":
+      return "Reserved";
+    case "sold":
+      return "Placed";
+    case "not_for_sale":
+      return "Not in public route";
+    default:
+      return "Inquiry";
+  }
+}
+
+function getAvailabilityCopy(status: typeof availabilityStatus) {
+  if (status === "available") {
+    if (originalOption && printOptions.length > 0) {
+      return "Original and selected edition routes are currently open.";
+    }
+
+    if (originalOption) {
+      return "Original collector route is currently open.";
+    }
+
+    if (printOptions.length > 0) {
+      return "Selected edition routes are currently open.";
+    }
+
+    return "Collector route is currently open.";
+  }
+
+  if (status === "reserved") {
+    return "This work is under collector hold. Use inquiry for follow-up or nearby alternatives.";
+  }
+
+  if (status === "sold") {
+    return "This work is already placed. Inquiry can open adjacent or series-related options.";
+  }
+
+  if (status === "not_for_sale") {
+    return "This work is outside the public collector route and remains available for context only.";
+  }
+
+  return "Availability, pricing, and next steps are shared through direct studio contact.";
+}
+
+function getCollectorRouteCopy() {
+  if (canCheckout) {
+    if (originalOption && printOptions.length > 0) {
+      return "Choose between the original work and selected signed pigment editions.";
+    }
+
+    if (originalOption) {
+      return "Original work route is active with direct checkout support.";
+    }
+
+    if (printOptions.length > 0) {
+      return "Edition route is active with direct checkout support.";
+    }
+  }
+
+  if (availabilityStatus === "sold") {
+    return "This object record remains public while acquisition continues through adjacent works or direct inquiry.";
+  }
+
+  if (availabilityStatus === "reserved") {
+    return "Collector hold is active. Inquiry remains open for follow-up context.";
+  }
+
+  if (availabilityStatus === "not_for_sale") {
+    return "This work is held outside the public collector route.";
+  }
+
+  return "Collector route continues through direct inquiry.";
+}
+
+const availabilityLabel = getAvailabilityLabel(availabilityStatus);
+const availabilityCopy = getAvailabilityCopy(availabilityStatus);
+const collectorRouteCopy = getCollectorRouteCopy();
+const routeBackHref = artworkSeries ? `/works?series=${artworkSeries.slug}` : "/works";
+const routeBackLabel = artworkSeries ? "Return to series works" : "Return to works field";
+const seriesChapterHref = artworkSeries ? `/series/${artworkSeries.slug}` : null;
+const defaultRouteLabel = defaultCommerceOption
+  ? getCommerceOptionTypeLabel(defaultCommerceOption)
+  : availabilityStatus === "sold"
+    ? "Placed work"
+    : availabilityStatus === "reserved"
+      ? "Collector hold"
+      : "Original inquiry";
+const defaultFormatLabel = defaultCommerceOption?.label ?? artworkMeta?.format ?? "Original work";
+const defaultDimensions = defaultCommerceOption?.dimensions ?? artworkMeta?.dimensions ?? work.dimensions ?? "";
+const defaultPriceLabel = defaultCommerceOption ? `EUR ${defaultCommerceOption.priceEUR}` : "Shared on request";
+const inquiryHref = buildCollectorInquiryHref({
+  context: "collector",
+  workTitle: work.title,
+  workSlug: work.slug,
+  inventoryNumber,
+  seriesTitle: artworkSeries?.title ?? null,
+  seriesSlug: artworkSeries?.slug ?? null,
+  routeLabel: defaultRouteLabel,
+  formatLabel: defaultFormatLabel,
+  dimensions: defaultDimensions,
+  priceLabel: defaultPriceLabel,
+  source: "work-detail",
+});
+---
+
+<div
+  id="collector-route"
+  class="detail-purchase-panel collector-instrument__route floating-acquisition-annotation"
+  data-collector-route
+>
+  <p class="detail-purchase-kicker">collector route</p>
+
+  <p class="collector-object-record">
+    {recordParts.map((part) => (
+      <span>{part}</span>
+    ))}
+  </p>
+
+  <div class="detail-purchase-topline collector-instrument__route-copy">
+    <div class="collector-availability" aria-label="Availability status">
+      <span class={`collector-availability__badge is-${availabilityStatus}`}>{availabilityLabel}</span>
+      <p class="collector-availability__copy">{availabilityCopy}</p>
+    </div>
+
+    <p class="detail-purchase-edition">
+      {collectorRouteCopy}
+    </p>
+  </div>
+
+  <p class="collector-material-line">
+    {mediumLine}
+  </p>
+
+  {canCheckout && commerceProduct ? (
+    <>
+      <div class="detail-purchase-size-row collector-instrument__selector">
+        <p class="detail-purchase-label">Format</p>
+
+        <div class="detail-size-options">
+          {commerceProduct.options.map((option, index, array) => {
+            const isDefaultActive = option.sizeKey === "original" || (!array.some((item) => item.sizeKey === "original") && index === 0);
+
+            return (
+              <button
+                type="button"
+                class={`detail-size-chip ${isDefaultActive ? "is-active" : ""}`}
+                data-size-chip
+                data-size-label={option.sizeKey}
+                data-size-dimensions={option.dimensions}
+                data-size-price={String(option.priceEUR)}
+                data-size-type-label={getCommerceOptionTypeLabel(option)}
+                data-size-proof-line={getCompactProofLine(option, getCommerceOptionProofLine(option))}
+                data-size-material-line={getCompactMaterialLine(option, getCommerceOptionMaterialLine(option))}
+                data-size-production-time={option.productionTime ?? ""}
+                data-size-return-window={option.returnWindow ?? ""}
+                data-size-shipping-note={option.shippingNote ?? ""}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div class="detail-purchase-price-row collector-instrument__readout">
+        <div class="collector-instrument__readout-cell">
+          <p class="detail-purchase-label">Price</p>
+          <p class="detail-price-value" data-price-display>
+            EUR {defaultCommerceOption?.priceEUR ?? 0}
+          </p>
+        </div>
+
+        <div class="collector-instrument__readout-cell">
+          <p class="detail-purchase-label">Selected format</p>
+          <p class="detail-format-value" data-format-display>
+            {defaultCommerceOption?.dimensions ?? work.dimensions}
+          </p>
+        </div>
+      </div>
+
+      <div class="detail-purchase-proof-list collector-instrument__proof collector-signal-line">
+        <span data-type-display>{defaultOptionTypeLabel}</span>
+        <span data-proof-display>{defaultCompactProofLine}</span>
+        <span data-material-display>{defaultCompactMaterialLine}</span>
+      </div>
+
+      <div class="detail-purchase-actions collector-instrument__actions" data-collector-actions>
+        <button
+          type="button"
+          class="detail-purchase-primary"
+          data-buy-now
+          data-buy-now-default-label={defaultRouteLabel}
+        >
+          Acquire work
+        </button>
+        {hasPreviewRoute ? (
+          <button type="button" class="detail-purchase-secondary" data-interior-preview-open>
+            Scale preview
+          </button>
+        ) : null}
+        {hasPreviewRoute ? (
+          <button type="button" class="detail-purchase-secondary" data-print-ar-open>
+            AR preview
+          </button>
+        ) : null}
+        <a
+          href={inquiryHref}
+          class="detail-purchase-secondary"
+          data-collector-inquiry-link
+          data-inquiry-work-title={work.title}
+          data-inquiry-work-slug={work.slug}
+          data-inquiry-inventory={inventoryNumber}
+          data-inquiry-series-title={artworkSeries?.title ?? ""}
+          data-inquiry-series-slug={artworkSeries?.slug ?? ""}
+          data-inquiry-default-route={defaultRouteLabel}
+          data-inquiry-default-format={defaultFormatLabel}
+          data-inquiry-default-dimensions={defaultDimensions}
+          data-inquiry-default-price={defaultPriceLabel}
+        >
+          Ask about this work
+        </a>
+      </div>
+    </>
+  ) : (
+    <div class="detail-purchase-actions collector-instrument__actions" data-collector-actions>
+      <a
+        href={inquiryHref}
+        class="detail-purchase-primary"
+        data-collector-inquiry-link
+        data-inquiry-work-title={work.title}
+        data-inquiry-work-slug={work.slug}
+        data-inquiry-inventory={inventoryNumber}
+        data-inquiry-series-title={artworkSeries?.title ?? ""}
+        data-inquiry-series-slug={artworkSeries?.slug ?? ""}
+        data-inquiry-default-route={defaultRouteLabel}
+        data-inquiry-default-format={defaultFormatLabel}
+        data-inquiry-default-dimensions={defaultDimensions}
+        data-inquiry-default-price={defaultPriceLabel}
+      >
+        {availabilityStatus === "sold" ? "Ask about related works" : "Inquire about this work"}
+      </a>
+      {hasPreviewRoute ? (
+        <button type="button" class="detail-purchase-secondary" data-interior-preview-open>
+          Scale preview
+        </button>
+      ) : null}
+      {hasPreviewRoute ? (
+        <button type="button" class="detail-purchase-secondary" data-print-ar-open>
+          AR preview
+        </button>
+      ) : null}
+    </div>
+  )}
+
+  <div class="collector-route-links" aria-label="Collector route links">
+    {seriesChapterHref ? <a href={seriesChapterHref}>Return to series chapter</a> : null}
+    <a href={routeBackHref}>{routeBackLabel}</a>
+    <a href="/process">Open process</a>
+  </div>
+
+  <details class="detail-purchase-meta collector-instrument__logistics collector-details" data-collector-details>
+    <summary data-collector-details-summary>Collector details</summary>
+
+    <dl class="collector-details-list">
+      <div class="detail-purchase-meta-row" data-collector-detail="availability" data-collector-detail-priority="primary">
+        <dt>Availability</dt>
+        <dd>{availabilityLabel} - {availabilityCopy}</dd>
+      </div>
+
+      {artworkSeries ? (
+        <div class="detail-purchase-meta-row" data-collector-detail="series" data-collector-detail-priority="primary">
+          <dt>Series</dt>
+          <dd>
+            <a href={`/series/${artworkSeries.slug}`}>{artworkSeries.title}</a>
+          </dd>
+        </div>
+      ) : (
+        <div class="detail-purchase-meta-row" data-collector-detail="context" data-collector-detail-priority="primary">
+          <dt>Context</dt>
+          <dd>Independent Manifestation</dd>
+        </div>
+      )}
+
+      {artworkMeta?.inventoryNumber ? (
+        <div class="detail-purchase-meta-row" data-collector-detail="inventory" data-collector-detail-priority="primary">
+          <dt>Inventory</dt>
+          <dd>{artworkMeta.inventoryNumber}</dd>
+        </div>
+      ) : null}
+
+      {artworkMeta?.year ? (
+        <div class="detail-purchase-meta-row" data-collector-detail="year" data-collector-detail-priority="primary">
+          <dt>Year</dt>
+          <dd>{artworkMeta.year}</dd>
+        </div>
+      ) : null}
+
+      {formatDetails ? (
+        <div class="detail-purchase-meta-row" data-collector-detail="format" data-collector-detail-priority="primary">
+          <dt>Format</dt>
+          <dd>{formatDetails}</dd>
+        </div>
+      ) : null}
+
+      {artworkMeta?.technique ? (
+        <div class="detail-purchase-meta-row" data-collector-detail="method" data-collector-detail-priority="primary">
+          <dt>Method</dt>
+          <dd>
+            <a href="/process">{artworkMeta.technique}</a>
+          </dd>
+        </div>
+      ) : null}
+
+      {artworkMeta?.techniqueNote ? (
+        <div class="detail-purchase-meta-row" data-collector-detail="process" data-collector-detail-priority="secondary">
+          <dt>Process</dt>
+          <dd>{artworkMeta.techniqueNote}</dd>
+        </div>
+      ) : null}
+
+      {artworkMeta?.referencePolicy ? (
+        <div class="detail-purchase-meta-row" data-collector-detail="reference" data-collector-detail-priority="secondary">
+          <dt>Reference</dt>
+          <dd>{artworkMeta.referencePolicy}</dd>
+        </div>
+      ) : null}
+
+      {processLayerLine ? (
+        <div class="detail-purchase-meta-row" data-collector-detail="layers" data-collector-detail-priority="secondary">
+          <dt>Layers</dt>
+          <dd>{processLayerLine}</dd>
+        </div>
+      ) : null}
+
+      {artworkMeta?.surfaceTreatment ? (
+        <div class="detail-purchase-meta-row" data-collector-detail="surface" data-collector-detail-priority="primary">
+          <dt>Surface</dt>
+          <dd>{artworkMeta.surfaceTreatment}</dd>
+        </div>
+      ) : null}
+
+      {artworkMeta?.paper ? (
+        <div class="detail-purchase-meta-row" data-collector-detail="paper" data-collector-detail-priority="primary">
+          <dt>Paper</dt>
+          <dd>{artworkMeta.paper}</dd>
+        </div>
+      ) : null}
+
+      {materialsLine ? (
+        <div class="detail-purchase-meta-row" data-collector-detail="materials" data-collector-detail-priority="secondary">
+          <dt>Materials</dt>
+          <dd>{materialsLine}</dd>
+        </div>
+      ) : null}
+
+      <div class="detail-purchase-meta-row" data-collector-detail="signature" data-collector-detail-priority="secondary">
+        <dt>Signature</dt>
+        <dd>{artworkMeta?.signature === "signed" ? "Signed" : "Signature status pending"}</dd>
+      </div>
+
+      <div class="detail-purchase-meta-row" data-collector-detail="certificate" data-collector-detail-priority="primary">
+        <dt>Certificate</dt>
+        <dd>{artworkMeta?.certificate ? "Certificate context included" : "Certificate context pending"}</dd>
+      </div>
+
+      <div class="detail-purchase-meta-row" data-collector-detail="routes" data-collector-detail-priority="primary">
+        <dt>Routes</dt>
+        <dd class="collector-details-routes">
+          {seriesChapterHref ? <a href={seriesChapterHref}>Series chapter</a> : null}
+          <a href={routeBackHref}>
+            Works index
+          </a>
+          <a href={inquiryHref} data-collector-inquiry-link>
+            Contact the studio
+          </a>
+        </dd>
+      </div>
+
+      {hasPreviewRoute ? (
+        <div class="detail-purchase-meta-row" data-collector-detail="viewing" data-collector-detail-priority="secondary">
+          <dt>Viewing</dt>
+          <dd>Interior scale preview is available as a collector confidence tool.</dd>
+        </div>
+      ) : null}
+
+      {canCheckout ? (
+        <>
+          <div class="detail-purchase-meta-row" data-collector-detail="production" data-collector-detail-priority="secondary">
+            <dt>Production</dt>
+            <dd data-production-display>
+              {defaultCommerceOption?.productionTime ?? "Production timing confirmed inside the collector route."}
+            </dd>
+          </div>
+
+          <div class="detail-purchase-meta-row" data-collector-detail="shipping" data-collector-detail-priority="secondary">
+            <dt>Shipping</dt>
+            <dd data-shipping-display>
+              {defaultCommerceOption?.shippingNote ?? "Shipping route confirmed after checkout."}
+            </dd>
+          </div>
+
+          <div class="detail-purchase-meta-row" data-collector-detail="returns" data-collector-detail-priority="secondary">
+            <dt>Returns</dt>
+            <dd data-return-display>
+              {defaultCommerceOption?.returnWindow ?? "Return terms confirmed by selected option."}
+            </dd>
+          </div>
+        </>
+      ) : null}
+    </dl>
+
+    <button type="button" class="collector-details-close" data-collector-details-close aria-label="Close collector details">
+      Close details
+    </button>
+  </details>
+
+  <div class="detail-purchase-trust-links collector-instrument__trust" aria-label="Collector trust links">
+    <a href="/process">Process</a>
+    <a href="/collectors">Collector process</a>
+    <a href="/policies/shipping">Shipping</a>
+    <a href="/policies/returns">Returns</a>
+  </div>
+
+  <p class="detail-purchase-note collector-instrument__note">
+    {canCheckout
+      ? "Secure checkout is active for the selected route. Inquiry remains open for collector context."
+      : "Inquiry route carries availability, placement, and acquisition context."}
+  </p>
+  <div class="detail-checkout-status" aria-live="polite">
+    <div class="detail-checkout-feedback" data-checkout-feedback></div>
+  </div>
+  <div class="detail-checkout-overlay" data-checkout-overlay hidden>
+    <div class="detail-checkout-overlay-inner">
+      <div class="detail-checkout-spinner" aria-hidden="true"></div>
+      <p class="detail-checkout-overlay-kicker">Preparing secure checkout</p>
+      <p class="detail-checkout-overlay-copy" data-checkout-overlay-copy>
+        Redirecting to Stripe...
+      </p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .collector-availability {
+    display: grid;
+    gap: 0.45rem;
+    margin: 0 0 0.85rem;
+  }
+
+  .collector-availability__badge {
+    width: fit-content;
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.8rem;
+    padding: 0.2rem 0.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    color: rgba(245, 248, 242, 0.84);
+    font-size: 0.62rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    background: rgba(12, 15, 14, 0.34);
+  }
+
+  .collector-availability__badge.is-available {
+    border-color: rgba(181, 201, 164, 0.28);
+    color: rgba(232, 242, 222, 0.94);
+    background: rgba(48, 62, 41, 0.26);
+  }
+
+  .collector-availability__badge.is-inquiry,
+  .collector-availability__badge.is-reserved {
+    border-color: rgba(214, 196, 154, 0.22);
+    color: rgba(244, 232, 211, 0.9);
+    background: rgba(68, 58, 41, 0.22);
+  }
+
+  .collector-availability__badge.is-sold,
+  .collector-availability__badge.is-not_for_sale {
+    border-color: rgba(196, 170, 170, 0.18);
+    color: rgba(236, 222, 222, 0.82);
+    background: rgba(58, 38, 40, 0.2);
+  }
+
+  .collector-availability__copy {
+    margin: 0;
+    max-width: 33rem;
+    color: rgba(235, 240, 232, 0.56);
+    font-size: 0.84rem;
+    line-height: 1.52;
+  }
+
+  .collector-route-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 0.95rem;
+    margin: 0.95rem 0 0;
+  }
+
+  .collector-route-links a {
+    color: rgba(241, 245, 238, 0.72);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .collector-route-links a:hover,
+  .collector-route-links a:focus-visible {
+    color: rgba(255, 250, 242, 0.96);
+    border-bottom-color: rgba(255, 255, 255, 0.26);
+  }
+</style>

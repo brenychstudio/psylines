@@ -1,0 +1,86 @@
+---
+import { getArtworkAtmosphereProfile } from "../../lib/artwork-atmosphere/artworkAtmosphereProfiles";
+
+type Props = {
+  slug?: string;
+  mode?: "page" | "section" | "home" | "works" | "work-detail";
+};
+
+const { slug, mode = "page" } = Astro.props;
+const profile = getArtworkAtmosphereProfile(slug);
+---
+
+<script
+  is:inline
+  define:vars={{
+    slug: profile.slug,
+    wash: profile.wash,
+    washStrong: profile.washStrong,
+    glow: profile.glow,
+    shadow: profile.shadow,
+    shadowWash: profile.shadowWash,
+    accent: profile.accent,
+    pressure: profile.pressure,
+    density: profile.density,
+    fieldOpacity: profile.fieldOpacity,
+    focusedOpacity: profile.focusedOpacity,
+    inspectOpacity: profile.inspectOpacity,
+    mode,
+  }}
+>
+  (() => {
+    const root = document.documentElement;
+    if (!root) return;
+
+    if (mode === "work-detail") {
+      root.dataset.artworkAtmosphereContext = "work-detail";
+    }
+
+    function applyFallbackProfile(profile) {
+      if (!profile) return;
+
+      root.style.setProperty("--artwork-wash", profile.wash);
+      root.style.setProperty("--artwork-wash-strong", profile.washStrong);
+      root.style.setProperty("--artwork-glow", profile.glow);
+      root.style.setProperty("--artwork-shadow", profile.shadow);
+      root.style.setProperty("--artwork-shadow-wash", profile.shadowWash);
+      root.style.setProperty("--artwork-accent", profile.accent);
+      root.style.setProperty("--artwork-pressure", profile.pressure);
+      root.style.setProperty("--artwork-density", profile.density);
+      root.style.setProperty("--artwork-field-opacity", profile.fieldOpacity);
+      root.style.setProperty("--artwork-field-focused-opacity", profile.focusedOpacity);
+      root.style.setProperty("--artwork-field-inspect-opacity", profile.inspectOpacity);
+      root.dataset.artworkAtmosphere = profile.slug;
+      root.dataset.artworkAtmosphereMode = mode;
+    }
+
+    const pageProfile = {
+      slug,
+      wash,
+      washStrong,
+      glow,
+      shadow,
+      shadowWash,
+      accent,
+      pressure,
+      density,
+      fieldOpacity,
+      focusedOpacity,
+      inspectOpacity,
+    };
+
+    const detail = { slug, source: mode || "page" };
+
+    if (window.ArtistStageAtmosphereOrchestrator?.setTarget) {
+      window.ArtistStageAtmosphereOrchestrator.setTarget(slug, {
+        source: mode === "work-detail" ? "work-detail" : mode || "page",
+        immediate: false,
+      });
+      return;
+    }
+
+    window.__artistStagePendingArtworkAtmosphere = detail;
+    window.dispatchEvent(new CustomEvent("artist-stage:artwork-atmosphere:set", { detail }));
+    applyFallbackProfile(pageProfile);
+  })();
+</script>

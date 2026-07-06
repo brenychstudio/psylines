@@ -1,0 +1,2678 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import AtmosphericBackdropRoot from "../../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
+import ArtworkAtmosphereBridge from "../../components/artwork-atmosphere/ArtworkAtmosphereBridge.astro";
+import { artworkSeries, getSeriesBySlug } from "../../data/site/series";
+import { getSeriesArtworks } from "../../data/site/artworkCollections";
+import { getArtworkAtmosphereProfile } from "../../lib/artwork-atmosphere/artworkAtmosphereProfiles";
+import { getResponsivePublicImage } from "../../lib/assets/responsiveImage";
+
+export function getStaticPaths() {
+  return artworkSeries.map((series) => ({
+    params: { slug: series.slug },
+    props: { series },
+  }));
+}
+
+const routeSeries = Astro.props.series ?? getSeriesBySlug(Astro.params.slug);
+
+if (!routeSeries) {
+  throw new Error("Series chapter requires a valid series.");
+}
+
+const series = routeSeries;
+const seriesDisplayTitle = series.title.replace(/\s+\/\s+/g, " ");
+const seriesWorks = getSeriesArtworks(series.id);
+const selectedSeriesWorks = seriesWorks.filter(
+  (work) => series.selectedWorkSlugs.includes(work.slug) || work.meta.isSelected,
+);
+
+const flagshipWork =
+  seriesWorks.find((work) => series.flagshipWorkSlugs.includes(work.slug)) ??
+  seriesWorks.find((work) => work.meta.isFlagship) ??
+  seriesWorks[0] ??
+  null;
+
+const displaySelectedWorks =
+  selectedSeriesWorks.length > 0
+    ? selectedSeriesWorks
+    : seriesWorks.slice(0, 4);
+
+const sequenceWorks = seriesWorks.length > 0 ? seriesWorks : displaySelectedWorks;
+const heroWorks = sequenceWorks;
+const sequenceLayouts = ["hero", "right", "left", "wide", "portrait", "standard", "offset-left", "offset-right"] as const;
+const seriesToneByMood = {
+  metaBodies: "earth",
+  nightWater: "blue",
+  studies: "ash",
+  independent: "neutral",
+} as const;
+const seriesTone = seriesToneByMood[series.mood] ?? "neutral";
+const visibleSeries = [...artworkSeries].sort((a, b) => a.order - b.order);
+const seriesIndex = visibleSeries.findIndex((item) => item.slug === series.slug);
+const previousSeries = visibleSeries[(seriesIndex - 1 + visibleSeries.length) % visibleSeries.length];
+const nextSeries = visibleSeries[(seriesIndex + 1) % visibleSeries.length];
+
+const chapterAtmosphereSlug =
+  flagshipWork?.meta.atmosphereProfile ??
+  series.atmosphereProfile ??
+  "default";
+
+const hasWorks = seriesWorks.length > 0;
+
+const getWorkImage = (work: (typeof seriesWorks)[number], defaultWidth = 960) =>
+  getResponsivePublicImage(work.cover, { defaultWidth });
+const getWorkImageAlt = (work: (typeof seriesWorks)[number]) => work.title || "Artwork";
+
+const getWorkAtmosphereSlug = (work: (typeof seriesWorks)[number]) => work.meta.atmosphereProfile || work.slug;
+const getWorkAtmosphereVars = (work: (typeof seriesWorks)[number]) => {
+  const profile = getArtworkAtmosphereProfile(getWorkAtmosphereSlug(work));
+
+  return [
+    `--work-wash: ${profile.washStrong}`,
+    `--work-glow: ${profile.glow}`,
+    `--work-accent: ${profile.accent}`,
+    `--work-shadow: ${profile.shadowWash}`,
+  ].join("; ");
+};
+
+const getHeroSlot = (index: number, total: number) => {
+  if (index === 0) return "active";
+  if (total <= 1) return "active";
+  if (index === 1) return "next";
+  if (index === total - 1) return "prev";
+  if (index === 2) return "far-next";
+  if (index === total - 2) return "far-prev";
+  return "hidden";
+};
+---
+<BaseLayout
+  title={`${series.title} - ARTIST STAGE`}
+  description={series.statement}
+  canonicalPath={`/series/${series.slug}`}
+  hideFooter
+>
+  <ArtworkAtmosphereBridge slug={chapterAtmosphereSlug} mode="page" />
+
+  <div
+    class={`series-chapter series-chapter--${series.slug}`}
+    data-tone={seriesTone}
+    data-works-atmosphere-field
+  >
+    <AtmosphericBackdropRoot />
+
+    <section class="series-chapter-hero" data-series-hero data-atmosphere-section="series-chapter-hero">
+      <div class="series-chapter-hero__copy">
+        <p class="series-chapter-kicker">SERIES / CINEMATIC CHAPTER</p>
+        <h1 class="series-chapter-title">{seriesDisplayTitle}</h1>
+        {series.subtitle ? <p class="series-chapter-subtitle">{series.subtitle}</p> : null}
+        <p class="series-chapter-copy">{series.statement}</p>
+
+        <div class="series-chapter-live-signal" aria-label="Active series signal">
+          <div>
+            <span>Active work</span>
+            <strong data-series-hero-active-title>
+              {heroWorks[0]?.meta.inventoryNumber ?? heroWorks[0]?.title ?? "Pending"}
+            </strong>
+          </div>
+          <div>
+            <span>Chapter field</span>
+            <strong>{String(seriesWorks.length).padStart(2, "0")} works</strong>
+          </div>
+        </div>
+
+        <nav class="series-chapter-routes" aria-label="Series routes">
+          <a href="/series" data-series-return-map data-series-return-id={series.slug}>Return to chapter map</a>
+          <a href={`/works?series=${series.slug}`}>Open works index</a>
+          <a href="/process">Open process</a>
+          {heroWorks[0] ? (
+            <a
+              href={`/works/${heroWorks[0].slug}`}
+              data-series-hero-active-link
+              data-atmosphere-handoff-slug={getWorkAtmosphereSlug(heroWorks[0])}
+            >
+              Open active object
+            </a>
+          ) : null}
+        </nav>
+      </div>
+
+      {heroWorks.length > 0 ? (
+        <div class="series-hero-carousel" data-series-hero-carousel aria-label={`${series.title} selected works`}>
+          <div class="series-hero-carousel__field" aria-live="polite">
+            {heroWorks.map((work, index) => {
+              const image = getWorkImage(work, index === 0 ? 1500 : 1100);
+              const title = work.meta.inventoryNumber ?? work.title;
+              const statement = work.meta.shortStatement ?? work.statement ?? series.shortLine;
+
+              return (
+                <button
+                  class="series-hero-frame"
+                  type="button"
+                  data-series-hero-frame
+                  data-frame-index={index}
+                  data-slot={getHeroSlot(index, heroWorks.length)}
+                  data-title={title}
+                  data-description={statement}
+                  data-href={`/works/${work.slug}`}
+                  data-atmosphere-handoff-slug={getWorkAtmosphereSlug(work)}
+                  data-cinematic-route-slug={work.slug}
+                  data-cinematic-manual="true"
+                  style={getWorkAtmosphereVars(work)}
+                >
+                  <figure>
+                    <img
+                      src={image.src}
+                      srcset={image.srcset}
+                      sizes="(min-width: 1300px) 34vw, (min-width: 760px) 56vw, 86vw"
+                      alt={getWorkImageAlt(work)}
+                      loading={index < 3 ? "eager" : "lazy"}
+                      fetchpriority={index === 0 ? "high" : "auto"}
+                      decoding="async"
+                      data-cinematic-cover
+                      data-cinematic-route-slug={work.slug}
+                    />
+                    <figcaption>
+                      <span>{String(index + 1).padStart(2, "0")}</span>
+                      <strong>{title}</strong>
+                      <small>{work.meta.year ?? series.years}</small>
+                    </figcaption>
+                  </figure>
+                </button>
+              );
+            })}
+          </div>
+
+          <div class="series-hero-carousel__controls" aria-label="Series hero controls">
+            <button type="button" data-series-hero-prev disabled={heroWorks.length <= 1}>Prev</button>
+            <div class="series-hero-carousel__dots" aria-label="Select work">
+              {heroWorks.map((work, index) => (
+                <button
+                  type="button"
+                  data-series-hero-dot
+                  data-dot-index={index}
+                  aria-label={`Show ${work.meta.inventoryNumber ?? work.title}`}
+                  aria-current={index === 0 ? "true" : "false"}
+                />
+              ))}
+            </div>
+            <button type="button" data-series-hero-next disabled={heroWorks.length <= 1}>Next</button>
+          </div>
+        </div>
+      ) : (
+        <aside class="series-hero-empty">
+          <p class="series-chapter-kicker">FIELD STATE</p>
+          <h2>Works for this field are still being organized.</h2>
+          <p>This chapter is prepared as a future route. Confirmed works will appear here after author review.</p>
+        </aside>
+      )}
+    </section>
+
+    {sequenceWorks.length > 0 ? (
+      <section class="series-chapter-sequence" data-series-living-sequence data-atmosphere-section="series-chapter-sequence">
+        <div class="series-section-heading">
+          <p class="series-chapter-kicker">SERIES / LIVING IMAGE FIELD</p>
+          <h2>Works held as a moving chapter surface.</h2>
+        </div>
+
+        <div class="series-sequence-field">
+          {sequenceWorks.map((work, index) => {
+            const image = getWorkImage(work, index === 0 ? 1200 : 860);
+            const layout = sequenceLayouts[index % sequenceLayouts.length];
+
+            return (
+              <button
+                class={`series-sequence-plane series-sequence-plane--${layout}`}
+                type="button"
+                style={getWorkAtmosphereVars(work)}
+                data-series-inspect-trigger
+                data-series-canvas-card
+                data-series-inspect-index={index}
+                data-series-inspect-src={image.src}
+                data-series-inspect-title={work.meta.inventoryNumber ?? work.title}
+                data-series-inspect-label={`${String(index + 1).padStart(2, "0")} / ${series.title}`}
+                data-series-inspect-total={sequenceWorks.length}
+                data-series-inspect-href={`/works/${work.slug}`}
+                data-artwork-slug={work.slug}
+                data-atmosphere-handoff-slug={work.meta.atmosphereProfile || work.slug}
+              >
+                <img
+                  src={image.src}
+                  srcset={image.srcset}
+                  sizes="(min-width: 1200px) 38vw, (min-width: 760px) 56vw, 88vw"
+                  alt={getWorkImageAlt(work)}
+                  loading={index < 2 ? "eager" : "lazy"}
+                  fetchpriority={index < 2 ? "high" : "auto"}
+                  decoding="async"
+                  data-cinematic-cover
+                  data-cinematic-route-slug={work.slug}
+                />
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <strong>{work.meta.inventoryNumber ?? work.title}</strong>
+                <small>{work.meta.year ?? ""}</small>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+    ) : null}
+
+    <section class="series-chapter-register" data-atmosphere-section="series-chapter-register">
+      <div class="series-section-heading">
+        <p class="series-chapter-kicker">SERIES REGISTER</p>
+        <h2>Complete field register.</h2>
+      </div>
+
+      {hasWorks ? (
+        <div class="series-register-list">
+          {seriesWorks.map((work, index) => (
+            <a
+              class="series-register-row"
+              href={`/works/${work.slug}`}
+              data-artwork-slug={work.slug}
+              data-atmosphere-handoff-slug={work.meta.atmosphereProfile || work.slug}
+            >
+              <span>{String(work.meta.seriesOrder ?? index + 1).padStart(2, "0")}</span>
+              <strong>{work.meta.inventoryNumber ?? work.title}</strong>
+              <p>{work.statement ?? work.meta.shortStatement ?? "Manifestation in field."}</p>
+              <small>{work.meta.year ?? "year pending"}</small>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div class="series-empty-state">
+          <p>Confirmed works for this chapter are pending author review.</p>
+          <a href="/works">Return to works index</a>
+        </div>
+      )}
+    </section>
+
+    <nav class="series-chapter-neighbor-nav" aria-label="Adjacent series">
+      {previousSeries ? (
+        <a href={`/series/${previousSeries.slug}`} data-cinematic-route-slug={previousSeries.slug}>
+          Previous / {previousSeries.title}
+        </a>
+      ) : null}
+      <a href="/series" data-series-return-map data-series-return-id={series.slug}>Return to chapter map</a>
+      {nextSeries ? (
+        <a href={`/series/${nextSeries.slug}`} data-cinematic-route-slug={nextSeries.slug}>
+          Next / {nextSeries.title}
+        </a>
+      ) : null}
+    </nav>
+
+    <div class="series-inspector" data-series-inspector data-open="false" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Series image viewer">
+      <button class="series-inspector__veil" type="button" data-series-inspector-close aria-label="Close image viewer"></button>
+      <img class="series-inspector__morph" src="" alt="" data-series-inspector-morph />
+
+      <article class="series-inspector__panel" data-series-inspector-panel>
+        <div class="series-inspector__media" data-series-inspector-media>
+          <img class="series-inspector__image" src="" alt="" data-series-inspector-image />
+          <img class="series-inspector__shift" src="" alt="" data-series-inspector-shift />
+        </div>
+
+        <div class="series-inspector__toolbar">
+          <div class="series-inspector__readout" aria-live="polite">
+            <span data-series-inspector-count></span>
+            <strong data-series-inspector-title></strong>
+            <span data-series-inspector-label></span>
+          </div>
+
+          <div class="series-inspector__controls" aria-label="Image inspector controls">
+            <a
+              class="series-inspector__work-link"
+              href="/works"
+              data-series-inspector-work-link
+              data-cinematic-source-selector="[data-series-inspector-image]"
+            >
+              View work
+            </a>
+            <button type="button" data-series-inspector-prev>Prev</button>
+            <button type="button" data-series-inspector-next>Next</button>
+            <button type="button" data-series-inspector-close>Close</button>
+          </div>
+        </div>
+
+        <div class="series-inspector__progress" aria-hidden="true">
+          <span data-series-inspector-progress></span>
+        </div>
+      </article>
+    </div>
+  </div>
+</BaseLayout>
+
+<script is:inline>
+  (() => {
+    const RETURN_KEY = "artist-stage:series-constellation-return";
+
+    document.querySelectorAll("[data-series-return-map]").forEach((link) => {
+      link.addEventListener("click", () => {
+        try {
+          sessionStorage.setItem(
+            RETURN_KEY,
+            JSON.stringify({
+              id: link.dataset.seriesReturnId,
+              slug: link.dataset.seriesReturnId,
+              at: Date.now(),
+            }),
+          );
+        } catch {
+          // Decorative continuity only.
+        }
+      });
+    });
+
+    const sequence = document.querySelector("[data-series-living-sequence]");
+    const planes = [...document.querySelectorAll("[data-series-inspect-trigger]")];
+    const hero = document.querySelector("[data-series-hero-carousel]");
+    const heroFrames = [...document.querySelectorAll("[data-series-hero-frame]")];
+    const heroDots = [...document.querySelectorAll("[data-series-hero-dot]")];
+    const heroActiveTitle = document.querySelector("[data-series-hero-active-title]");
+    const heroActiveLink = document.querySelector("[data-series-hero-active-link]");
+    const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    let syncHeroToInspectorFrame = () => {};
+
+    if (hero && heroFrames.length) {
+      let activeHeroIndex = 0;
+      let autoplayTimer = 0;
+      let pointerStartX = 0;
+      let isHeroPaused = false;
+
+      const getCircularOffset = (index) => {
+        const total = heroFrames.length;
+        let offset = index - activeHeroIndex;
+        if (offset > total / 2) offset -= total;
+        if (offset < -total / 2) offset += total;
+        return offset;
+      };
+
+      const getSlot = (index) => {
+        if (heroFrames.length <= 1) return "active";
+        const offset = getCircularOffset(index);
+        if (offset === 0) return "active";
+        if (offset === 1) return "next";
+        if (offset === -1) return "prev";
+        if (offset === 2) return "far-next";
+        if (offset === -2) return "far-prev";
+        return "hidden";
+      };
+
+      const syncHero = () => {
+        const activeFrame = heroFrames[activeHeroIndex];
+
+        heroFrames.forEach((frame, index) => {
+          const isActive = index === activeHeroIndex;
+          frame.dataset.slot = getSlot(index);
+          frame.setAttribute("aria-current", isActive ? "true" : "false");
+          frame.tabIndex = isActive || Math.abs(getCircularOffset(index)) <= 1 ? 0 : -1;
+        });
+
+        heroDots.forEach((dot, index) => {
+          dot.setAttribute("aria-current", index === activeHeroIndex ? "true" : "false");
+        });
+
+        if (activeFrame) {
+          const title = activeFrame.dataset.title || "";
+          if (heroActiveTitle) heroActiveTitle.textContent = title;
+          if (heroActiveLink) {
+            heroActiveLink.setAttribute("href", activeFrame.dataset.href || "/works");
+            heroActiveLink.setAttribute("data-atmosphere-handoff-slug", activeFrame.dataset.atmosphereHandoffSlug || "");
+          }
+
+          const atmosphereSlug = activeFrame.dataset.atmosphereHandoffSlug;
+          if (atmosphereSlug) {
+            window.ArtistStageAtmosphereOrchestrator?.setTarget?.(atmosphereSlug, {
+              source: "series-hero",
+              immediate: false,
+            });
+          }
+        }
+      };
+
+      const setHero = (index) => {
+        activeHeroIndex = (index + heroFrames.length) % heroFrames.length;
+        syncHero();
+      };
+
+      syncHeroToInspectorFrame = (index) => {
+        setHero(index);
+      };
+
+      const stepHero = (direction) => setHero(activeHeroIndex + direction);
+
+      const restartAutoplay = () => {
+        window.clearInterval(autoplayTimer);
+        if (prefersReducedMotion || heroFrames.length <= 1) return;
+        autoplayTimer = window.setInterval(() => {
+          if (!isHeroPaused) stepHero(1);
+        }, 5200);
+      };
+
+      heroFrames.forEach((frame, index) => {
+        const image = frame.querySelector("img");
+        const syncFormat = () => {
+          if (!image?.naturalWidth || !image?.naturalHeight) return;
+          const ratio = image.naturalWidth / image.naturalHeight;
+          frame.dataset.imageFormat = ratio > 1.14 ? "landscape" : ratio < 0.86 ? "portrait" : "square";
+        };
+
+        if (image?.complete) syncFormat();
+        image?.addEventListener("load", syncFormat, { once: true });
+
+        frame.addEventListener("click", (event) => {
+          event.preventDefault();
+          if (index === activeHeroIndex) {
+            openInspector(index, frame);
+          } else {
+            setHero(index);
+          }
+          restartAutoplay();
+        });
+      });
+
+      heroDots.forEach((dot) => {
+        dot.addEventListener("click", () => {
+          setHero(Number(dot.dataset.dotIndex || 0));
+          restartAutoplay();
+        });
+      });
+
+      hero.querySelector("[data-series-hero-prev]")?.addEventListener("click", () => {
+        stepHero(-1);
+        restartAutoplay();
+      });
+
+      hero.querySelector("[data-series-hero-next]")?.addEventListener("click", () => {
+        stepHero(1);
+        restartAutoplay();
+      });
+
+      hero.addEventListener("wheel", (event) => {
+        if (heroFrames.length <= 1 || Math.abs(event.deltaY) < 12) return;
+        event.preventDefault();
+        stepHero(event.deltaY > 0 ? 1 : -1);
+        restartAutoplay();
+      }, { passive: false });
+
+      hero.addEventListener("pointerdown", (event) => {
+        pointerStartX = event.clientX;
+      });
+
+      hero.addEventListener("pointerup", (event) => {
+        const delta = event.clientX - pointerStartX;
+        if (Math.abs(delta) > 64) {
+          stepHero(delta < 0 ? 1 : -1);
+          restartAutoplay();
+        }
+      });
+
+      hero.addEventListener("pointerenter", () => {
+        isHeroPaused = true;
+      });
+
+      hero.addEventListener("pointerleave", () => {
+        isHeroPaused = false;
+      });
+
+      hero.addEventListener("focusin", () => {
+        isHeroPaused = true;
+      });
+
+      hero.addEventListener("focusout", () => {
+        isHeroPaused = false;
+      });
+
+      syncHero();
+      restartAutoplay();
+    }
+
+    if ("IntersectionObserver" in window && planes.length) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            const rect = entry.boundingClientRect;
+            const center = rect.top + rect.height * 0.5;
+            const progress = Math.max(0, Math.min(1, 1 - Math.abs(center - window.innerHeight * 0.52) / window.innerHeight));
+            entry.target.style.setProperty("--sequence-visible", entry.isIntersecting ? "1" : "0");
+            entry.target.style.setProperty("--sequence-progress", progress.toFixed(3));
+            entry.target.style.setProperty("--sequence-depth", String(Math.round(progress * 42)));
+            entry.target.style.setProperty("--sequence-lift-x", `${((progress - 0.5) * 18).toFixed(2)}px`);
+            entry.target.style.setProperty("--sequence-lift-y", `${((0.5 - progress) * 26).toFixed(2)}px`);
+            entry.target.style.setProperty("--sequence-breathe", (0.985 + progress * 0.025).toFixed(3));
+          });
+        },
+        { threshold: [0, 0.16, 0.32, 0.48, 0.64, 0.8, 1] },
+      );
+
+      planes.forEach((plane) => observer.observe(plane));
+    }
+
+    const inspector = document.querySelector("[data-series-inspector]");
+    const inspectorPanel = inspector?.querySelector("[data-series-inspector-panel]");
+    const inspectorMedia = inspector?.querySelector("[data-series-inspector-media]");
+    const inspectorImage = inspector?.querySelector("[data-series-inspector-image]");
+    const inspectorMorph = inspector?.querySelector("[data-series-inspector-morph]");
+    const inspectorShift = inspector?.querySelector("[data-series-inspector-shift]");
+    const inspectorTitle = inspector?.querySelector("[data-series-inspector-title]");
+    const inspectorLabel = inspector?.querySelector("[data-series-inspector-label]");
+    const inspectorCount = inspector?.querySelector("[data-series-inspector-count]");
+    const inspectorProgress = inspector?.querySelector("[data-series-inspector-progress]");
+    const inspectorWorkLink = inspector?.querySelector("[data-series-inspector-work-link]");
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let activeIndex = 0;
+    let sourceTrigger = null;
+    let inspectorOrigin = "sequence";
+    let lastFocusedElement = null;
+    let lockedScrollY = 0;
+    let isInspectorOpen = false;
+    let isInspectorBusy = false;
+    let inspectorCloseTimer = 0;
+    let wheelDelta = 0;
+    let wheelCooldown = 0;
+    let previousBodyTouchAction = "";
+
+    if (inspector && inspector.parentElement !== document.body) {
+      document.body.appendChild(inspector);
+    }
+
+    const frames = planes
+      .map((trigger, fallbackIndex) => ({
+        trigger,
+        sourceImage: trigger.querySelector("img") || trigger,
+        index: Number(trigger.dataset.seriesInspectIndex ?? fallbackIndex),
+        src: trigger.dataset.seriesInspectSrc,
+        title: trigger.dataset.seriesInspectTitle || "",
+        label: trigger.dataset.seriesInspectLabel || "",
+        href: trigger.dataset.seriesInspectHref || (trigger.dataset.artworkSlug ? `/works/${trigger.dataset.artworkSlug}` : "/works"),
+        slug: trigger.dataset.artworkSlug || "",
+        atmosphereSlug: trigger.dataset.atmosphereHandoffSlug || trigger.dataset.artworkSlug || "",
+        alt: trigger.querySelector("img")?.alt || trigger.dataset.seriesInspectTitle || "",
+        loaded: null,
+      }))
+      .filter((frame) => frame.src)
+      .sort((a, b) => a.index - b.index);
+
+    const lockScroll = () => {
+      lockedScrollY = window.scrollY;
+      previousBodyTouchAction = document.body.style.touchAction;
+      document.body.style.touchAction = "none";
+    };
+
+    const unlockScroll = () => {
+      document.body.style.touchAction = previousBodyTouchAction;
+      window.scrollTo(0, lockedScrollY);
+      window.requestAnimationFrame(() => window.scrollTo(0, lockedScrollY));
+    };
+
+    const waitForFrame = () =>
+      new Promise((resolve) => {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(resolve);
+        });
+      });
+
+    const imageReady = (image) => {
+      if (!image) return Promise.resolve();
+      if (image.complete && image.naturalWidth > 0) {
+        return image.decode?.().catch(() => {}) ?? Promise.resolve();
+      }
+      return new Promise((resolve) => {
+        image.onload = () => {
+          image.decode?.().catch(() => {}).finally(resolve);
+        };
+        image.onerror = resolve;
+      });
+    };
+
+    const preloadFrame = (frame) => {
+      if (!frame) return Promise.resolve(null);
+      if (frame.loaded) return frame.loaded;
+      frame.loaded = new Promise((resolve) => {
+        const image = new Image();
+        image.decoding = "async";
+        image.onload = () => resolve({
+          width: image.naturalWidth || 1200,
+          height: image.naturalHeight || 1600,
+        });
+        image.onerror = () => resolve({ width: 1200, height: 1600 });
+        image.src = frame.src;
+      });
+      return frame.loaded;
+    };
+
+    const preloadNeighbors = (index) => {
+      if (!frames.length) return;
+      preloadFrame(frames[(index + 1) % frames.length]);
+      preloadFrame(frames[(index - 1 + frames.length) % frames.length]);
+    };
+
+    const getTargetRect = (dimensions = { width: 1200, height: 1600 }) => {
+      const maxWidth = Math.min(window.innerWidth * 0.78, 1180);
+      const maxHeight = Math.min(window.innerHeight * 0.72, window.innerHeight - 165, 940);
+      const ratio = Math.max(0.35, Math.min(2.4, dimensions.width / dimensions.height));
+      let width = maxWidth;
+      let height = width / ratio;
+
+      if (height > maxHeight) {
+        height = maxHeight;
+        width = height * ratio;
+      }
+
+      return {
+        left: (window.innerWidth - width) / 2,
+        top: Math.max(52, (window.innerHeight - height) / 2 - window.innerHeight * 0.035),
+        width,
+        height,
+      };
+    };
+
+    const setLayerRect = (element, rect) => {
+      if (!element) return;
+      element.style.left = `${rect.left}px`;
+      element.style.top = `${rect.top}px`;
+      element.style.width = `${rect.width}px`;
+      element.style.height = `${rect.height}px`;
+    };
+
+    const setMediaRect = (rect) => {
+      if (!inspectorMedia || !rect) return;
+      inspectorMedia.style.setProperty("--series-inspector-media-left", `${rect.left}px`);
+      inspectorMedia.style.setProperty("--series-inspector-media-top", `${rect.top}px`);
+      inspectorMedia.style.setProperty("--series-inspector-media-width", `${rect.width}px`);
+      inspectorMedia.style.setProperty("--series-inspector-media-height", `${rect.height}px`);
+    };
+
+    const hideMorphLayer = () => {
+      if (!inspectorMorph) return;
+      inspectorMorph.getAnimations?.().forEach((animation) => animation.cancel());
+      inspectorMorph.src = "";
+      inspectorMorph.style.opacity = "0";
+      inspectorMorph.style.transform = "";
+      inspectorMorph.style.clipPath = "";
+    };
+
+    const hideShiftLayer = () => {
+      if (!inspectorShift) return;
+      inspectorShift.getAnimations?.().forEach((animation) => animation.cancel());
+      inspectorShift.src = "";
+      inspectorShift.style.opacity = "";
+      inspectorShift.style.transform = "";
+      inspectorShift.style.clipPath = "";
+    };
+
+    const getWorkColor = (frame, name, fallback) =>
+      frame?.trigger?.style?.getPropertyValue(name)?.trim() || fallback;
+
+    const updateInspectorTheme = (frame) => {
+      if (!inspector || !frame) return;
+      inspector.style.setProperty("--photo-inspector-accent", getWorkColor(frame, "--work-accent", "rgba(205, 221, 156, 0.86)"));
+      inspector.style.setProperty("--photo-inspector-atmo-a", getWorkColor(frame, "--work-wash", "rgba(81, 105, 58, 0.38)"));
+      inspector.style.setProperty("--photo-inspector-atmo-c", getWorkColor(frame, "--work-glow", "rgba(160, 181, 105, 0.24)"));
+      inspector.style.setProperty("--photo-inspector-shadow", getWorkColor(frame, "--work-shadow", "rgba(21, 30, 18, 0.72)"));
+    };
+
+    const updateReadout = (frame) => {
+      if (!frame) return;
+      if (inspectorCount) inspectorCount.textContent = `${String(activeIndex + 1).padStart(2, "0")} / ${String(frames.length).padStart(2, "0")}`;
+      if (inspectorTitle) inspectorTitle.textContent = frame.title;
+      if (inspectorLabel) inspectorLabel.textContent = frame.label;
+      if (inspectorProgress) inspectorProgress.style.width = `${((activeIndex + 1) / Math.max(frames.length, 1)) * 100}%`;
+      if (inspectorWorkLink) {
+        inspectorWorkLink.href = frame.href || "/works";
+        inspectorWorkLink.dataset.cinematicRouteSlug = frame.slug || "";
+        inspectorWorkLink.dataset.artworkSlug = frame.slug || "";
+        inspectorWorkLink.dataset.atmosphereHandoffSlug = frame.atmosphereSlug || frame.slug || "";
+        inspectorWorkLink.setAttribute("aria-label", `View work ${frame.title}`);
+      }
+      updateInspectorTheme(frame);
+    };
+
+    const setDisplayFrame = (frame) => {
+      if (!frame || !inspectorImage) return;
+      inspectorImage.src = frame.src;
+      inspectorImage.alt = frame.alt;
+      updateReadout(frame);
+    };
+
+    const finishCloseInspector = () => {
+      if (!inspector) return;
+      inspector.setAttribute("aria-hidden", "true");
+      inspector.dataset.open = "false";
+      delete inspector.dataset.entered;
+      delete inspector.dataset.morphing;
+      delete inspector.dataset.handoff;
+      delete inspector.dataset.phase;
+      delete document.documentElement.dataset.seriesInspectorOpen;
+      inspectorMorph?.getAnimations?.().forEach((animation) => animation.cancel());
+      inspectorShift?.getAnimations?.().forEach((animation) => animation.cancel());
+      if (inspectorMorph) {
+        inspectorMorph.src = "";
+        inspectorMorph.style.opacity = "";
+        inspectorMorph.style.transform = "";
+      }
+      if (inspectorShift) {
+        inspectorShift.src = "";
+        inspectorShift.style.opacity = "";
+        inspectorShift.style.transform = "";
+      }
+      inspectorMedia?.style.removeProperty("--series-inspector-media-width");
+      inspectorMedia?.style.removeProperty("--series-inspector-media-height");
+      inspectorMedia?.style.removeProperty("--series-inspector-media-left");
+      inspectorMedia?.style.removeProperty("--series-inspector-media-top");
+      isInspectorBusy = false;
+      window.clearTimeout(inspectorCloseTimer);
+      inspectorCloseTimer = window.setTimeout(() => {
+        if (isInspectorOpen) {
+          unlockScroll();
+          isInspectorOpen = false;
+        }
+        lastFocusedElement?.focus?.({ preventScroll: true });
+      }, 300);
+    };
+
+    const openInspector = async (index, sourceOverride = null) => {
+      const frame = frames[index];
+      if (!frame || !inspector || !inspectorImage || !inspectorMorph) return;
+      if (isInspectorBusy) return;
+
+      isInspectorBusy = true;
+      lastFocusedElement = document.activeElement;
+      activeIndex = index;
+      sourceTrigger = sourceOverride || frame.trigger;
+      inspectorOrigin = sourceOverride ? "hero" : "sequence";
+      window.clearTimeout(inspectorCloseTimer);
+      updateInspectorTheme(frame);
+
+      if (!isInspectorOpen) {
+        lockScroll();
+        isInspectorOpen = true;
+      }
+
+      const dimensions = await preloadFrame(frame);
+      const sourceImage = sourceOverride?.querySelector?.("img") || frame.sourceImage;
+      const sourceRect = sourceImage.getBoundingClientRect();
+      const targetRect = getTargetRect(dimensions);
+      setMediaRect(targetRect);
+
+      setDisplayFrame(frame);
+      inspectorMorph.src = frame.src;
+      inspectorMorph.alt = frame.alt;
+      await Promise.all([imageReady(inspectorImage), imageReady(inspectorMorph)]);
+      inspectorMorph.getAnimations?.().forEach((morphAnimation) => morphAnimation.cancel());
+      setLayerRect(inspectorMorph, sourceRect);
+      inspectorMorph.style.opacity = "1";
+      inspectorMorph.style.transform = "";
+      inspectorMorph.style.clipPath = "";
+      inspectorMorph.style.transformOrigin = "top left";
+
+      inspector.setAttribute("aria-hidden", "false");
+      inspector.dataset.open = "true";
+      inspector.dataset.phase = "primed";
+      inspector.dataset.morphing = "true";
+      delete inspector.dataset.handoff;
+      delete inspector.dataset.entered;
+      document.documentElement.dataset.seriesInspectorOpen = "true";
+      await waitForFrame();
+
+      const openingTransform = `translate3d(${sourceRect.left - targetRect.left}px, ${sourceRect.top - targetRect.top}px, 0) scale(${sourceRect.width / targetRect.width}, ${sourceRect.height / targetRect.height})`;
+      setLayerRect(inspectorMorph, targetRect);
+      inspectorMorph.style.transform = openingTransform;
+      inspector.dataset.phase = "opening";
+      await waitForFrame();
+
+      const animation = reduceMotion || !inspectorMorph.animate
+        ? null
+        : inspectorMorph.animate(
+            [
+              { transform: openingTransform, opacity: 0.88, clipPath: "inset(0% 0% 0% 0%)" },
+              { transform: "translate3d(0, 0, 0) scale(1)", opacity: 1, clipPath: "inset(0% 0% 0% 0%)" },
+            ],
+            {
+              duration: 620,
+              easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+              fill: "forwards",
+            },
+          );
+
+      if (animation) await animation.finished.catch(() => {});
+      inspectorMorph.style.transform = "translate3d(0, 0, 0) scale(1)";
+      inspectorMorph.style.opacity = "1";
+      inspectorMorph.style.clipPath = "inset(0% 0% 0% 0%)";
+      if (animation) animation.cancel();
+
+      inspector.dataset.entered = "true";
+      inspector.dataset.phase = "entered";
+      inspector.dataset.handoff = "true";
+      delete inspector.dataset.morphing;
+      await waitForFrame();
+      const handoff = inspectorMorph.animate?.(
+        [
+          { opacity: 1 },
+          { opacity: 0 },
+        ],
+        {
+          duration: reduceMotion ? 1 : 120,
+          easing: "ease",
+          fill: "forwards",
+        },
+      );
+      if (handoff) await handoff.finished.catch(() => {});
+      hideMorphLayer();
+      delete inspector.dataset.handoff;
+      isInspectorBusy = false;
+      preloadNeighbors(activeIndex);
+    };
+
+    const closeInspector = async () => {
+      if (!inspector || !inspectorImage || !inspectorMorph || inspector.getAttribute("aria-hidden") === "true") return;
+      if (isInspectorBusy) return;
+
+      isInspectorBusy = true;
+      window.clearTimeout(inspectorCloseTimer);
+      const frame = frames[activeIndex];
+      const dimensions = await preloadFrame(frame);
+      const fromRect = getTargetRect(dimensions);
+      syncHeroToInspectorFrame(activeIndex);
+      if (inspectorOrigin === "hero") {
+        sourceTrigger = heroFrames[activeIndex] || frame.trigger;
+        lastFocusedElement = sourceTrigger;
+      }
+      await waitForFrame();
+      const sourceImage = sourceTrigger?.querySelector("img") || sourceTrigger;
+      const sourceRect = sourceImage?.getBoundingClientRect?.();
+      const sourceVisible = sourceRect && sourceRect.bottom > 0 && sourceRect.top < window.innerHeight;
+
+      inspectorMorph.src = inspectorImage.src;
+      inspectorMorph.alt = inspectorImage.alt;
+      await imageReady(inspectorMorph);
+      inspectorMorph.getAnimations?.().forEach((morphAnimation) => morphAnimation.cancel());
+      setLayerRect(inspectorMorph, fromRect);
+      inspectorMorph.style.opacity = "1";
+      inspectorMorph.style.transform = "";
+      inspectorMorph.style.clipPath = "";
+      inspectorMorph.style.transformOrigin = "top left";
+      await waitForFrame();
+
+      inspector.dataset.phase = "closing";
+      inspector.dataset.morphing = "true";
+      delete inspector.dataset.entered;
+      await waitForFrame();
+
+      if (!sourceVisible || reduceMotion || !inspectorMorph.animate) {
+        const fallback = inspectorMorph.animate?.(
+          [
+            { transform: "translate3d(0, 0, 0) scale(1)", opacity: 1 },
+            { transform: "translate3d(0, 10px, 0) scale(0.96)", opacity: 0 },
+          ],
+          { duration: 260, easing: "ease", fill: "forwards" },
+        );
+        if (fallback) await fallback.finished.catch(() => {});
+        if (fallback) fallback.cancel();
+        finishCloseInspector();
+        return;
+      }
+
+      const to = `translate3d(${sourceRect.left - fromRect.left}px, ${sourceRect.top - fromRect.top}px, 0) scale(${sourceRect.width / fromRect.width}, ${sourceRect.height / fromRect.height})`;
+      const animation = inspectorMorph.animate(
+        [
+          { transform: "translate3d(0, 0, 0) scale(1)", opacity: 1 },
+          { transform: to, opacity: 0.72 },
+        ],
+        {
+          duration: 420,
+          easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+          fill: "forwards",
+        },
+      );
+
+      await animation.finished.catch(() => {});
+      animation.cancel();
+      finishCloseInspector();
+    };
+
+    const forceCloseInspector = () => {
+      window.clearTimeout(inspectorCloseTimer);
+      finishCloseInspector();
+    };
+
+    const shiftTo = async (nextIndex) => {
+      if (!frames.length || !inspectorImage || !inspectorShift || isInspectorBusy) return;
+      const normalizedIndex = (nextIndex + frames.length) % frames.length;
+      if (normalizedIndex === activeIndex) return;
+
+      isInspectorBusy = true;
+      const previousIndex = activeIndex;
+      const direction = normalizedIndex > previousIndex || (previousIndex === frames.length - 1 && normalizedIndex === 0) ? 1 : -1;
+      const nextFrame = frames[normalizedIndex];
+      const nextDimensions = await preloadFrame(nextFrame);
+      setMediaRect(getTargetRect(nextDimensions));
+
+      activeIndex = normalizedIndex;
+      sourceTrigger = nextFrame.trigger;
+      updateReadout(nextFrame);
+
+      inspectorImage.getAnimations?.().forEach((animation) => animation.cancel());
+      hideShiftLayer();
+      inspectorShift.src = nextFrame.src;
+      inspectorShift.alt = nextFrame.alt;
+      inspectorShift.style.opacity = "1";
+      inspectorShift.style.transform = `translate3d(${direction * 9}vw, 0, 0) scale(0.985)`;
+      inspectorShift.style.clipPath = "";
+      inspector.dataset.phase = direction > 0 ? "shift-next" : "shift-prev";
+
+      if (reduceMotion || !inspectorImage.animate || !inspectorShift.animate) {
+        setDisplayFrame(nextFrame);
+        hideShiftLayer();
+        isInspectorBusy = false;
+        preloadNeighbors(activeIndex);
+        return;
+      }
+
+      const outgoing = inspectorImage.animate(
+        [
+          { transform: "translate3d(0, 0, 0) scale(1)", opacity: 1, clipPath: "inset(0% 0% 0% 0%)" },
+          { transform: `translate3d(${-direction * 8}vw, 0, 0) scale(0.975)`, opacity: 0, clipPath: "inset(3% 5% 3% 5%)" },
+        ],
+        { duration: 460, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "forwards" },
+      );
+      const incoming = inspectorShift.animate(
+        [
+          { transform: `translate3d(${direction * 9}vw, 0, 0) scale(0.985)`, opacity: 0, clipPath: "inset(4% 6% 4% 6%)" },
+          { transform: "translate3d(0, 0, 0) scale(1)", opacity: 1, clipPath: "inset(0% 0% 0% 0%)" },
+        ],
+        { duration: 520, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "forwards" },
+      );
+
+      await Promise.all([outgoing.finished.catch(() => {}), incoming.finished.catch(() => {})]);
+      inspectorImage.getAnimations?.().forEach((animation) => animation.cancel());
+      inspectorImage.style.transform = "";
+      inspectorImage.style.opacity = "";
+      inspectorImage.style.clipPath = "";
+      setDisplayFrame(nextFrame);
+      hideShiftLayer();
+      inspector.dataset.phase = "entered";
+      isInspectorBusy = false;
+      preloadNeighbors(activeIndex);
+    };
+
+    const stepInspector = (direction) => {
+      shiftTo(activeIndex + direction);
+    };
+
+    planes.forEach((trigger, index) => {
+      trigger.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openInspector(index);
+      });
+    });
+
+    inspector?.querySelectorAll("[data-series-inspector-close]").forEach((control) => {
+      control.addEventListener("click", closeInspector);
+    });
+    inspector?.querySelector("[data-series-inspector-prev]")?.addEventListener("click", () => stepInspector(-1));
+    inspector?.querySelector("[data-series-inspector-next]")?.addEventListener("click", () => stepInspector(1));
+    inspector?.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      wheelDelta += event.deltaY;
+      window.clearTimeout(wheelCooldown);
+      if (Math.abs(wheelDelta) > 72) {
+        stepInspector(wheelDelta > 0 ? 1 : -1);
+        wheelDelta = 0;
+      }
+      wheelCooldown = window.setTimeout(() => {
+        wheelDelta = 0;
+      }, 180);
+    }, { passive: false });
+
+    let swipeStartX = 0;
+    inspector?.addEventListener("pointerdown", (event) => {
+      swipeStartX = event.clientX;
+    });
+    inspector?.addEventListener("pointerup", (event) => {
+      const delta = event.clientX - swipeStartX;
+      if (Math.abs(delta) > 60) stepInspector(delta < 0 ? 1 : -1);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (!inspector || inspector.getAttribute("aria-hidden") === "true") return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeInspector();
+      }
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+        event.preventDefault();
+        stepInspector(-1);
+      }
+      if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+        event.preventDefault();
+        stepInspector(1);
+      }
+    });
+
+    window.addEventListener("pagehide", forceCloseInspector);
+    window.addEventListener("pageshow", forceCloseInspector);
+
+    if (sequence && !planes.length) {
+      sequence.hidden = true;
+    }
+
+    const canvasCards = [...document.querySelectorAll("[data-series-canvas-card]")];
+    let canvasRaf = 0;
+
+    const renderCanvasCards = () => {
+      canvasRaf = 0;
+      const viewportCenter = window.innerHeight * 0.52;
+
+      canvasCards.forEach((card, index) => {
+        const rect = card.getBoundingClientRect();
+        const center = rect.top + rect.height * 0.5;
+        const distance = Math.abs(center - viewportCenter);
+        const emphasis = Math.max(0, Math.min(1, 1 - distance / (window.innerHeight * 0.72)));
+        const y = (1 - emphasis) * 34;
+        const scale = 0.94 + emphasis * 0.075;
+        const opacity = 0.5 + emphasis * 0.5;
+
+        card.style.setProperty("--cover-y", `${y.toFixed(2)}px`);
+        card.style.setProperty("--cover-scale", scale.toFixed(4));
+        card.style.setProperty("--cover-opacity", opacity.toFixed(3));
+        card.style.setProperty("--cover-tilt", "0deg");
+        card.style.setProperty("--sequence-progress", emphasis.toFixed(3));
+        card.style.setProperty("--sequence-visible", rect.bottom > 0 && rect.top < window.innerHeight ? "1" : "0");
+      });
+    };
+
+    const requestCanvasRender = () => {
+      if (!canvasRaf) canvasRaf = window.requestAnimationFrame(renderCanvasCards);
+    };
+
+    if (canvasCards.length) {
+      window.addEventListener("scroll", requestCanvasRender, { passive: true });
+      window.addEventListener("resize", requestCanvasRender);
+      requestCanvasRender();
+    }
+  })();
+</script>
+
+<style>
+  /* V3-32 - Series Chapter Route */
+  .series-chapter {
+    position: relative;
+    overflow: clip;
+    padding: clamp(6.5rem, 10vw, 9rem) 0 clamp(5rem, 9vw, 8rem);
+  }
+
+  .series-chapter::before {
+    content: "";
+    position: absolute;
+    inset: 5rem 0 auto;
+    z-index: -2;
+    height: min(56rem, 76svh);
+    background:
+      radial-gradient(circle at 28% 36%, var(--artwork-wash-strong), transparent 36rem),
+      radial-gradient(circle at 72% 54%, var(--artwork-glow), transparent 30rem),
+      linear-gradient(180deg, rgba(5, 8, 7, 0), rgba(5, 8, 7, 0.38));
+    opacity: calc(0.48 + (var(--artwork-density) * 0.18));
+    pointer-events: none;
+  }
+
+  .series-chapter-threshold,
+  .series-chapter-flagship,
+  .series-chapter-selected,
+  .series-chapter-register {
+    width: min(1560px, calc(100vw - clamp(36px, 6vw, 112px)));
+    margin-inline: auto;
+  }
+
+  .series-chapter-threshold {
+    min-height: min(720px, calc(100svh - 5rem));
+    display: grid;
+    grid-template-columns: minmax(460px, 0.58fr) minmax(280px, 0.42fr);
+    align-items: center;
+    gap: clamp(3rem, 7vw, 8rem);
+  }
+
+  .series-chapter-kicker {
+    margin: 0 0 1.1rem;
+    font-size: 0.68rem;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    color: rgba(235, 240, 232, 0.44);
+  }
+
+  .series-chapter-title {
+    margin: 0;
+    max-width: 11ch;
+    font-size: clamp(4rem, 7vw, 8.2rem);
+    line-height: 0.9;
+    letter-spacing: 0;
+    font-weight: 300;
+    color: rgba(245, 248, 242, 0.94);
+  }
+
+  .series-chapter-subtitle {
+    max-width: 42rem;
+    margin: 1.25rem 0 0;
+    font-size: clamp(1.1rem, 1.4vw, 1.5rem);
+    line-height: 1.35;
+    color: rgba(245, 248, 242, 0.72);
+  }
+
+  .series-chapter-copy {
+    max-width: 44rem;
+    margin: 1.15rem 0 0;
+    font-size: clamp(1rem, 1.1vw, 1.16rem);
+    line-height: 1.65;
+    color: rgba(235, 240, 232, 0.62);
+  }
+
+  .series-chapter-routes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem 1.2rem;
+    margin-top: 1.7rem;
+  }
+
+  .series-chapter-routes a,
+  .series-chapter-flagship__copy a,
+  .series-empty-state a {
+    color: rgba(245, 248, 242, 0.84);
+    text-decoration: none;
+    font-size: 0.68rem;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+    padding-bottom: 0.28rem;
+  }
+
+  .series-chapter-routes a::after,
+  .series-chapter-flagship__copy a::after,
+  .series-empty-state a::after {
+    content: " ->";
+    opacity: 0.62;
+  }
+
+  .series-chapter-register-card {
+    border-top: 1px solid rgba(255, 255, 255, 0.065);
+    padding-top: 1rem;
+  }
+
+  .series-chapter-register-card dl {
+    margin: 0;
+    display: grid;
+    gap: 1rem;
+  }
+
+  .series-chapter-register-card div {
+    display: grid;
+    grid-template-columns: minmax(100px, 0.34fr) minmax(0, 0.66fr);
+    gap: 1rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+  }
+
+  .series-chapter-register-card dt {
+    font-size: 0.62rem;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    color: rgba(235, 240, 232, 0.36);
+  }
+
+  .series-chapter-register-card dd {
+    margin: 0;
+    color: rgba(245, 248, 242, 0.74);
+  }
+
+  .series-chapter-flagship {
+    margin-top: clamp(2rem, 5vw, 5rem);
+    display: grid;
+    grid-template-columns: minmax(420px, 0.56fr) minmax(360px, 0.44fr);
+    gap: clamp(3rem, 7vw, 8rem);
+    align-items: center;
+    min-height: min(760px, 92vh);
+    position: relative;
+    isolation: isolate;
+  }
+
+  .series-chapter-flagship::before {
+    content: "";
+    position: absolute;
+    inset: 0 -8%;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 28% 48%, var(--artwork-wash-strong), transparent 40%),
+      radial-gradient(circle at 54% 62%, var(--artwork-glow), transparent 42%);
+    opacity: 0.18;
+    filter: none;
+  }
+
+  .series-chapter-flagship__surface {
+    display: grid;
+    place-items: center;
+  }
+
+  .series-chapter-flagship__surface a {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .series-chapter-flagship__surface img {
+    width: auto;
+    max-width: min(100%, 560px);
+    max-height: min(72vh, 760px);
+    object-fit: contain;
+    box-shadow:
+      0 42px 110px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.025);
+  }
+
+  .series-chapter-flagship__copy h2 {
+    margin: 0;
+    max-width: 10ch;
+    font-size: clamp(3rem, 5.4vw, 6.4rem);
+    line-height: 0.92;
+    letter-spacing: 0;
+    font-weight: 300;
+    color: rgba(245, 248, 242, 0.92);
+  }
+
+  .series-chapter-flagship__copy p {
+    max-width: 34rem;
+    margin: 1rem 0 0;
+    color: rgba(235, 240, 232, 0.62);
+    line-height: 1.58;
+  }
+
+  .series-chapter-selected {
+    margin-top: clamp(4rem, 8vw, 8rem);
+  }
+
+  .series-section-heading {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.4fr) minmax(0, 0.6fr);
+    gap: clamp(2rem, 6vw, 6rem);
+    margin-bottom: clamp(2rem, 5vw, 4rem);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 1rem;
+  }
+
+  .series-section-heading h2 {
+    margin: 0;
+    font-size: clamp(2.4rem, 4.8vw, 5.4rem);
+    line-height: 0.96;
+    letter-spacing: 0;
+    font-weight: 300;
+    color: rgba(245, 248, 242, 0.9);
+  }
+
+  .series-selected-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: clamp(1.2rem, 2vw, 2rem);
+  }
+
+  .series-selected-work {
+    grid-column: span 4;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .series-selected-work img {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    box-shadow:
+      0 28px 80px rgba(0, 0, 0, 0.42),
+      0 0 0 1px rgba(255, 255, 255, 0.025);
+    transition:
+      transform 420ms ease,
+      filter 420ms ease;
+  }
+
+  .series-selected-work:hover img,
+  .series-selected-work:focus-visible img {
+    transform: translateY(-4px);
+    filter: saturate(1.04) contrast(1.02);
+  }
+
+  .series-selected-work span {
+    display: block;
+    margin-top: 0.85rem;
+    color: rgba(245, 248, 242, 0.82);
+  }
+
+  .series-selected-work small {
+    display: block;
+    margin-top: 0.2rem;
+    color: rgba(235, 240, 232, 0.42);
+  }
+
+  .series-chapter-register {
+    margin-top: clamp(5rem, 10vw, 10rem);
+  }
+
+  .series-register-list {
+    border-top: 1px solid rgba(255, 255, 255, 0.065);
+  }
+
+  .series-register-row {
+    display: grid;
+    grid-template-columns: 4rem minmax(180px, 0.24fr) minmax(0, 0.58fr) 7rem;
+    gap: 1rem;
+    align-items: baseline;
+    padding: 1.05rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .series-register-row span {
+    font-size: 0.62rem;
+    letter-spacing: 0;
+    color: rgba(235, 240, 232, 0.34);
+  }
+
+  .series-register-row strong {
+    color: rgba(245, 248, 242, 0.82);
+  }
+
+  .series-register-row p {
+    margin: 0;
+    color: rgba(235, 240, 232, 0.56);
+    line-height: 1.48;
+  }
+
+  .series-register-row small {
+    color: rgba(235, 240, 232, 0.4);
+    text-align: right;
+  }
+
+  .series-chapter-flagship--latent,
+  .series-empty-state {
+    border-top: 1px solid rgba(255, 255, 255, 0.065);
+    padding-top: 1rem;
+    color: rgba(235, 240, 232, 0.62);
+  }
+
+  .series-chapter-flagship--latent h2 {
+    max-width: 14ch;
+    font-size: clamp(2.6rem, 5vw, 5.8rem);
+    line-height: 0.96;
+    letter-spacing: 0;
+    font-weight: 300;
+    color: rgba(245, 248, 242, 0.86);
+  }
+
+  .series-chapter-routes a:focus-visible,
+  .series-chapter-flagship__copy a:focus-visible,
+  .series-empty-state a:focus-visible,
+  .series-selected-work:focus-visible,
+  .series-register-row:focus-visible,
+  .series-chapter-flagship__surface a:focus-visible {
+    outline: 1px solid rgba(245, 248, 242, 0.38);
+    outline-offset: 6px;
+  }
+
+  @media (max-width: 900px) {
+    .series-chapter-threshold,
+    .series-chapter-flagship,
+    .series-section-heading {
+      grid-template-columns: 1fr;
+      min-height: auto;
+    }
+
+    .series-chapter-title {
+      font-size: clamp(3.3rem, 15vw, 6rem);
+    }
+
+    .series-chapter-flagship__surface img {
+      max-height: 520px;
+    }
+
+    .series-selected-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .series-selected-work {
+      grid-column: auto;
+    }
+
+    .series-register-row {
+      grid-template-columns: 2.6rem minmax(0, 1fr);
+    }
+
+    .series-register-row p,
+    .series-register-row small {
+      grid-column: 2;
+      text-align: left;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .series-chapter-threshold,
+    .series-chapter-flagship,
+    .series-chapter-selected,
+    .series-chapter-register {
+      width: min(100% - 24px, 1560px);
+    }
+
+    .series-chapter-routes {
+      display: grid;
+    }
+
+    .series-selected-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .series-chapter-flagship__surface img {
+      max-height: 420px;
+    }
+  }
+
+  .series-chapter[data-tone="earth"] {
+    --series-detail-a: rgba(72, 88, 50, 0.5);
+    --series-detail-b: rgba(167, 190, 117, 0.2);
+  }
+
+  .series-chapter[data-tone="blue"] {
+    --series-detail-a: rgba(34, 86, 104, 0.48);
+    --series-detail-b: rgba(111, 180, 205, 0.2);
+  }
+
+  .series-chapter[data-tone="ash"] {
+    --series-detail-a: rgba(94, 82, 68, 0.46);
+    --series-detail-b: rgba(202, 178, 138, 0.16);
+  }
+
+  .series-chapter[data-tone="neutral"] {
+    --series-detail-a: rgba(72, 76, 66, 0.42);
+    --series-detail-b: rgba(198, 204, 178, 0.14);
+  }
+
+  .series-chapter::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -3;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 66% 32%, var(--series-detail-a, rgba(72, 88, 50, 0.46)), transparent 34rem),
+      radial-gradient(circle at 26% 68%, var(--series-detail-b, rgba(167, 190, 117, 0.16)), transparent 30rem);
+    opacity: 0.9;
+  }
+
+  .series-chapter-sequence {
+    width: min(1680px, calc(100vw - clamp(28px, 5vw, 96px)));
+    margin: clamp(5rem, 9vw, 10rem) auto 0;
+  }
+
+  .series-sequence-field {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: clamp(2.2rem, 5vw, 7rem) clamp(1.2rem, 3vw, 4rem);
+    align-items: start;
+  }
+
+  .series-sequence-plane {
+    --sequence-progress: 0;
+    --sequence-visible: 0;
+    --sequence-depth: 0;
+    --sequence-lift-x: 0px;
+    --sequence-lift-y: 0px;
+    --sequence-breathe: 1;
+    display: block;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: zoom-in;
+    opacity: calc(0.42 + (var(--sequence-visible) * 0.58));
+    transform:
+      translate3d(var(--sequence-lift-x), var(--sequence-lift-y), 0)
+      scale(var(--sequence-breathe));
+    transition:
+      opacity 420ms ease,
+      filter 420ms ease;
+  }
+
+  .series-sequence-plane--featured {
+    grid-column: 3 / span 6;
+  }
+
+  .series-sequence-plane--left {
+    grid-column: 1 / span 4;
+    margin-top: 4rem;
+  }
+
+  .series-sequence-plane--right {
+    grid-column: 8 / span 4;
+    margin-top: 1rem;
+  }
+
+  .series-sequence-plane--wide {
+    grid-column: 4 / span 7;
+  }
+
+  .series-sequence-plane--small {
+    grid-column: 2 / span 3;
+  }
+
+  .series-sequence-plane--center {
+    grid-column: 5 / span 4;
+  }
+
+  .series-sequence-plane img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: min(78svh, 820px);
+    object-fit: contain;
+    box-shadow:
+      0 38px 120px rgba(0, 0, 0, 0.52),
+      0 0 0 1px rgba(245, 248, 242, 0.035);
+    filter: saturate(calc(0.86 + (var(--sequence-progress) * 0.18))) brightness(calc(0.78 + (var(--sequence-progress) * 0.22)));
+  }
+
+  .series-sequence-plane:hover img,
+  .series-sequence-plane:focus-visible img {
+    filter: saturate(1.06) brightness(1.02);
+  }
+
+  .series-sequence-plane span,
+  .series-sequence-plane small {
+    display: block;
+    margin-top: 0.62rem;
+    color: rgba(235, 240, 232, 0.42);
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .series-sequence-plane strong {
+    display: block;
+    margin-top: 0.3rem;
+    color: rgba(245, 248, 242, 0.82);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+  }
+
+  .series-chapter-neighbor-nav {
+    width: min(1560px, calc(100vw - clamp(36px, 6vw, 112px)));
+    margin: clamp(4rem, 8vw, 8rem) auto 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    border-top: 1px solid rgba(245, 248, 242, 0.07);
+    padding-top: 1rem;
+  }
+
+  .series-chapter-neighbor-nav a {
+    color: rgba(245, 248, 242, 0.78);
+    text-decoration: none;
+    font-size: 0.7rem;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .series-chapter-neighbor-nav a:nth-child(2) {
+    text-align: center;
+  }
+
+  .series-chapter-neighbor-nav a:last-child {
+    text-align: right;
+  }
+
+  .series-inspector {
+    --photo-inspector-accent: rgba(205, 221, 156, 0.86);
+    --photo-inspector-atmo-a: rgba(81, 105, 58, 0.38);
+    --photo-inspector-atmo-c: rgba(160, 181, 105, 0.24);
+    --photo-inspector-shadow: rgba(21, 30, 18, 0.72);
+    position: fixed;
+    inset: 0;
+    z-index: 2147482500;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    visibility: visible;
+    opacity: 1;
+    overflow: hidden;
+    background: transparent;
+    transform: translateZ(0);
+    isolation: isolate;
+  }
+
+  .series-inspector[data-open="true"],
+  .series-inspector[data-open="false"][data-phase="closing"] {
+    pointer-events: auto;
+  }
+
+  .series-inspector__veil {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border: 0;
+    padding: 0;
+    background:
+      radial-gradient(circle at 50% 44%, var(--photo-inspector-atmo-c), transparent 32rem),
+      radial-gradient(circle at 32% 58%, var(--photo-inspector-atmo-a), transparent 38rem),
+      radial-gradient(circle at 50% 43%, rgba(245, 248, 242, 0.08), transparent 20rem),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.64), rgba(0, 0, 0, 0.28) 30%, rgba(0, 0, 0, 0.34) 68%, rgba(0, 0, 0, 0.72)),
+      linear-gradient(120deg, rgba(1, 3, 3, 0.985), rgba(4, 8, 6, 0.94), rgba(0, 0, 0, 0.99)),
+      rgba(0, 0, 0, 0.94);
+    cursor: zoom-out;
+    opacity: 0;
+    transition: opacity 320ms ease;
+  }
+
+  .series-inspector[data-phase="primed"] .series-inspector__veil,
+  .series-inspector[data-phase="opening"] .series-inspector__veil,
+  .series-inspector[data-entered="true"] .series-inspector__veil,
+  .series-inspector[data-phase="shift-next"] .series-inspector__veil,
+  .series-inspector[data-phase="shift-prev"] .series-inspector__veil,
+  .series-inspector[data-open="false"][data-phase="closing"] .series-inspector__veil {
+    opacity: 1;
+  }
+
+  .series-inspector[data-phase="primed"] .series-inspector__veil {
+    transition: none;
+  }
+
+  .series-inspector::before,
+  .series-inspector::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .series-inspector::before {
+    background:
+      repeating-linear-gradient(90deg, rgba(245, 248, 242, 0.035) 0 1px, transparent 1px 9rem),
+      repeating-linear-gradient(0deg, rgba(245, 248, 242, 0.018) 0 1px, transparent 1px 7rem);
+    mask-image: radial-gradient(circle at 50% 48%, black, transparent 74%);
+    opacity: 0;
+    transition: opacity 320ms ease;
+  }
+
+  .series-inspector[data-phase="primed"]::before,
+  .series-inspector[data-phase="opening"]::before,
+  .series-inspector[data-entered="true"]::before,
+  .series-inspector[data-phase="shift-next"]::before,
+  .series-inspector[data-phase="shift-prev"]::before,
+  .series-inspector[data-open="false"][data-phase="closing"]::before {
+    opacity: 0.22;
+  }
+
+  .series-inspector::after {
+    background:
+      radial-gradient(circle at 50% 50%, transparent 34%, rgba(0, 0, 0, 0.5) 78%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.24), transparent 34%, rgba(0, 0, 0, 0.42));
+    opacity: 0;
+    transition: opacity 320ms ease;
+  }
+
+  .series-inspector[data-phase="primed"]::after,
+  .series-inspector[data-phase="opening"]::after,
+  .series-inspector[data-entered="true"]::after,
+  .series-inspector[data-phase="shift-next"]::after,
+  .series-inspector[data-phase="shift-prev"]::after,
+  .series-inspector[data-open="false"][data-phase="closing"]::after {
+    opacity: 1;
+  }
+
+  .series-inspector[data-phase="primed"]::before,
+  .series-inspector[data-phase="primed"]::after {
+    transition: none;
+  }
+
+  .series-inspector__morph {
+    position: fixed;
+    z-index: 5;
+    display: block;
+    object-fit: contain;
+    pointer-events: none;
+    box-shadow:
+      0 50px 150px rgba(0, 0, 0, 0.72),
+      0 0 0 1px rgba(245, 248, 242, 0.08);
+    opacity: 0;
+    will-change: transform, opacity;
+  }
+
+  .series-inspector__panel {
+    position: relative;
+    z-index: 4;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    display: grid;
+    place-items: center;
+    padding: clamp(4rem, 7svh, 6rem) clamp(1rem, 3vw, 3rem) clamp(7.5rem, 13svh, 9rem);
+    box-sizing: border-box;
+    opacity: 0;
+    visibility: hidden;
+    transform: translate3d(0, 10px, 0);
+    transition:
+      opacity 360ms ease,
+      transform 620ms cubic-bezier(0.16, 1, 0.3, 1),
+      visibility 0s linear 360ms;
+  }
+
+  .series-inspector[data-entered="true"] .series-inspector__panel {
+    opacity: 1;
+    visibility: visible;
+    transform: translate3d(0, 0, 0);
+    transition:
+      opacity 360ms ease,
+      transform 620ms cubic-bezier(0.16, 1, 0.3, 1),
+      visibility 0s;
+  }
+
+  .series-inspector[data-handoff="true"] .series-inspector__panel {
+    opacity: 1;
+    visibility: visible;
+    transform: translate3d(0, 0, 0);
+    transition: none;
+  }
+
+  .series-inspector__media {
+    position: fixed;
+    left: var(--series-inspector-media-left, 50%);
+    top: var(--series-inspector-media-top, 50%);
+    width: var(--series-inspector-media-width, min(78vw, 1180px));
+    height: var(--series-inspector-media-height, min(72svh, calc(100svh - 165px), 940px));
+    max-width: min(78vw, 1180px);
+    max-height: min(72svh, calc(100svh - 165px), 940px);
+    display: grid;
+    place-items: center;
+    isolation: isolate;
+    overflow: visible;
+    transform: translate3d(0, 0, 0);
+  }
+
+  .series-inspector__media::before {
+    content: "";
+    position: absolute;
+    inset: 8% 3%;
+    z-index: -1;
+    background: radial-gradient(circle at 50% 50%, var(--photo-inspector-accent), transparent 58%);
+    opacity: 0.16;
+    filter: blur(30px);
+  }
+
+  .series-inspector__image,
+  .series-inspector__shift {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    box-shadow:
+      0 54px 150px rgba(0, 0, 0, 0.72),
+      0 0 0 1px rgba(245, 248, 242, 0.06);
+    will-change: transform, opacity, clip-path;
+  }
+
+  .series-inspector__shift {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .series-inspector__toolbar {
+    position: absolute;
+    left: clamp(1rem, 3vw, 3rem);
+    right: clamp(1rem, 3vw, 3rem);
+    bottom: clamp(1.65rem, 3vw, 2.75rem);
+    z-index: 7;
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: clamp(1rem, 3vw, 3rem);
+    pointer-events: none;
+  }
+
+  .series-inspector__readout {
+    max-width: min(42rem, 56vw);
+    display: grid;
+    gap: 0.32rem;
+    color: rgba(235, 240, 232, 0.6);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .series-inspector__readout strong {
+    color: rgba(245, 248, 242, 0.86);
+    font-size: clamp(1rem, 1.7vw, 1.55rem);
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .series-inspector__controls {
+    display: flex;
+    gap: 0.65rem;
+    pointer-events: auto;
+  }
+
+  .series-inspector__controls a,
+  .series-inspector__controls button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.25rem;
+    border: 1px solid rgba(245, 248, 242, 0.16);
+    border-radius: 999px;
+    background:
+      linear-gradient(90deg, rgba(245, 248, 242, 0.09), rgba(245, 248, 242, 0.035));
+    color: rgba(245, 248, 242, 0.78);
+    font: inherit;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    line-height: 2.25rem;
+    text-decoration: none;
+    text-transform: uppercase;
+    padding: 0 0.88rem;
+    cursor: pointer;
+    transition:
+      border-color 180ms ease,
+      background 180ms ease,
+      color 180ms ease;
+  }
+
+  .series-inspector__work-link {
+    min-width: 9.6rem;
+    border-width: 0 0 1px;
+    border-color: rgba(245, 248, 242, 0.52);
+    border-radius: 0;
+    background:
+      linear-gradient(90deg, transparent, rgba(245, 248, 242, 0.085) 42%, transparent),
+      transparent;
+    color: rgba(245, 248, 242, 0.92);
+    justify-content: flex-end;
+    padding: 0 0.12rem 0 3.7rem;
+    box-shadow:
+      0 16px 50px rgba(0, 0, 0, 0.18),
+      0 0 36px rgba(245, 248, 242, 0.035);
+  }
+
+  .series-inspector__work-link::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 2.8rem;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(245, 248, 242, 0.12), rgba(245, 248, 242, 0.82));
+    transform: translateY(-50%);
+    transition:
+      width 260ms cubic-bezier(0.16, 1, 0.3, 1),
+      background 180ms ease;
+  }
+
+  .series-inspector__work-link::after {
+    content: "";
+    position: absolute;
+    right: -0.34rem;
+    top: 50%;
+    width: 0.28rem;
+    height: 0.28rem;
+    border-top: 1px solid currentColor;
+    border-right: 1px solid currentColor;
+    opacity: 0.68;
+    transform: translateY(-50%) rotate(45deg);
+    transition:
+      right 260ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 180ms ease;
+  }
+
+  .series-inspector__work-link:hover {
+    border-color: rgba(245, 248, 242, 0.78);
+    background:
+      linear-gradient(90deg, transparent, var(--photo-inspector-atmo-c) 48%, transparent),
+      transparent;
+    color: rgba(248, 244, 235, 0.98);
+  }
+
+  .series-inspector__work-link:hover::before {
+    width: 3.35rem;
+    background: linear-gradient(90deg, rgba(245, 248, 242, 0.16), rgba(245, 248, 242, 0.96));
+  }
+
+  .series-inspector__work-link:hover::after {
+    right: -0.68rem;
+    opacity: 1;
+  }
+
+  .series-inspector__controls button:hover {
+    border-color: rgba(245, 248, 242, 0.34);
+    background: rgba(245, 248, 242, 0.9);
+    color: rgba(4, 6, 5, 0.92);
+  }
+
+  .series-inspector__progress {
+    position: absolute;
+    left: clamp(1rem, 3vw, 3rem);
+    right: clamp(1rem, 3vw, 3rem);
+    bottom: clamp(0.55rem, 1.3vw, 1rem);
+    z-index: 7;
+    height: 1px;
+    background: rgba(245, 248, 242, 0.08);
+    overflow: hidden;
+  }
+
+  .series-inspector__progress span {
+    display: block;
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--photo-inspector-accent), rgba(248, 241, 230, 0.56));
+    transition: width 620ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .series-sequence-plane:focus-visible,
+  .series-chapter-neighbor-nav a:focus-visible,
+  .series-inspector__controls a:focus-visible,
+  .series-inspector__controls button:focus-visible {
+    outline: 1px solid rgba(245, 248, 242, 0.42);
+    outline-offset: 6px;
+  }
+
+  @media (max-width: 900px) {
+    .series-chapter-sequence,
+    .series-chapter-neighbor-nav {
+      width: min(100% - 24px, 1560px);
+    }
+
+    .series-sequence-field,
+    .series-chapter-neighbor-nav {
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+
+    .series-sequence-plane,
+    .series-sequence-plane--featured,
+    .series-sequence-plane--left,
+    .series-sequence-plane--right,
+    .series-sequence-plane--wide,
+    .series-sequence-plane--small,
+    .series-sequence-plane--center {
+      grid-column: auto;
+      margin-top: 0;
+    }
+
+    .series-chapter-neighbor-nav a,
+    .series-chapter-neighbor-nav a:nth-child(2),
+    .series-chapter-neighbor-nav a:last-child {
+      text-align: left;
+    }
+
+    .series-inspector__toolbar {
+      display: grid;
+      align-items: start;
+      bottom: 1.6rem;
+    }
+
+    .series-inspector__readout {
+      max-width: 100%;
+    }
+
+    .series-inspector__controls {
+      justify-content: start;
+    }
+
+    .series-inspector__media {
+      width: var(--series-inspector-media-width, 88vw);
+      height: var(--series-inspector-media-height, min(64svh, calc(100svh - 180px)));
+      left: var(--series-inspector-media-left, 6vw);
+      top: var(--series-inspector-media-top, 12svh);
+      max-width: 88vw;
+      max-height: min(64svh, calc(100svh - 180px));
+    }
+  }
+
+  /* V3-41 - Cinematic Series Chapter Surface */
+  .series-chapter {
+    padding: clamp(6rem, 8vw, 8rem) 0 clamp(6rem, 10vw, 10rem);
+    background:
+      linear-gradient(180deg, rgba(5, 8, 7, 0.38), rgba(2, 4, 4, 0.2) 26%, rgba(2, 4, 4, 0.62) 100%);
+    isolation: isolate;
+  }
+
+  .series-chapter .atmosphere-root {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.74;
+    mix-blend-mode: screen;
+  }
+
+  .series-chapter-hero,
+  .series-chapter-sequence,
+  .series-chapter-register,
+  .series-chapter-neighbor-nav {
+    position: relative;
+    z-index: 2;
+  }
+
+  .series-inspector {
+    position: fixed;
+    inset: 0;
+    z-index: 2147482500;
+  }
+
+  .series-chapter .atmo-base {
+    opacity: 0.72;
+    background:
+      radial-gradient(circle at var(--living-field-x-a) var(--living-field-y-a), var(--artwork-wash-strong), transparent 34%),
+      radial-gradient(circle at var(--living-field-x-b) var(--living-field-y-b), var(--artwork-glow), transparent 28%),
+      linear-gradient(180deg, rgba(5, 7, 7, 0.88), rgba(4, 7, 6, 0.94) 48%, rgba(2, 4, 4, 0.98));
+  }
+
+  .series-chapter .atmo-light {
+    opacity: calc(0.26 + (var(--living-activity) * 0.16));
+    background:
+      radial-gradient(circle at var(--living-focus-x) var(--living-focus-y), var(--artwork-glow), transparent 19%),
+      radial-gradient(circle at var(--living-field-x-b) var(--living-field-y-b), var(--artwork-wash-strong), transparent 22%),
+      radial-gradient(circle at var(--living-field-x-c) var(--living-field-y-c), rgba(255, 255, 255, 0.04), transparent 18%);
+  }
+
+  .series-chapter .atmo-light.atmo-light-b {
+    opacity: calc(0.12 + (var(--living-pulse-b) * 0.08));
+  }
+
+  .series-chapter .atmo-structure {
+    opacity: 0.16;
+  }
+
+  .series-chapter .atmo-particles {
+    opacity: 0.1;
+  }
+
+  .series-chapter::before {
+    height: min(68rem, 92svh);
+    background:
+      radial-gradient(ellipse at 62% 38%, var(--artwork-wash-strong), transparent 44%),
+      radial-gradient(ellipse at 34% 64%, var(--artwork-glow), transparent 42%),
+      linear-gradient(180deg, rgba(5, 8, 7, 0), rgba(5, 8, 7, 0.52));
+    opacity: 0.34;
+    filter: blur(8px);
+  }
+
+  .series-chapter-hero {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: min(860px, calc(100svh - 4.8rem));
+    margin-inline: auto;
+    padding-inline: clamp(2.75rem, 3.2vw, 4.5rem) clamp(0.75rem, 1.4vw, 1.75rem);
+    display: grid;
+    grid-template-columns: minmax(360px, 42rem) minmax(0, 1fr);
+    gap: 0;
+    align-items: center;
+    position: relative;
+    isolation: isolate;
+    justify-items: start;
+  }
+
+  .series-chapter-hero::before,
+  .series-chapter-sequence::before {
+    content: "";
+    position: absolute;
+    inset: 4% -5%;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      linear-gradient(rgba(245, 248, 242, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245, 248, 242, 0.022) 1px, transparent 1px);
+    background-size: 96px 96px;
+    mask-image: radial-gradient(ellipse at 58% 48%, #000 0%, transparent 72%);
+    opacity: 0.46;
+  }
+
+  .series-chapter-hero::after {
+    content: "";
+    position: absolute;
+    inset: 8% -1% 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at 58% 46%, var(--artwork-wash-strong), transparent 42%),
+      radial-gradient(ellipse at 76% 58%, rgba(245, 248, 242, 0.055), transparent 28%),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.64), transparent 36%, rgba(0, 0, 0, 0.58));
+    opacity: 0.44;
+    filter: blur(10px);
+  }
+
+  .series-chapter-hero__copy {
+    position: relative;
+    z-index: 18;
+    max-width: 46rem;
+    margin-left: 0;
+    padding-left: 0;
+  }
+
+  .series-chapter-hero__copy::before {
+    content: "";
+    position: absolute;
+    inset: -18% -22% -18% -10%;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at 18% 48%, rgba(2, 4, 4, 0.86), transparent 72%),
+      linear-gradient(90deg, rgba(2, 4, 4, 0.72), rgba(2, 4, 4, 0.28) 62%, transparent);
+    filter: blur(4px);
+  }
+
+  .series-chapter-hero .series-chapter-title {
+    max-width: 12ch;
+  }
+
+  .series-chapter-live-signal {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+    max-width: 35rem;
+    margin-top: 1.45rem;
+  }
+
+  .series-chapter-live-signal div {
+    border: 1px solid rgba(245, 248, 242, 0.08);
+    background: rgba(245, 248, 242, 0.025);
+    padding: 0.8rem 0.9rem;
+  }
+
+  .series-chapter-live-signal span {
+    display: block;
+    color: rgba(235, 240, 232, 0.34);
+    font-size: 0.56rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .series-chapter-live-signal strong {
+    display: block;
+    margin-top: 0.28rem;
+    color: rgba(245, 248, 242, 0.78);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+  }
+
+  .series-hero-carousel {
+    min-height: clamp(610px, 78svh, 820px);
+    position: absolute;
+    inset: 0;
+    isolation: isolate;
+    z-index: 6;
+    margin: 0;
+    pointer-events: none;
+  }
+
+  .series-hero-carousel__field {
+    position: absolute;
+    inset: 0;
+    perspective: 1600px;
+    transform-style: preserve-3d;
+    pointer-events: none;
+  }
+
+  .series-hero-frame {
+    --series-hero-x: 0%;
+    --series-hero-y: 0%;
+    --series-hero-scale: 1;
+    --series-hero-opacity: 1;
+    --series-hero-brightness: 1;
+    --series-hero-blur: 0px;
+    position: absolute;
+    left: 57%;
+    top: 50%;
+    z-index: 4;
+    width: clamp(280px, 29vw, 560px);
+    margin: 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    opacity: var(--series-hero-opacity);
+    transform:
+      translate3d(calc(-50% + var(--series-hero-x)), calc(-50% + var(--series-hero-y)), 0)
+      scale(var(--series-hero-scale));
+    transform-origin: center;
+    transition:
+      transform 980ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 760ms ease,
+      filter 760ms ease;
+    filter: blur(var(--series-hero-blur)) brightness(var(--series-hero-brightness));
+    will-change: transform, opacity, filter;
+    pointer-events: auto;
+  }
+
+  .series-hero-frame[data-image-format="landscape"] {
+    width: clamp(420px, 47vw, 780px);
+  }
+
+  .series-hero-frame[data-image-format="square"] {
+    width: clamp(320px, 34vw, 620px);
+  }
+
+  .series-hero-frame[data-slot="active"] {
+    --series-hero-x: 0%;
+    --series-hero-y: 0%;
+    --series-hero-scale: 1;
+    --series-hero-opacity: 1;
+    --series-hero-brightness: 1.02;
+    --series-hero-blur: 0px;
+    z-index: 9;
+    cursor: zoom-in;
+  }
+
+  .series-hero-frame[data-slot="prev"] {
+    --series-hero-x: -170%;
+    --series-hero-y: 4%;
+    --series-hero-scale: 0.7;
+    --series-hero-opacity: 0.42;
+    --series-hero-brightness: 0.66;
+    --series-hero-blur: 1.4px;
+    z-index: 5;
+  }
+
+  .series-hero-frame[data-slot="next"] {
+    --series-hero-x: 132%;
+    --series-hero-y: -3%;
+    --series-hero-scale: 0.7;
+    --series-hero-opacity: 0.46;
+    --series-hero-brightness: 0.68;
+    --series-hero-blur: 1.4px;
+    z-index: 5;
+  }
+
+  .series-hero-frame[data-slot="far-prev"] {
+    --series-hero-x: -245%;
+    --series-hero-y: 12%;
+    --series-hero-scale: 0.52;
+    --series-hero-opacity: 0.22;
+    --series-hero-brightness: 0.48;
+    --series-hero-blur: 2.6px;
+    z-index: 2;
+  }
+
+  .series-hero-frame[data-slot="far-next"] {
+    --series-hero-x: 215%;
+    --series-hero-y: 12%;
+    --series-hero-scale: 0.52;
+    --series-hero-opacity: 0.22;
+    --series-hero-brightness: 0.48;
+    --series-hero-blur: 2.6px;
+    z-index: 2;
+  }
+
+  .series-hero-frame[data-slot="hidden"] {
+    --series-hero-x: 0%;
+    --series-hero-y: 18%;
+    --series-hero-scale: 0.42;
+    --series-hero-opacity: 0;
+    --series-hero-brightness: 0.42;
+    --series-hero-blur: 4px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .series-hero-frame figure {
+    margin: 0;
+    position: relative;
+  }
+
+  .series-hero-frame figure::before {
+    content: "";
+    position: absolute;
+    inset: -18%;
+    z-index: -1;
+    background:
+      radial-gradient(ellipse at 50% 46%, var(--work-glow), transparent 48%),
+      radial-gradient(ellipse at 50% 90%, rgba(0, 0, 0, 0.72), transparent 68%);
+    opacity: 0.22;
+    filter: blur(10px);
+    transition: opacity 760ms ease;
+  }
+
+  .series-hero-frame[data-slot="active"] figure::before {
+    opacity: 0.44;
+  }
+
+  .series-hero-frame img {
+    display: block;
+    width: 100%;
+    max-height: min(70svh, 720px);
+    object-fit: contain;
+    box-shadow:
+      0 54px 150px rgba(0, 0, 0, 0.72),
+      0 0 0 1px rgba(245, 248, 242, 0.06);
+  }
+
+  .series-hero-frame figcaption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: end;
+    padding: 1rem;
+    background: linear-gradient(180deg, transparent, rgba(2, 4, 4, 0.68));
+    color: rgba(245, 248, 242, 0.78);
+    text-transform: uppercase;
+  }
+
+  .series-hero-frame figcaption span,
+  .series-hero-frame figcaption small {
+    color: rgba(235, 240, 232, 0.42);
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+  }
+
+  .series-hero-frame figcaption strong {
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+  }
+
+  .series-hero-carousel__controls {
+    position: absolute;
+    left: 57%;
+    bottom: clamp(-2.8rem, -3.5vh, -1.75rem);
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transform: translateX(-50%);
+    border: 1px solid rgba(245, 248, 242, 0.08);
+    background: rgba(3, 5, 5, 0.54);
+    backdrop-filter: blur(18px);
+    padding: 0.55rem 0.85rem;
+    pointer-events: auto;
+  }
+
+  .series-hero-carousel__controls button {
+    border: 0;
+    background: transparent;
+    color: rgba(245, 248, 242, 0.7);
+    font: inherit;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .series-hero-carousel__controls button:disabled {
+    opacity: 0.26;
+    cursor: default;
+  }
+
+  .series-hero-carousel__dots {
+    display: flex;
+    align-items: center;
+    gap: 0.32rem;
+  }
+
+  .series-hero-carousel__dots button {
+    width: 0.34rem;
+    height: 0.34rem;
+    padding: 0;
+    border-radius: 999px;
+    background: rgba(245, 248, 242, 0.28);
+    transition:
+      width 360ms ease,
+      background 360ms ease;
+  }
+
+  .series-hero-carousel__dots button[aria-current="true"] {
+    width: 1.5rem;
+    background: rgba(245, 248, 242, 0.86);
+  }
+
+  .series-hero-empty {
+    border-left: 1px solid rgba(245, 248, 242, 0.1);
+    padding-left: 1.5rem;
+  }
+
+  .series-hero-empty h2 {
+    margin: 0;
+    max-width: 14ch;
+    color: rgba(245, 248, 242, 0.88);
+    font-size: clamp(2.6rem, 5vw, 5.8rem);
+    font-weight: 300;
+    letter-spacing: 0;
+    line-height: 0.96;
+  }
+
+  .series-hero-empty p {
+    max-width: 34rem;
+    color: rgba(235, 240, 232, 0.62);
+    line-height: 1.6;
+  }
+
+  .series-chapter-sequence {
+    width: min(1840px, calc(100vw - clamp(28px, 4vw, 72px)));
+    margin: clamp(3rem, 7vw, 7rem) auto 0;
+    position: relative;
+    isolation: isolate;
+    padding: clamp(3rem, 7vw, 7rem) 0 clamp(2rem, 5vw, 5rem);
+  }
+
+  .series-chapter-sequence::after {
+    content: "";
+    position: absolute;
+    inset: 0 -4%;
+    z-index: -3;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at 22% 22%, var(--series-detail-b), transparent 34%),
+      radial-gradient(ellipse at 70% 54%, var(--series-detail-a), transparent 42%),
+      linear-gradient(180deg, rgba(245, 248, 242, 0.025), transparent 18%, rgba(245, 248, 242, 0.018));
+    opacity: 0.58;
+    mask-image: linear-gradient(180deg, transparent, #000 12%, #000 84%, transparent);
+  }
+
+  .series-sequence-field {
+    gap: clamp(4rem, 8vw, 10rem) clamp(1.5rem, 4vw, 5rem);
+    padding-top: clamp(1rem, 3vw, 3rem);
+  }
+
+  .series-sequence-plane {
+    --cover-y: 0px;
+    --cover-scale: 1;
+    --cover-opacity: 0.7;
+    --cover-tilt: 0deg;
+    opacity: var(--cover-opacity);
+    display: grid;
+    transform:
+      translate3d(0, var(--cover-y), 0)
+      rotate(var(--cover-tilt))
+      scale(var(--cover-scale));
+    transition:
+      opacity 420ms ease,
+      filter 420ms ease,
+      transform 420ms ease;
+    position: relative;
+    isolation: isolate;
+  }
+
+  .series-sequence-plane::before {
+    content: "";
+    position: absolute;
+    inset: -18%;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at 50% 48%, var(--work-glow), transparent 48%),
+      radial-gradient(ellipse at 50% 88%, rgba(0, 0, 0, 0.74), transparent 70%);
+    opacity: calc(0.08 + (var(--sequence-progress) * 0.28));
+    filter: blur(14px);
+  }
+
+  .series-sequence-plane--hero {
+    grid-column: 2 / span 6;
+  }
+
+  .series-sequence-plane--right {
+    grid-column: 8 / span 4;
+    margin-top: clamp(6rem, 13vw, 12rem);
+  }
+
+  .series-sequence-plane--left {
+    grid-column: 1 / span 4;
+    margin-top: clamp(2rem, 8vw, 7rem);
+  }
+
+  .series-sequence-plane--wide {
+    grid-column: 5 / span 7;
+  }
+
+  .series-sequence-plane--portrait {
+    grid-column: 2 / span 3;
+    margin-top: clamp(1rem, 5vw, 5rem);
+  }
+
+  .series-sequence-plane--standard {
+    grid-column: 7 / span 4;
+    margin-top: clamp(4rem, 10vw, 9rem);
+  }
+
+  .series-sequence-plane--offset-left {
+    grid-column: 3 / span 5;
+  }
+
+  .series-sequence-plane--offset-right {
+    grid-column: 8 / span 4;
+    margin-top: clamp(2rem, 7vw, 7rem);
+  }
+
+  .series-sequence-plane img {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: min(78svh, 820px);
+    background: transparent;
+    box-shadow:
+      0 46px 130px rgba(0, 0, 0, 0.48),
+      0 0 0 1px rgba(245, 248, 242, 0.035);
+  }
+
+  .series-sequence-plane span,
+  .series-sequence-plane small {
+    color: rgba(235, 240, 232, 0.38);
+    font-size: 0.56rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+  }
+
+  .series-sequence-plane strong {
+    color: rgba(245, 248, 242, 0.82);
+    font-size: 0.86rem;
+    letter-spacing: 0.08em;
+  }
+
+  .series-chapter-routes a,
+  .series-empty-state a {
+    letter-spacing: 0.12em;
+    font-weight: 800;
+  }
+
+  @media (max-width: 1100px) {
+    .series-chapter-hero {
+      grid-template-columns: minmax(0, 1fr);
+      min-height: min(820px, calc(100svh - 4.8rem));
+      gap: 2.5rem;
+    }
+
+    .series-hero-carousel {
+      min-height: clamp(520px, 76svh, 720px);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .series-chapter {
+      padding-top: 6rem;
+    }
+
+    .series-chapter-hero,
+    .series-chapter-sequence {
+      width: 100%;
+    }
+
+    .series-chapter-live-signal {
+      grid-template-columns: 1fr;
+    }
+
+    .series-hero-carousel {
+      min-height: 620px;
+      overflow: hidden;
+    }
+
+    .series-hero-frame,
+    .series-hero-frame[data-image-format="landscape"],
+    .series-hero-frame[data-image-format="square"] {
+      width: min(72vw, 390px);
+    }
+
+    .series-hero-frame[data-slot="prev"] {
+      --series-hero-x: -52%;
+      --series-hero-scale: 0.68;
+    }
+
+    .series-hero-frame[data-slot="next"] {
+      --series-hero-x: 52%;
+      --series-hero-scale: 0.68;
+    }
+
+    .series-hero-frame[data-slot="far-prev"],
+    .series-hero-frame[data-slot="far-next"] {
+      --series-hero-opacity: 0;
+      pointer-events: none;
+    }
+
+    .series-hero-carousel__controls {
+      width: min(100%, 28rem);
+      justify-content: space-between;
+    }
+
+    .series-sequence-plane,
+    .series-sequence-plane--hero,
+    .series-sequence-plane--left,
+    .series-sequence-plane--right,
+    .series-sequence-plane--wide,
+    .series-sequence-plane--portrait,
+    .series-sequence-plane--standard,
+    .series-sequence-plane--offset-left,
+    .series-sequence-plane--offset-right {
+      grid-column: auto;
+      margin-top: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .series-sequence-plane,
+    .series-hero-frame,
+    .series-inspector {
+      transition: none;
+    }
+  }
+</style>

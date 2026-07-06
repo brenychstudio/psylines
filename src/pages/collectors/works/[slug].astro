@@ -1,0 +1,145 @@
+---
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import AtmosphericBackdropRoot from "../../../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
+import {
+  getAllWorks,
+  getPrintByArtworkSlug,
+  getWorkBySlug,
+} from "../../../data/site/relations";
+import { collectorChecklist } from "../../../data/site/collector";
+import { resolvePublicAsset } from "../../../lib/assets/publicAsset";
+import { getResponsivePublicImage } from "../../../lib/assets/responsiveImage";
+
+export async function getStaticPaths() {
+  return getAllWorks().map((item) => ({
+    params: { slug: item.slug },
+  }));
+}
+
+const slug = Astro.params.slug;
+
+if (!slug) {
+  throw new Error("Missing work collector slug");
+}
+
+const work = getWorkBySlug(slug);
+
+if (!work) {
+  throw new Error(`Work not found for collector route: ${slug}`);
+}
+
+const relatedPrint = getPrintByArtworkSlug(work.slug);
+const coverSrc = resolvePublicAsset(work.cover);
+const coverImage = getResponsivePublicImage(work.cover, { defaultWidth: 1400 });
+---
+<BaseLayout
+  title={`${work.title} - Collector Route - ARTIST STAGE`}
+  description={`Collector route for ${work.title}`}
+  canonicalPath={`/collectors/works/${work.slug}`}
+  noindex={true}
+>
+  <AtmosphericBackdropRoot />
+
+  <section class="detail-shell">
+    <div class={`detail-hero aspect-${work.aspect}`}>
+      <div class={`detail-media-card aspect-${work.aspect}`}>
+        {coverSrc ? (
+          <>
+            <img
+              src={coverImage.src}
+              srcset={coverImage.srcset}
+              sizes="(min-width: 980px) 46vw, 92vw"
+              alt={`${work.title} collector route`}
+              class="detail-media-image"
+              loading="eager"
+              decoding="async"
+            />
+            <div class="detail-media-overlay"></div>
+          </>
+        ) : (
+          <div class="detail-media-surface"></div>
+        )}
+        <div class="detail-media-frame"></div>
+        <div class="detail-media-label">Collector route / artwork inquiry</div>
+      </div>
+
+      <div class="detail-info-card">
+        <p class="detail-kicker">collector route / artwork</p>
+        <h1 class="detail-title">{work.title}</h1>
+        <p class="detail-copy">{work.statement}</p>
+
+        <div class="detail-chip-row">
+          <span class="detail-chip">{work.medium}</span>
+          <span class="detail-chip">{work.dimensions}</span>
+          {relatedPrint ? <span class="detail-chip">print route also available</span> : null}
+        </div>
+
+        <div class="btn-row">
+          <a href="/contact" class="btn-primary">Open contact lane</a>
+          {relatedPrint ? (
+            <a href={`/collectors/prints/${relatedPrint.slug}`} class="btn-secondary">Open print collector route</a>
+          ) : (
+            <a href={`/works/${work.slug}`} class="btn-secondary">Back to artwork</a>
+          )}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="notice-strip">
+    <div class="notice-card">
+      <h2 class="notice-title">When to use this route</h2>
+      <p class="notice-copy">
+        Use this route when the work needs inquiry-first handling: original availability, custom presentation, curatorial discussion, or other acquisition questions that should not be reduced to a simple add-to-cart flow.
+      </p>
+    </div>
+  </section>
+
+  <section class="flow-shell">
+    <div class="flow-grid cols-3">
+      <article class="flow-card">
+        <p class="detail-kicker">route type</p>
+        <h2 class="flow-title">Inquiry-led artwork path</h2>
+        <p class="flow-copy">This route supports original or higher-touch acquisition logic rather than immediate checkout.</p>
+      </article>
+
+      <article class="flow-card">
+        <p class="detail-kicker">work context</p>
+        <h2 class="flow-title">{work.medium}</h2>
+        <p class="flow-copy">{work.dimensions}</p>
+      </article>
+
+      <article class="flow-card">
+        <p class="detail-kicker">edition relation</p>
+        <h2 class="flow-title">{relatedPrint ? "Print route available" : "No print route attached"}</h2>
+        <p class="flow-copy">
+          {relatedPrint
+            ? "A dedicated print edition route also exists for this work."
+            : "This work currently uses inquiry as the main collector path."}
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <section class="flow-shell">
+    <div class="flow-grid cols-2">
+      <article class="flow-note-card">
+        <p class="detail-kicker">what to include</p>
+        <h2 class="flow-title">Inquiry checklist</h2>
+        <ul class="flow-checklist">
+          {collectorChecklist.map((item) => (
+            <li>{item}</li>
+          ))}
+        </ul>
+      </article>
+
+      <article class="flow-note-card">
+        <p class="detail-kicker">recommended next step</p>
+        <h2 class="flow-title">Continue into the contact lane with context.</h2>
+        <p class="flow-copy">
+          The contact route should receive a focused request: acquisition intent, location, preferred format or work, and whether the conversation is collector, exhibition, or curatorial in nature.
+        </p>
+      </article>
+    </div>
+  </section>
+</BaseLayout>

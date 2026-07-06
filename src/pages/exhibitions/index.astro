@@ -1,0 +1,86 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import AtmosphericBackdropRoot from "../../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
+import { getAllExhibitions } from "../../data/site/relations";
+import { resolvePublicAsset } from "../../lib/assets/publicAsset";
+import { getResponsivePublicImage } from "../../lib/assets/responsiveImage";
+
+const exhibitionCards = getAllExhibitions().map((entry) => ({
+  entry,
+  coverSrc: resolvePublicAsset(entry.cover),
+  coverImage: getResponsivePublicImage(entry.cover, { defaultWidth: 640 }),
+}));
+---
+<BaseLayout
+  title="Exhibitions - ARTIST STAGE"
+  description="Supporting exhibition routes and curatorial presentation notes."
+  canonicalPath="/exhibitions"
+  noindex={true}
+>
+  <AtmosphericBackdropRoot />
+
+  <section class="page-hero">
+    <p class="eyebrow">exhibitions</p>
+    <h1 class="page-title">Exhibitions and presentation lanes.</h1>
+    <p class="page-copy">
+      This layer connects editorial presentation, curatorial framing, and the future
+      immersive / XR direction of the artist platform.
+    </p>
+  </section>
+
+  <section class="listing-shell">
+    {exhibitionCards.length > 0 ? (
+      <div class="listing-grid">
+        {exhibitionCards.map(({ entry, coverSrc, coverImage }) => (
+          <a href={`/exhibitions/${entry.slug}`} class={`listing-card aspect-${entry.aspect}`}>
+            <div class="listing-media">
+              {coverSrc ? (
+                <>
+                  <img
+                    src={coverImage.src}
+                    srcset={coverImage.srcset}
+                    sizes="(min-width: 980px) 24vw, (min-width: 640px) 42vw, 88vw"
+                    alt={`${entry.title} exhibition cover`}
+                    class="listing-media-image"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div class="listing-media-overlay"></div>
+                </>
+              ) : null}
+
+              <div class="listing-media-frame"></div>
+              <div class="listing-media-label">
+                {coverSrc ? "Exhibition / real image slot" : "Exhibition / atmospheric placeholder surface"}
+              </div>
+            </div>
+
+            <div class="listing-content">
+              <p class="listing-kicker">{entry.status} / {entry.location}</p>
+              <h2 class="listing-title">{entry.title}</h2>
+              <p class="listing-copy">
+                {entry.period} / {entry.description}
+              </p>
+
+              <div class="listing-meta">
+                <span class="listing-pill">{entry.location}</span>
+                <span class="listing-pill">{entry.period}</span>
+                <span class="listing-pill">{entry.status}</span>
+              </div>
+
+              <p class="listing-arrow">Open exhibition</p>
+            </div>
+          </a>
+        ))}
+      </div>
+    ) : (
+      <div class="section-card">
+        <p class="card-kicker">empty state</p>
+        <h2 class="card-title">No exhibition entries found</h2>
+        <p class="card-copy">
+          The exhibition route is active, but no exhibition data is currently defined.
+        </p>
+      </div>
+    )}
+  </section>
+</BaseLayout>

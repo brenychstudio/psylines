@@ -1,0 +1,115 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import AtmosphericBackdropRoot from "../../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
+import {
+  getAllExhibitions,
+  getExhibitionBySlug,
+} from "../../data/site/relations";
+import { resolvePublicAsset } from "../../lib/assets/publicAsset";
+import { getResponsivePublicImage } from "../../lib/assets/responsiveImage";
+
+export async function getStaticPaths() {
+  return getAllExhibitions().map((entry) => ({
+    params: { slug: entry.slug },
+  }));
+}
+
+const slug = Astro.params.slug;
+
+if (!slug) {
+  throw new Error("Missing exhibition slug");
+}
+
+const exhibition = getExhibitionBySlug(slug);
+
+if (!exhibition) {
+  throw new Error(`Exhibition not found for slug: ${slug}`);
+}
+
+const coverSrc = resolvePublicAsset(exhibition.cover);
+const coverImage = getResponsivePublicImage(exhibition.cover, { defaultWidth: 1400 });
+---
+<BaseLayout
+  title={`${exhibition.title} - Exhibition - ARTIST STAGE`}
+  description={exhibition.description}
+  canonicalPath={`/exhibitions/${exhibition.slug}`}
+  noindex={true}
+>
+  <AtmosphericBackdropRoot />
+
+  <section class="detail-shell">
+    <div class={`detail-hero aspect-${exhibition.aspect}`}>
+      <div class={`detail-media-card aspect-${exhibition.aspect}`}>
+        {coverSrc ? (
+          <>
+            <img
+              src={coverImage.src}
+              srcset={coverImage.srcset}
+              sizes="(min-width: 980px) 46vw, 92vw"
+              alt={`${exhibition.title} exhibition cover`}
+              class="detail-media-image"
+              loading="eager"
+              decoding="async"
+            />
+            <div class="detail-media-overlay"></div>
+          </>
+        ) : (
+          <div class="detail-media-surface"></div>
+        )}
+
+        <div class="detail-media-frame"></div>
+        <div class="detail-media-label">
+          {coverSrc ? "Exhibition / real image slot" : "Exhibition preview / atmospheric placeholder"}
+        </div>
+      </div>
+
+      <div class="detail-info-card">
+        <p class="detail-kicker">exhibition / {exhibition.status}</p>
+        <h1 class="detail-title">{exhibition.title}</h1>
+        <p class="detail-copy">
+          {exhibition.location} / {exhibition.period} / {exhibition.description}
+        </p>
+
+        <div class="detail-chip-row">
+          <span class="detail-chip">{exhibition.location}</span>
+          <span class="detail-chip">{exhibition.period}</span>
+          <span class="detail-chip">{exhibition.status}</span>
+        </div>
+
+        <div class="btn-row">
+          <a href="/immersive" class="btn-primary">Open immersive lane</a>
+          <a href="/exhibitions" class="btn-secondary">Back to exhibitions</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="detail-grid">
+    <article class="detail-meta-card">
+      <p class="detail-kicker">curatorial note</p>
+      <h2 class="detail-meta-title">Atmospheric exhibition surface</h2>
+      <p class="detail-meta-copy">
+        This exhibition route is the first bridge between the editorial artist website
+        and the future immersive / XR presentation lane.
+      </p>
+    </article>
+
+    <article class="detail-meta-card">
+      <p class="detail-kicker">presentation logic</p>
+      <h2 class="detail-meta-title">Editorial now, immersive next</h2>
+      <p class="detail-meta-copy">
+        The current page holds a premium static composition first. A later pass can add
+        scene-based entry, portal logic, or a dedicated exhibition stage surface.
+      </p>
+    </article>
+
+    <article class="detail-cta-card">
+      <p class="detail-kicker">future lane</p>
+      <h2 class="detail-meta-title">XR-ready direction</h2>
+      <p class="detail-meta-copy">
+        This route is intentionally structured as a future bridge into immersive previews,
+        spatial exhibition surfaces, and later WebGL / XR activation.
+      </p>
+    </article>
+  </section>
+</BaseLayout>

@@ -1,0 +1,29 @@
+---
+import { moodStops, type AtmosphereMoodId } from "../../lib/living-atmosphere/moodStops";
+
+type Props = {
+  mood: AtmosphereMoodId | string;
+};
+
+const { mood } = Astro.props as Props;
+const safeMood = mood in moodStops ? mood : "metaBodies";
+---
+
+<script is:inline define:vars={{ mood: safeMood }}>
+  (function () {
+    function applyOverride() {
+      if (window.ArtistStageAtmosphere?.setMood) {
+        window.ArtistStageAtmosphere.setMood(mood);
+        return;
+      }
+
+      window.dispatchEvent(
+        new CustomEvent("artist-stage:atmosphere:set", {
+          detail: { mood: mood },
+        }),
+      );
+    }
+
+    applyOverride();
+  })();
+</script>

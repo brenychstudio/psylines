@@ -1,0 +1,256 @@
+<script is:inline>
+  (() => {
+    if (window.__artistStageCinematicIdleInstalled) return;
+    window.__artistStageCinematicIdleInstalled = true;
+
+    const rootSelector = "[data-cinematic-idle-root]";
+    const targetSelector = "[data-cinematic-idle]";
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const controllers = new Set();
+
+    const roleWeight = {
+      anchor: 0,
+      presence: 1,
+      image: 1,
+      voice: 3,
+      line: 4,
+      detail: 5,
+      trace: 6,
+    };
+
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+    const hashElement = (element, index) => {
+      const source = `${element.textContent || element.getAttribute("aria-label") || ""}:${index}`;
+      let hash = 0;
+
+      for (let i = 0; i < source.length; i += 1) {
+        hash = (hash << 5) - hash + source.charCodeAt(i);
+        hash |= 0;
+      }
+
+      return Math.abs(hash);
+    };
+
+    const prepareWave = (root) => {
+      const targets = Array.from(root.querySelectorAll(targetSelector)).filter((element) => {
+        return !element.closest("[hidden], [aria-hidden='true']");
+      });
+      const viewportHeight = Math.max(window.innerHeight || 1, 1);
+      const focusY = viewportHeight * 0.46;
+      const total = Math.max(targets.length - 1, 1);
+
+      targets.forEach((element, index) => {
+        const rect = element.getBoundingClientRect();
+        const centerY = rect.top + rect.height * 0.5;
+        const distance = clamp(Math.abs(centerY - focusY) / viewportHeight, 0, 1.4);
+        const role = element.getAttribute("data-cinematic-idle") || "voice";
+        const weight = roleWeight[role] ?? roleWeight.voice;
+        const manualOrder = Number(element.getAttribute("data-cinematic-idle-order"));
+        const order = Number.isFinite(manualOrder) ? manualOrder : index / total;
+        const hash = hashElement(element, index);
+        const jitter = hash % 120;
+        const driftY = clamp((centerY - focusY) / viewportHeight, -0.8, 0.8) * 0.72;
+        const driftX = ((hash % 28) - 14) / 100;
+        const enterDelay = Math.round(distance * 540 + weight * 72 + order * 420 + jitter);
+        const wakeDelay = Math.round((1.15 - clamp(distance, 0, 1.15)) * 170 + (1 - order) * 180 + (hash % 70));
+
+        element.style.setProperty("--cinematic-idle-enter-delay", `${enterDelay}ms`);
+        element.style.setProperty("--cinematic-idle-wake-delay", `${wakeDelay}ms`);
+        element.style.setProperty("--cinematic-idle-x", `${driftX.toFixed(3)}rem`);
+        element.style.setProperty("--cinematic-idle-y", `${driftY.toFixed(3)}rem`);
+      });
+    };
+
+    const ensureVeil = (root) => {
+      if (root.querySelector(":scope > .cinematic-idle-veil")) return;
+
+      const veil = document.createElement("span");
+      veil.className = "cinematic-idle-veil";
+      veil.setAttribute("aria-hidden", "true");
+      root.prepend(veil);
+    };
+
+    const createController = (root) => {
+      if (root.__artistStageCinematicIdleController) return root.__artistStageCinematicIdleController;
+
+      ensureVeil(root);
+      root.dataset.cinematicIdleState = "awake";
+
+      let timer = 0;
+      const idleDelay = Number(root.dataset.cinematicIdleDelay) || 5600;
+      const reducedDelay = Number(root.dataset.cinematicIdleReducedDelay) || Math.max(idleDelay, 9000);
+
+      const enter = () => {
+        if (document.hidden || root.matches(":focus-within")) return;
+        prepareWave(root);
+        root.dataset.cinematicIdleState = "idle";
+      };
+
+      const schedule = () => {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(enter, reducedMotion.matches ? reducedDelay : idleDelay);
+      };
+
+      const wake = () => {
+        const wasContemplating =
+          root.dataset.cinematicIdleState === "idle" || root.dataset.cinematicIdleState === "waking";
+
+        if (wasContemplating) {
+          prepareWave(root);
+          root.dataset.cinematicIdleState = "waking";
+          window.setTimeout(() => {
+            if (root.dataset.cinematicIdleState === "waking") {
+              root.dataset.cinematicIdleState = "awake";
+            }
+          }, reducedMotion.matches ? 160 : 1450);
+        } else {
+          root.dataset.cinematicIdleState = "awake";
+        }
+
+        schedule();
+      };
+
+      const controller = { root, schedule, wake };
+      root.__artistStageCinematicIdleController = controller;
+      controllers.add(controller);
+      schedule();
+
+      return controller;
+    };
+
+    const initRoots = () => {
+      document.querySelectorAll(rootSelector).forEach(createController);
+    };
+
+    let wakeQueued = false;
+
+    const wakeAll = () => {
+      controllers.forEach((controller) => controller.wake());
+    };
+
+    const requestWakeAll = () => {
+      if (wakeQueued) return;
+      wakeQueued = true;
+
+      window.requestAnimationFrame(() => {
+        wakeQueued = false;
+        wakeAll();
+      });
+    };
+
+    const events = ["pointermove", "pointerdown", "wheel", "scroll", "keydown", "touchstart"];
+
+    events.forEach((eventName) => {
+      window.addEventListener(eventName, requestWakeAll, { passive: true });
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        controllers.forEach((controller) => {
+          controller.root.dataset.cinematicIdleState = "awake";
+        });
+        return;
+      }
+
+      controllers.forEach((controller) => controller.schedule());
+    });
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initRoots, { once: true });
+    } else {
+      initRoots();
+    }
+  })();
+</script>
+
+<style is:global>
+  [data-cinematic-idle-root] {
+    --cinematic-idle-ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --cinematic-idle-veil-opacity: 0.82;
+    position: relative;
+    isolation: isolate;
+  }
+
+  [data-cinematic-idle-root] > .cinematic-idle-veil {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 58% 44%, rgba(181, 205, 145, 0.1), transparent 34rem),
+      radial-gradient(circle at 28% 62%, rgba(136, 86, 62, 0.1), transparent 36rem),
+      linear-gradient(180deg, rgba(3, 5, 5, 0.08), rgba(3, 5, 5, 0.52));
+    opacity: 0;
+    transition:
+      opacity 1500ms var(--cinematic-idle-ease),
+      filter 1700ms var(--cinematic-idle-ease);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] > .cinematic-idle-veil {
+    opacity: var(--cinematic-idle-veil-opacity);
+  }
+
+  [data-cinematic-idle] {
+    transition:
+      opacity var(--cinematic-idle-duration, 1350ms) var(--cinematic-idle-ease),
+      filter var(--cinematic-idle-duration, 1350ms) var(--cinematic-idle-ease),
+      transform var(--cinematic-idle-duration, 1350ms) var(--cinematic-idle-ease),
+      text-shadow var(--cinematic-idle-duration, 1350ms) var(--cinematic-idle-ease);
+    transition-delay: var(--cinematic-idle-wake-delay, 0ms);
+    will-change: opacity, filter, transform;
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle] {
+    transition-delay: var(--cinematic-idle-enter-delay, 0ms);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="anchor"] {
+    opacity: 0.78;
+    filter: blur(0.18px);
+    text-shadow: 0 0 34px rgba(245, 248, 242, 0.08);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="presence"],
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="image"] {
+    opacity: 0.96;
+    transform: translate3d(0, calc(var(--cinematic-idle-y, 0rem) * 0.45), 0) scale(1.012);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="voice"] {
+    opacity: 0.3;
+    filter: blur(0.78px);
+    transform: translate3d(var(--cinematic-idle-x, 0rem), calc(var(--cinematic-idle-y, 0rem) + 0.08rem), 0);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="line"] {
+    opacity: 0.18;
+    filter: blur(1.35px);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) + 0.18rem), var(--cinematic-idle-y, 0rem), 0);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="detail"] {
+    opacity: 0.18;
+    filter: blur(1.2px);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 0.6), calc(var(--cinematic-idle-y, 0rem) * 0.4), 0);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="trace"] {
+    opacity: 0.22;
+    filter: blur(1.1px);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="waking"] [data-cinematic-idle] {
+    transition-duration: var(--cinematic-idle-wake-duration, 1100ms);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-cinematic-idle-root] > .cinematic-idle-veil,
+    [data-cinematic-idle] {
+      transition-duration: 1ms !important;
+      transition-delay: 0ms !important;
+      transform: none !important;
+      filter: none !important;
+    }
+  }
+</style>

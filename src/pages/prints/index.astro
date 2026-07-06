@@ -1,0 +1,84 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import AtmosphericBackdropRoot from "../../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
+import { getAllWorks, getAllPrints } from "../../data/site/relations";
+import { resolvePublicAsset } from "../../lib/assets/publicAsset";
+import { getResponsivePublicImage } from "../../lib/assets/responsiveImage";
+
+const works = getAllWorks();
+
+const printCards = getAllPrints().map((print) => {
+  const relatedWork = works.find((work) => work.slug === print.artworkSlug);
+
+  return {
+    print,
+    coverSrc: relatedWork ? resolvePublicAsset(relatedWork.cover) : null,
+    coverImage: relatedWork ? getResponsivePublicImage(relatedWork.cover, { defaultWidth: 640 }) : null,
+  };
+});
+---
+<BaseLayout
+  title="Print Editions - ARTIST STAGE"
+  description="Supporting print edition routes for selected works. Primary artwork context remains in Works and Contact."
+  canonicalPath="/prints"
+  noindex={true}
+>
+  <AtmosphericBackdropRoot />
+
+  <section class="page-hero">
+    <p class="eyebrow">supporting print routes</p>
+    <h1 class="page-title">Selected print editions.</h1>
+    <p class="page-copy">
+      This register supports selected edition routes. Primary artwork context stays in
+      the works field and contact route.
+    </p>
+  </section>
+
+  <section class="listing-shell">
+    <div class="listing-grid">
+      {printCards.map(({ print, coverSrc, coverImage }) => (
+        <a href={`/prints/${print.slug}`} class={`listing-card aspect-${print.aspect}`}>
+          <div class="listing-media">
+            {coverSrc ? (
+              <>
+                <img
+                  src={coverImage?.src ?? coverSrc}
+                  srcset={coverImage?.srcset}
+                  sizes="(min-width: 980px) 24vw, (min-width: 640px) 42vw, 88vw"
+                  alt={`${print.title} print edition`}
+                  class="listing-media-image"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <div class="listing-media-overlay"></div>
+              </>
+            ) : null}
+
+            <div class="listing-media-frame"></div>
+            <div class="listing-media-label">
+              {coverSrc ? "Print edition / real image slot" : "Print edition / premium placeholder surface"}
+            </div>
+          </div>
+
+          <div class="listing-content">
+            <p class="listing-kicker">print edition</p>
+            <h2 class="listing-title">{print.title}</h2>
+            <p class="listing-copy">
+              {print.edition} / {print.paper}
+            </p>
+
+            <div class="listing-meta">
+              <span class="listing-pill">
+                from EUR {Math.min(...print.options.map((option) => option.priceEUR))}
+              </span>
+              <span class="listing-pill">{print.leadTime}</span>
+              <span class="listing-pill">{print.aspect}</span>
+            </div>
+
+            <p class="listing-arrow">Open print edition</p>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+</BaseLayout>
