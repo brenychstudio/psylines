@@ -1,17 +1,25 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import AtmosphericBackdropRoot from "../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
+import LivingRouteEnvironment from "../components/living-background/LivingRouteEnvironment.astro";
 import {
   bodyManifestationProcess,
   bodyManifestationSteps,
 } from "../data/site/process";
 import { getResponsivePublicImage } from "../lib/assets/responsiveImage";
 
-const artistTracePrimary = getResponsivePublicImage("/images/works/p-1.jpg", { defaultWidth: 960 });
-const artistTraceSecondary = getResponsivePublicImage("/artworks/test-painting-2/mt-5.jpg", { defaultWidth: 640 });
-const artistTraceGhost = getResponsivePublicImage("/artworks/test-painting-2/mt-3.jpg", { defaultWidth: 640 });
-const artistStatementTrace = getResponsivePublicImage("/artworks/test-painting-2/mt-2.jpg", { defaultWidth: 960 });
+const artistTracePrimary = getResponsivePublicImage("/images/works/p-1.jpg", { defaultWidth: 2000 });
+const artistTraceSecondary = getResponsivePublicImage("/artworks/test-painting-2/mt-5.jpg", { defaultWidth: 2000 });
+const artistTraceGhost = getResponsivePublicImage("/artworks/test-painting-2/mt-3.jpg", { defaultWidth: 2000 });
+const artistStatementTrace = getResponsivePublicImage("/artworks/test-painting-2/mt-2.jpg", { defaultWidth: 2000 });
 const artistMethodRows = bodyManifestationSteps.slice(0, 4);
+
+const artistEnvironmentTextures = [
+  { slug: "artist-origin", src: artistTracePrimary.src },
+  { slug: "artist-body-memory", src: artistTraceSecondary.src },
+  { slug: "artist-field-memory", src: artistTraceGhost.src },
+  { slug: "artist-pressure", src: artistStatementTrace.src },
+];
 
 const practiceSignals = [
   {
@@ -68,20 +76,33 @@ const trustRows = [
   description="A practice of bodies, signals, residue, unstable presence, original works, and collector editions."
   canonicalPath="/artist"
 >
+  <LivingRouteEnvironment
+    profile="artist"
+    textures={artistEnvironmentTextures}
+    initialSlug="artist-origin"
+    memorySlug="artist-field-memory"
+  />
   <AtmosphericBackdropRoot />
-
-  <main class="artist-practice-field">
-    <section class="artist-threshold artist-spine-threshold" aria-labelledby="artist-threshold-title" data-atmosphere-section="artist-threshold">
+  <main
+    class="artist-practice-field"
+    data-cinematic-idle-root
+    data-cinematic-idle-delay="6200"
+    data-cinematic-idle-reduced-delay="9800"
+    data-cinematic-idle-wake-duration="3800"
+    data-cinematic-idle-settle-duration="3200"
+    data-cinematic-idle-dream-duration="8600"
+  >
+    <section class="artist-threshold artist-spine-threshold" aria-labelledby="artist-threshold-title" data-atmosphere-section="artist-threshold" data-lbe-target="artist-origin">
       <div class="artist-threshold-copy artist-spine-copy">
-        <p class="artist-kicker">ARTIST / PRACTICE FIELD</p>
-        <h1 class="artist-title" id="artist-threshold-title">
+        <p class="artist-kicker" data-cinematic-idle="detail">ARTIST / PRACTICE FIELD</p>
+        <h1 class="artist-title" id="artist-threshold-title" data-cinematic-idle="anchor">
           A practice of bodies, signals, residue, and unstable presence.
         </h1>
-        <p class="artist-copy artist-copy--lead">
+        <p class="artist-copy artist-copy--lead" data-cinematic-idle="voice">
           The works move between drawing, body-memory, abstraction, and spatial manifestation. They are not portraits or representations, but states of presence translated through line, pressure, surface, and atmosphere.
         </p>
 
-        <nav class="artist-route-row artist-route-signals" aria-label="Artist routes">
+        <nav class="artist-route-row artist-route-signals" aria-label="Artist routes" data-cinematic-idle="action">
           <a href="/works">Enter works field</a>
           <a href="/process">Open process</a>
           <a href="/works/mt-3">Open collector route</a>
@@ -90,30 +111,30 @@ const trustRows = [
       </div>
 
       <div class="artist-practice-traces artist-practice-trace-field" aria-hidden="true">
-        <div class="artist-trace artist-trace--primary artist-trace--main">
+        <div class="artist-trace artist-trace--primary artist-trace--main" data-cinematic-idle="image">
           <img src={artistTracePrimary.src} srcset={artistTracePrimary.srcset} sizes="(min-width: 980px) 28vw, 72vw" alt="" loading="lazy" decoding="async" />
         </div>
-        <div class="artist-trace artist-trace--secondary artist-trace--crop">
+        <div class="artist-trace artist-trace--secondary artist-trace--crop" data-cinematic-idle="trace">
           <img src={artistTraceSecondary.src} srcset={artistTraceSecondary.srcset} sizes="(min-width: 980px) 18vw, 42vw" alt="" loading="lazy" decoding="async" />
         </div>
-        <div class="artist-trace artist-trace--ghost">
+        <div class="artist-trace artist-trace--ghost" data-cinematic-idle="trace">
           <img src={artistTraceGhost.src} srcset={artistTraceGhost.srcset} sizes="(min-width: 980px) 16vw, 38vw" alt="" loading="lazy" decoding="async" />
         </div>
       </div>
     </section>
 
-    <section class="artist-statement-field artist-statement-spine" aria-labelledby="artist-statement-title" data-atmosphere-section="artist-statement">
-      <p class="artist-kicker artist-section-kicker">STATEMENT FIELD</p>
+    <section class="artist-statement-field artist-statement-spine" aria-labelledby="artist-statement-title" data-atmosphere-section="artist-statement" data-lbe-target="artist-pressure">
+      <p class="artist-kicker artist-section-kicker" data-cinematic-idle="detail">STATEMENT FIELD</p>
       <div class="statement-spine-grid">
-        <h2 class="artist-section-title" id="artist-statement-title">Not figures. Manifestations.</h2>
+        <h2 class="artist-section-title" id="artist-statement-title" data-cinematic-idle="anchor">Not figures. Manifestations.</h2>
         <div class="artist-statement-copy statement-spine-copy">
-          <p>
+          <p data-cinematic-idle="voice">
             These forms can appear human-like, yet they are not defined by anatomy or identity. The body is treated as a temporary surface: a place where pressure, memory, structure, and signal become visible.
           </p>
-          <p>
+          <p data-cinematic-idle="voice">
             Each work records a state rather than a pose: tension, density, collapse, transition, or return. The image remains partial by design.
           </p>
-          <figure class="statement-trace">
+          <figure class="statement-trace" data-cinematic-idle="trace">
             <img src={artistStatementTrace.src} srcset={artistStatementTrace.srcset} sizes="(min-width: 980px) 32vw, 86vw" alt="" loading="lazy" decoding="async" />
             <figcaption>line / pressure / unresolved body-state</figcaption>
           </figure>
@@ -121,21 +142,21 @@ const trustRows = [
       </div>
     </section>
 
-    <section class="artist-method-route" aria-labelledby="artist-method-title" data-atmosphere-section="artist-practice">
+    <section class="artist-method-route" aria-labelledby="artist-method-title" data-atmosphere-section="artist-practice" data-lbe-target="artist-field-memory">
       <div class="artist-method-head">
-        <p class="artist-kicker">METHOD ROUTE</p>
-        <h2 class="artist-section-title" id="artist-method-title">The body is found inside the line field.</h2>
-        <p class="artist-copy artist-method-copy">
+        <p class="artist-kicker" data-cinematic-idle="detail">METHOD ROUTE</p>
+        <h2 class="artist-section-title" id="artist-method-title" data-cinematic-idle="anchor">The body is found inside the line field.</h2>
+        <p class="artist-copy artist-method-copy" data-cinematic-idle="voice">
           {bodyManifestationProcess.shortDefinition}
         </p>
-        <nav class="artist-route-row" aria-label="Process route">
+        <nav class="artist-route-row" aria-label="Process route" data-cinematic-idle="action">
           <a href="/process">Read the full process</a>
         </nav>
       </div>
 
       <div class="artist-method-list">
         {artistMethodRows.map((step, index) => (
-          <div class="artist-method-row">
+          <div class="artist-method-row" data-cinematic-idle="line" data-cinematic-idle-order={String(index / artistMethodRows.length)}>
             <span>{String(index + 1).padStart(2, "0")}</span>
             <strong>{step.title}</strong>
             <p>{step.copy}</p>
@@ -144,15 +165,15 @@ const trustRows = [
       </div>
     </section>
 
-    <section class="artist-practice-logic" aria-labelledby="artist-logic-title" data-atmosphere-section="artist-practice">
+    <section class="artist-practice-logic" aria-labelledby="artist-logic-title" data-atmosphere-section="artist-practice" data-lbe-target="artist-body-memory">
       <div class="artist-band-head">
-        <p class="artist-kicker">PRACTICE LOGIC</p>
-        <h2 class="practice-logic-title" id="artist-logic-title">How the work holds presence.</h2>
+        <p class="artist-kicker" data-cinematic-idle="detail">PRACTICE LOGIC</p>
+        <h2 class="practice-logic-title" id="artist-logic-title" data-cinematic-idle="anchor">How the work holds presence.</h2>
       </div>
 
       <div class="artist-signal-band practice-signal-list">
         {practiceSignals.map((item, index) => (
-          <div class="artist-signal practice-signal-row">
+          <div class="artist-signal practice-signal-row" data-cinematic-idle="line" data-cinematic-idle-order={String(index / practiceSignals.length)}>
             <span class="practice-signal-index">{String(index + 1).padStart(2, "0")}</span>
             <strong>{item.title}</strong>
             <p>{item.copy}</p>
@@ -161,15 +182,15 @@ const trustRows = [
       </div>
     </section>
 
-    <section class="artist-cycle-register artist-register-section" aria-labelledby="artist-register-title" data-atmosphere-section="artist-practice">
+    <section class="artist-cycle-register artist-register-section" aria-labelledby="artist-register-title" data-atmosphere-section="artist-practice" data-lbe-target="artist-body-memory">
       <div>
-        <p class="artist-kicker">CYCLE REGISTER</p>
-        <h2 class="artist-register-title" id="artist-register-title">Recurring fields, not catalogue categories.</h2>
+        <p class="artist-kicker" data-cinematic-idle="detail">CYCLE REGISTER</p>
+        <h2 class="artist-register-title" id="artist-register-title" data-cinematic-idle="anchor">Recurring fields, not catalogue categories.</h2>
       </div>
 
       <div class="artist-register-list">
-        {cycleRows.map((item) => (
-          <a class="artist-register-row" href="/works">
+        {cycleRows.map((item, index) => (
+          <a class="artist-register-row" href="/works" data-cinematic-idle="line" data-cinematic-idle-order={String(index / cycleRows.length)}>
             <span>{item.title}</span>
             <p>{item.copy}</p>
           </a>
@@ -177,18 +198,18 @@ const trustRows = [
       </div>
     </section>
 
-    <section class="artist-material-route" aria-labelledby="artist-material-title" data-atmosphere-section="artist-material">
+    <section class="artist-material-route" aria-labelledby="artist-material-title" data-atmosphere-section="artist-material" data-lbe-target="artist-pressure">
       <div class="artist-material-head">
-        <p class="artist-kicker">MATERIAL ROUTE</p>
-        <h2 class="artist-section-title" id="artist-material-title">Prepared as collector-facing objects.</h2>
-        <p class="artist-copy">
+        <p class="artist-kicker" data-cinematic-idle="detail">MATERIAL ROUTE</p>
+        <h2 class="artist-section-title" id="artist-material-title" data-cinematic-idle="anchor">Prepared as collector-facing objects.</h2>
+        <p class="artist-copy" data-cinematic-idle="voice">
           Original works and selected editions are prepared as collector-facing objects. Prints are produced as pigment prints on archival fine-art paper, signed and accompanied by certificate context where applicable.
         </p>
       </div>
 
       <div class="artist-trust-list">
-        {trustRows.map((item) => (
-          <div class="artist-trust-row">
+        {trustRows.map((item, index) => (
+          <div class="artist-trust-row" data-cinematic-idle="line" data-cinematic-idle-order={String(index / trustRows.length)}>
             <strong>{item.title}</strong>
             <p>{item.copy}</p>
           </div>
@@ -196,17 +217,17 @@ const trustRows = [
       </div>
     </section>
 
-    <section class="artist-collector-handoff" aria-labelledby="artist-handoff-title" data-atmosphere-section="artist-material">
+    <section class="artist-collector-handoff" aria-labelledby="artist-handoff-title" data-atmosphere-section="artist-material" data-lbe-target="artist-origin">
       <div>
-        <p class="artist-kicker">COLLECTOR HANDOFF</p>
-        <h2 id="artist-handoff-title">The collector route stays close to the work.</h2>
+        <p class="artist-kicker" data-cinematic-idle="detail">COLLECTOR HANDOFF</p>
+        <h2 id="artist-handoff-title" data-cinematic-idle="anchor">The collector route stays close to the work.</h2>
       </div>
 
       <div class="artist-handoff-copy">
-        <p>
+        <p data-cinematic-idle="voice">
           Each available work can be reviewed through its object page, selected as original or edition, previewed in interior context, and completed through secure checkout or direct inquiry where needed.
         </p>
-        <nav class="artist-route-row" aria-label="Collector handoff routes">
+        <nav class="artist-route-row" aria-label="Collector handoff routes" data-cinematic-idle="action">
           <a href="/works">Enter available works</a>
           <a href="/contact">Collector inquiry</a>
         </nav>
@@ -220,19 +241,19 @@ const trustRows = [
   .artist-practice-field {
     position: relative;
     z-index: 1;
+    isolation: isolate;
     padding: clamp(6.5rem, 10vw, 9rem) 0 clamp(5rem, 9vw, 8rem);
   }
 
   .artist-practice-field::before {
     content: "";
-    position: absolute;
-    inset: 2rem 0 auto;
+    position: fixed;
+    inset: var(--site-header-height) 0 0;
     z-index: -1;
-    height: min(52rem, 80svh);
+    height: auto;
     background:
-      radial-gradient(circle at 22% 22%, rgba(235, 240, 232, 0.055), transparent 30rem),
-      radial-gradient(circle at 68% 24%, rgba(204, 171, 116, 0.12), transparent 34rem),
-      linear-gradient(180deg, rgba(5, 8, 7, 0), rgba(5, 8, 7, 0.34));
+      linear-gradient(90deg, rgba(3, 6, 5, 0.66) 0%, rgba(3, 6, 5, 0.28) 32%, transparent 64%),
+      linear-gradient(180deg, rgba(5, 8, 7, 0.035), rgba(5, 8, 7, 0.18));
     pointer-events: none;
   }
 
@@ -1029,6 +1050,45 @@ const trustRows = [
   .artist-material-copy {
     opacity: calc(0.82 + (var(--presence-calm, 0.42) * 0.12));
     transition: opacity 520ms ease;
+  }
+
+  /* Cinematic Idle adaptation: text can dissolve, but the practice images stay present. */
+  .artist-practice-field [data-cinematic-idle="image"],
+  .artist-practice-field [data-cinematic-idle="trace"] {
+    transition:
+      opacity var(--cinematic-idle-duration, 3200ms) var(--cinematic-idle-ease),
+      filter var(--cinematic-idle-duration, 3200ms) var(--cinematic-idle-ease),
+      transform var(--cinematic-idle-duration, 3200ms) var(--cinematic-idle-ease);
+  }
+
+  .artist-practice-field .artist-practice-trace-field [data-cinematic-idle="image"] {
+    opacity: 0.76;
+  }
+
+  .artist-practice-field .artist-practice-trace-field [data-cinematic-idle="trace"] {
+    opacity: 0.28;
+  }
+
+  .artist-practice-field[data-cinematic-idle-state="settling"] .artist-practice-trace-field [data-cinematic-idle="image"],
+  .artist-practice-field[data-cinematic-idle-state="idle"] .artist-practice-trace-field [data-cinematic-idle="image"],
+  .artist-practice-field[data-cinematic-idle-state="dreaming"] .artist-practice-trace-field [data-cinematic-idle="image"] {
+    opacity: 0.88;
+    filter: saturate(1.08) brightness(1.05);
+  }
+
+  .artist-practice-field[data-cinematic-idle-state="settling"] .artist-practice-trace-field [data-cinematic-idle="trace"] {
+    opacity: 0.34;
+    filter: saturate(1.02) brightness(1.02);
+  }
+
+  .artist-practice-field[data-cinematic-idle-state="idle"] .artist-practice-trace-field [data-cinematic-idle="trace"] {
+    opacity: 0.42;
+    filter: saturate(1.05) brightness(1.03);
+  }
+
+  .artist-practice-field[data-cinematic-idle-state="dreaming"] .artist-practice-trace-field [data-cinematic-idle="trace"] {
+    opacity: 0.5;
+    filter: saturate(1.08) brightness(1.04);
   }
 
   /* V3 Canonical Frame - align Artist page to the shared header axis. */

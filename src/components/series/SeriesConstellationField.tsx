@@ -198,6 +198,22 @@ export default function SeriesConstellationField({
 
   const writeHandoff = useCallback((node: SeriesConstellationNode) => {
     try {
+      const nodeElement = anchorRefs.current.get(node.id);
+      const nodeImage = nodeElement?.querySelector("img");
+      const fieldHost = document.querySelector("[data-series-webgl-backdrop]");
+      const nodeStyle = nodeElement ? window.getComputedStyle(nodeElement) : null;
+      const fieldStyle = fieldHost ? window.getComputedStyle(fieldHost) : null;
+      const readColor = (...names: string[]) => {
+        for (const style of [nodeStyle, fieldStyle]) {
+          if (!style) continue;
+          for (const name of names) {
+            const value = style.getPropertyValue(name).trim();
+            if (value) return value;
+          }
+        }
+        return "";
+      };
+
       window.sessionStorage.setItem(
         HANDOFF_KEY,
         JSON.stringify({
@@ -207,6 +223,18 @@ export default function SeriesConstellationField({
           tone: node.tone,
           atmosphere: node.atmosphereSlug,
           href: node.href,
+          coverSrc: nodeImage?.currentSrc || node.coverSrc,
+          palette: {
+            accent: readColor("--node-accent", "--series-pigment-a", "--series-accent"),
+            wash: readColor("--series-pigment-b", "--series-atmo-b"),
+            ink: readColor("--series-deep", "--series-atmo-c"),
+          },
+          map: {
+            x: currentPan.current.x,
+            y: currentPan.current.y,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+          },
           at: Date.now(),
         }),
       );
@@ -218,11 +246,10 @@ export default function SeriesConstellationField({
   const readReturnTarget = useCallback(() => {
     try {
       const payload = window.sessionStorage.getItem(RETURN_KEY) || window.sessionStorage.getItem(HANDOFF_KEY);
-      if (!payload) return "";
-      const parsed = JSON.parse(payload);
-      return parsed?.id || parsed?.slug || "";
+      if (!payload) return null;
+      return JSON.parse(payload);
     } catch {
-      return "";
+      return null;
     }
   }, []);
 
@@ -376,13 +403,50 @@ export default function SeriesConstellationField({
   );
 
   useEffect(() => {
-    const requestedId = readReturnTarget();
+    const returnState = readReturnTarget();
+    const requestedId = returnState?.id || returnState?.slug || "";
     const requestedIndex = nodes.findIndex((node) => node.id === requestedId || node.title === requestedId);
+    const storedMap = returnState?.map;
+    const canRestorePan =
+      requestedIndex >= 0 &&
+      Number.isFinite(storedMap?.x) &&
+      Number.isFinite(storedMap?.y) &&
+      Math.abs(Number(storedMap?.viewportWidth || window.innerWidth) - window.innerWidth) < 240;
+
     setActiveNode(requestedIndex >= 0 ? requestedIndex : 0, {
-      pan: true,
+      pan: !canRestorePan,
       pulse: requestedIndex >= 0,
     });
-  }, [nodes, readReturnTarget, setActiveNode]);
+
+    if (canRestorePan) {
+      targetPan.current.x = Number(storedMap.x);
+      targetPan.current.y = Number(storedMap.y);
+      clampPan();
+      currentPan.current.x = targetPan.current.x;
+      currentPan.current.y = targetPan.current.y;
+      requestRender();
+    }
+  }, [clampPan, nodes, readReturnTarget, requestRender, setActiveNode]);
+
+  useEffect(() => {
+    const handleCinematicNavigation = (event: Event) => {
+      const detail = (event as CustomEvent<{ fromPath?: string; toPath?: string; link?: Element }>).detail;
+      if (detail?.fromPath !== "/series" || !detail.link || !rootRef.current?.contains(detail.link)) return;
+
+      const destinationNode = nodes.find((node) => {
+        try {
+          return new URL(node.href, window.location.href).pathname === detail.toPath;
+        } catch {
+          return false;
+        }
+      });
+
+      writeHandoff(destinationNode || activeNode);
+    };
+
+    window.addEventListener("artist-stage:cinematic-navigation-start", handleCinematicNavigation);
+    return () => window.removeEventListener("artist-stage:cinematic-navigation-start", handleCinematicNavigation);
+  }, [activeNode, nodes, writeHandoff]);
 
   useEffect(() => {
     if (!activeNode || !rootRef.current) return;
@@ -647,18 +711,20 @@ export default function SeriesConstellationField({
       className="series-constellation-page"
       data-series-constellation
       data-active-tone={activeNode.tone}
+      data-active-artwork={activeNode.coverSrc}
+      data-active-series-id={activeNode.id}
       data-works-atmosphere-field
     >
       <div className="series-constellation__atmosphere" aria-hidden="true" />
 
       <section className="series-constellation-shell" aria-label="Series constellation field">
         <aside className="series-constellation-panel" aria-live="polite">
-          <p className="series-constellation-kicker">SERIES / LIVING CHAPTER MAP</p>
-          <p className="series-constellation-signal">{activeNode.signal}</p>
-          <h1>{activeNode.title}</h1>
-          <p className="series-constellation-description">{activeNode.description}</p>
+          <p className="series-constellation-kicker" data-cinematic-idle="detail">SERIES / LIVING CHAPTER MAP</p>
+          <p className="series-constellation-signal" data-cinematic-idle="detail">{activeNode.signal}</p>
+          <h1 data-cinematic-idle="anchor">{activeNode.title}</h1>
+          <p className="series-constellation-description" data-cinematic-idle="voice">{activeNode.description}</p>
 
-          <dl className="series-constellation-meta">
+          <dl className="series-constellation-meta" data-cinematic-idle="line">
             <div>
               <dt>Status</dt>
               <dd>{activeNode.status}</dd>
@@ -673,7 +739,7 @@ export default function SeriesConstellationField({
             </div>
           </dl>
 
-          <div className="series-constellation-controls" aria-label="Series field controls">
+          <div className="series-constellation-controls" aria-label="Series field controls" data-cinematic-idle="action">
             <button type="button" onClick={() => setActiveNode(activeIndex - 1)}>
               Prev signal
             </button>
@@ -685,7 +751,7 @@ export default function SeriesConstellationField({
             </button>
           </div>
 
-          <div className="series-constellation-actions">
+          <div className="series-constellation-actions" data-cinematic-idle="action">
             <button
               type="button"
               className="series-open-primary"
@@ -859,6 +925,7 @@ export default function SeriesConstellationField({
                         draggable={false}
                         data-cinematic-cover
                         data-cinematic-route-slug={node.id}
+                        data-cinematic-idle={isActive ? "image" : undefined}
                       />
                     ) : (
                       <span className="series-constellation-empty" aria-hidden="true" />
@@ -868,7 +935,7 @@ export default function SeriesConstellationField({
                     </span>
                   </figure>
 
-                  <div className="series-constellation-node__caption">
+                  <div className="series-constellation-node__caption" data-cinematic-idle={isActive ? "line" : "detail"}>
                     <span>{String(index + 1).padStart(2, "0")}</span>
                     <strong>{node.title}</strong>
                     <small>
@@ -890,8 +957,8 @@ export default function SeriesConstellationField({
 
       <section className="series-mobile-browser" aria-label="Series chapter browser">
         <div className="series-mobile-browser__head">
-          <p className="series-constellation-kicker">CHAPTER BROWSER</p>
-          <h2>Chapter signals.</h2>
+          <p className="series-constellation-kicker" data-cinematic-idle="detail">CHAPTER BROWSER</p>
+          <h2 data-cinematic-idle="anchor">Chapter signals.</h2>
         </div>
 
         <div className="series-mobile-browser__rail">
@@ -913,10 +980,11 @@ export default function SeriesConstellationField({
                 decoding="async"
                 data-cinematic-cover
                 data-cinematic-route-slug={node.id}
+                data-cinematic-idle={index === activeIndex ? "image" : "trace"}
               />
               <span>{String(index + 1).padStart(2, "0")}</span>
-              <strong>{node.title}</strong>
-              <small>{node.signal}</small>
+              <strong data-cinematic-idle="line">{node.title}</strong>
+              <small data-cinematic-idle="detail">{node.signal}</small>
             </a>
           ))}
         </div>

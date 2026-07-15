@@ -41,6 +41,13 @@ type SetTargetOptions = {
 
 type PresenceAtmosphereId = "active" | "settling" | "still" | "deep";
 
+type PresenceDirectorPhase =
+  | "awake"
+  | "settling"
+  | "contemplating"
+  | "dreaming"
+  | "waking";
+
 type PendingAtmosphereSignal = {
   slug?: string;
   source?: string;
@@ -240,6 +247,13 @@ export function lerpNumber(a: number, b: number, t: number) {
 
 function clampNumber(value: number, min = 0, max = 1) {
   return Math.min(max, Math.max(min, value));
+}
+
+function getPresenceIdForDirectorPhase(phase?: string): PresenceAtmosphereId {
+  if (phase === "settling") return "settling";
+  if (phase === "contemplating") return "still";
+  if (phase === "dreaming") return "deep";
+  return "active";
 }
 
 function toPercent(value: number) {
@@ -660,6 +674,8 @@ export function initLivingAtmosphereOrchestrator() {
   let lastExplicitHandoffAt = 0;
   let prefersReducedMotion = reducedMotionQuery.matches;
   let isDocumentVisible = !document.hidden;
+  let presenceDirectorActive = root.dataset.presenceDirector === "active";
+  let presenceDirectorPhase = (root.dataset.presencePhase || "awake") as PresenceDirectorPhase;
   let tickTimer = 0;
   const livingEnvironment = createLivingEnvironmentState();
   const visibleArtwork = new Map<string, number>();
@@ -999,6 +1015,13 @@ export function initLivingAtmosphereOrchestrator() {
   }
 
   function updatePresenceFromTime() {
+    if (presenceDirectorActive) {
+      setPresence(getPresenceIdForDirectorPhase(presenceDirectorPhase), {
+        source: `presence-director:${presenceDirectorPhase}`,
+      });
+      return;
+    }
+
     const now = Date.now();
     const stillTargetKey = getStillTargetKey();
 
@@ -1156,6 +1179,12 @@ export function initLivingAtmosphereOrchestrator() {
   function resetIdleTimer(sourceName = "activity", shouldMarkActivity = true) {
     const now = Date.now();
 
+    if (presenceDirectorActive) {
+      window.clearTimeout(idleTimer);
+      if (shouldMarkActivity) markActivity(sourceName);
+      return;
+    }
+
     if (shouldMarkActivity && now - lastIdleResetAt < ACTIVITY_TIMER_THROTTLE_MS) {
       lastActivityAt = now;
       isPointerStill = false;
@@ -1261,7 +1290,9 @@ export function initLivingAtmosphereOrchestrator() {
       updatePointerEnvironment(event.clientX, event.clientY);
     }
 
-    resetIdleTimer("pointer");
+    if (!presenceDirectorActive) {
+      resetIdleTimer("pointer");
+    }
   }
 
   function handleLinkClick(event: MouseEvent) {
@@ -1468,6 +1499,26 @@ export function initLivingAtmosphereOrchestrator() {
     if (detail?.presenceId) {
       setPresence(detail.presenceId, { source: detail.source ?? "event" });
     }
+  });
+
+  window.addEventListener("artist-stage:presence-phase", (event) => {
+    const detail = (event as CustomEvent).detail;
+    const phase = (detail?.phase || "awake") as PresenceDirectorPhase;
+
+    presenceDirectorActive = true;
+    presenceDirectorPhase = phase;
+    isIdle = phase === "settling" || phase === "contemplating" || phase === "dreaming";
+
+    if (isIdle) {
+      isScrolling = false;
+      isRouteLeaving = false;
+    }
+
+    setPresence(getPresenceIdForDirectorPhase(phase), {
+      source: detail?.source ? `presence-director:${detail.source}` : `presence-director:${phase}`,
+      immediate: prefersReducedMotion,
+    });
+    applyCurrentProfile();
   });
 
   document.addEventListener("pointerover", handlePointerOver);

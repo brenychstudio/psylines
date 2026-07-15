@@ -1,0 +1,278 @@
+---
+interface Props {
+  mode?: "index" | "field";
+}
+
+const { mode = "index" } = Astro.props;
+---
+
+<div
+  class="works-archive-illumination"
+  data-works-archive-illumination
+  data-works-archive-mode={mode}
+  aria-hidden="true"
+>
+  <div class="works-archive-illumination__ambient"></div>
+  <div class="works-archive-illumination__rake"></div>
+  <div class="works-archive-illumination__counterlight"></div>
+  <div class="works-archive-illumination__register"></div>
+</div>
+
+<script>
+  const mountedArchiveLights = new WeakMap();
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const damp = (current, target, delta, speed) =>
+    current + (target - current) * (1 - Math.exp(-delta * speed));
+
+  const ARCHIVE_TONES = {
+    neutral: {
+      light: "rgba(191, 197, 181, 0.11)",
+      wash: "rgba(82, 91, 78, 0.08)",
+    },
+    moss: {
+      light: "rgba(150, 177, 92, 0.13)",
+      wash: "rgba(58, 82, 47, 0.09)",
+    },
+    oxide: {
+      light: "rgba(180, 91, 71, 0.13)",
+      wash: "rgba(91, 45, 39, 0.09)",
+    },
+    amber: {
+      light: "rgba(198, 142, 66, 0.13)",
+      wash: "rgba(95, 66, 32, 0.09)",
+    },
+    mineral: {
+      light: "rgba(114, 157, 159, 0.12)",
+      wash: "rgba(47, 70, 72, 0.085)",
+    },
+  };
+
+  function mountArchiveLight(host) {
+    if (mountedArchiveLights.has(host)) return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const mode = host.dataset.worksArchiveMode || "index";
+    let targetX = mode === "field" ? 14 : 4;
+    let currentX = targetX;
+    let targetIntensity = mode === "field" ? 0.74 : 0.48;
+    let currentIntensity = targetIntensity;
+    let targetTone = "neutral";
+    let currentTone = "neutral";
+    let raf = 0;
+    let releaseTimer = 0;
+    let lastFrame = 0;
+    let destroyed = false;
+    let activeSlug = "";
+
+    document.documentElement.dataset.worksArchiveLighting = mode;
+
+    const applyTone = (toneName) => {
+      const tone = ARCHIVE_TONES[toneName] || ARCHIVE_TONES.neutral;
+      host.style.setProperty("--works-archive-light", tone.light);
+      host.style.setProperty("--works-archive-wash", tone.wash);
+    };
+
+    const readEntry = (event) => {
+      if (!(event.target instanceof Element)) return null;
+      return event.target.closest("[data-works-light-tone]");
+    };
+
+    const focusEntry = (entry) => {
+      if (!entry) return;
+      window.clearTimeout(releaseTimer);
+      const rect = entry.getBoundingClientRect();
+      const center = rect.left + rect.width * 0.5;
+      targetX = clamp((center / Math.max(window.innerWidth, 1)) * 92 - 46, -38, 38);
+      targetIntensity = mode === "field" ? 1 : 0.82;
+      targetTone = entry.getAttribute("data-works-light-tone") || "neutral";
+      activeSlug = entry.getAttribute("data-artwork-slug") || "";
+      currentTone = targetTone;
+      applyTone(currentTone);
+      host.dataset.worksArchiveActive = activeSlug;
+    };
+
+    const handlePointerOver = (event) => focusEntry(readEntry(event));
+    const handleFocusIn = (event) => focusEntry(readEntry(event));
+    const handlePointerLeave = (event) => {
+      if (event.relatedTarget instanceof Element && event.relatedTarget.closest("[data-works-light-tone]")) {
+        return;
+      }
+      window.clearTimeout(releaseTimer);
+      releaseTimer = window.setTimeout(() => {
+        activeSlug = "";
+        delete host.dataset.worksArchiveActive;
+        targetIntensity = mode === "field" ? 0.74 : 0.48;
+      }, 5200);
+    };
+
+    const handlePresence = (event) => {
+      const phase = event.detail?.phase || "awake";
+      const phaseLift = phase === "dreaming" ? 0.08 : phase === "settling" ? 0.04 : 0;
+      const activeIntensity = activeSlug ? (mode === "field" ? 1 : 0.82) : (mode === "field" ? 0.74 : 0.48);
+      targetIntensity = activeIntensity + phaseLift;
+    };
+
+    const destroy = () => {
+      if (destroyed) return;
+      destroyed = true;
+      window.cancelAnimationFrame(raf);
+      window.clearTimeout(releaseTimer);
+      document.removeEventListener("pointerover", handlePointerOver);
+      document.removeEventListener("focusin", handleFocusIn);
+      document.removeEventListener("pointerout", handlePointerLeave);
+      window.removeEventListener("artist-stage:presence-phase", handlePresence);
+      if (document.documentElement.dataset.worksArchiveLighting === mode) {
+        delete document.documentElement.dataset.worksArchiveLighting;
+      }
+      delete host.__artistStageWorksArchiveLightState;
+      mountedArchiveLights.delete(host);
+    };
+
+    const render = (now) => {
+      if (destroyed) return;
+      if (!host.isConnected) {
+        destroy();
+        return;
+      }
+      raf = window.requestAnimationFrame(render);
+      const delta = lastFrame ? clamp((now - lastFrame) * 0.001, 0.001, 0.08) : 0.016;
+      lastFrame = now;
+      const speed = reducedMotion.matches ? 12 : 2.3;
+      currentX = damp(currentX, targetX, delta, speed);
+      currentIntensity = damp(currentIntensity, targetIntensity, delta, reducedMotion.matches ? 12 : 1.8);
+      host.style.setProperty("--works-archive-rake-x", `${currentX.toFixed(3)}%`);
+      host.style.setProperty("--works-archive-counter-x", `${(-currentX * 0.28).toFixed(3)}%`);
+      host.style.setProperty("--works-archive-intensity", currentIntensity.toFixed(4));
+    };
+
+    applyTone(currentTone);
+    document.addEventListener("pointerover", handlePointerOver, { passive: true });
+    document.addEventListener("focusin", handleFocusIn);
+    document.addEventListener("pointerout", handlePointerLeave, { passive: true });
+    window.addEventListener("artist-stage:presence-phase", handlePresence);
+    window.addEventListener("pagehide", destroy, { once: true });
+    raf = window.requestAnimationFrame(render);
+
+    host.__artistStageWorksArchiveLightState = () => ({
+      mode,
+      activeSlug,
+      tone: currentTone,
+      position: currentX,
+      intensity: currentIntensity,
+    });
+    mountedArchiveLights.set(host, { destroy });
+  }
+
+  function mountAllArchiveLights() {
+    document
+      .querySelectorAll("[data-works-archive-illumination]")
+      .forEach((host) => mountArchiveLight(host));
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mountAllArchiveLights, { once: true });
+  } else {
+    mountAllArchiveLights();
+  }
+
+  document.addEventListener("astro:page-load", mountAllArchiveLights);
+</script>
+
+<style>
+  .works-archive-illumination {
+    --works-archive-rake-x: 4%;
+    --works-archive-counter-x: -1.12%;
+    --works-archive-intensity: 0.48;
+    --works-archive-light: rgba(191, 197, 181, 0.11);
+    --works-archive-wash: rgba(82, 91, 78, 0.08);
+    position: fixed;
+    inset: var(--site-header-height) 0 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    background: #030504;
+  }
+
+  .works-archive-illumination__ambient,
+  .works-archive-illumination__rake,
+  .works-archive-illumination__counterlight,
+  .works-archive-illumination__register {
+    position: absolute;
+    inset: 0;
+  }
+
+  .works-archive-illumination__ambient {
+    background:
+      linear-gradient(116deg, rgba(1, 3, 2, 0.98) 0%, rgba(5, 8, 6, 0.96) 38%, rgba(8, 10, 8, 0.9) 68%, rgba(2, 4, 3, 0.98) 100%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.016), transparent 28%, rgba(0, 0, 0, 0.28));
+  }
+
+  .works-archive-illumination__rake {
+    inset: -24% -38%;
+    background: linear-gradient(
+      90deg,
+      transparent 27%,
+      var(--works-archive-wash) 43%,
+      var(--works-archive-light) 51%,
+      var(--works-archive-wash) 59%,
+      transparent 75%
+    );
+    opacity: calc(0.58 * var(--works-archive-intensity));
+    filter: blur(38px);
+    transform: translate3d(var(--works-archive-rake-x), 0, 0) skewX(-11deg);
+    will-change: transform, opacity;
+  }
+
+  .works-archive-illumination__counterlight {
+    inset: -12% -8%;
+    background: linear-gradient(
+      126deg,
+      transparent 41%,
+      rgba(222, 226, 214, 0.018) 50%,
+      transparent 59%
+    );
+    opacity: calc(0.7 * var(--works-archive-intensity));
+    transform: translate3d(var(--works-archive-counter-x), 0, 0);
+  }
+
+  .works-archive-illumination__register {
+    background-image:
+      linear-gradient(to right, rgba(238, 242, 232, 0.018) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(238, 242, 232, 0.012) 1px, transparent 1px);
+    background-size: 12.5vw 9rem;
+    mask-image: linear-gradient(180deg, transparent 0%, black 20%, black 82%, transparent 100%);
+    opacity: 0.2;
+  }
+
+  .works-archive-illumination[data-works-archive-mode="field"] {
+    --works-archive-intensity: 0.74;
+  }
+
+  .works-archive-illumination[data-works-archive-mode="field"] .works-archive-illumination__rake {
+    opacity: calc(0.68 * var(--works-archive-intensity));
+  }
+
+  :global(html[data-works-archive-lighting]) .site-shell::before,
+  :global(html[data-works-archive-lighting]) .site-artwork-atmosphere-field {
+    opacity: 0;
+  }
+
+  @media (max-width: 760px) {
+    .works-archive-illumination__register {
+      background-size: 50vw 7rem;
+      opacity: 0.14;
+    }
+
+    .works-archive-illumination__rake {
+      inset-inline: -70%;
+      filter: blur(28px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .works-archive-illumination__rake,
+    .works-archive-illumination__counterlight {
+      will-change: auto;
+    }
+  }
+</style>

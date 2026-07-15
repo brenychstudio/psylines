@@ -1,0 +1,854 @@
+---
+interface Props {
+  textureSources?: string[];
+}
+
+const { textureSources = [] } = Astro.props;
+const fallbackTexture = textureSources[0] ?? "/artworks/test-painting-2/mt-3.jpg";
+---
+
+<div
+  class="immersive-pressure-field"
+  data-immersive-pressure-field
+  data-pressure-textures={JSON.stringify(textureSources)}
+  aria-hidden="true"
+>
+  <img
+    class="immersive-pressure-field__fallback"
+    src={fallbackTexture}
+    alt=""
+    loading="eager"
+    decoding="async"
+  />
+</div>
+
+<script>
+  import * as THREE from "three";
+
+  const VERTEX_SHADER = `
+    precision highp float;
+
+    attribute vec3 position;
+    attribute vec2 uv;
+
+    varying vec2 vUv;
+
+    void main() {
+      vUv = uv;
+      gl_Position = vec4(position.xy, 0.0, 1.0);
+    }
+  `;
+
+  const FRAGMENT_SHADER = `
+    precision highp float;
+
+    uniform float uTime;
+    uniform vec2 uResolution;
+    uniform sampler2D uTextureA;
+    uniform sampler2D uTextureB;
+    uniform sampler2D uTextureC;
+    uniform sampler2D uIncomingTexture;
+    uniform vec2 uTextureASize;
+    uniform vec2 uTextureBSize;
+    uniform vec2 uTextureCSize;
+    uniform vec2 uIncomingTextureSize;
+    uniform float uTextureMix;
+    uniform float uBankMix;
+    uniform vec2 uPointer;
+    uniform float uInteraction;
+    uniform float uPresence;
+    uniform float uPressure;
+    uniform float uDreamAct;
+    uniform float uImpulse;
+
+    varying vec2 vUv;
+
+    float hash21(vec2 p) {
+      p = fract(p * vec2(123.34, 456.21));
+      p += dot(p, p + 45.32);
+      return fract(p.x * p.y);
+    }
+
+    float noise(vec2 p) {
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      vec2 curve = f * f * (3.0 - 2.0 * f);
+      float a = hash21(i);
+      float b = hash21(i + vec2(1.0, 0.0));
+      float c = hash21(i + vec2(0.0, 1.0));
+      float d = hash21(i + vec2(1.0, 1.0));
+      return mix(mix(a, b, curve.x), mix(c, d, curve.x), curve.y);
+    }
+
+    float fbm(vec2 p) {
+      float value = 0.0;
+      float amplitude = 0.52;
+      mat2 turn = mat2(0.82, -0.57, 0.57, 0.82);
+
+      for (int i = 0; i < 4; i++) {
+        value += noise(p) * amplitude;
+        p = turn * p * 2.03 + vec2(7.1, 3.7);
+        amplitude *= 0.5;
+      }
+
+      return value;
+    }
+
+    vec2 coverUv(vec2 uv, vec2 imageSize, vec2 screenSize) {
+      float imageAspect = imageSize.x / max(imageSize.y, 1.0);
+      float screenAspect = screenSize.x / max(screenSize.y, 1.0);
+      vec2 sampleScale = screenAspect > imageAspect
+        ? vec2(1.0, imageAspect / screenAspect)
+        : vec2(screenAspect / imageAspect, 1.0);
+      return (uv - 0.5) * sampleScale + 0.5;
+    }
+
+    float luminance(vec3 color) {
+      return dot(color, vec3(0.2126, 0.7152, 0.0722));
+    }
+
+    vec2 rotateUv(vec2 uv, float angle) {
+      float sine = sin(angle);
+      float cosine = cos(angle);
+      mat2 rotation = mat2(cosine, -sine, sine, cosine);
+      return rotation * (uv - 0.5) + 0.5;
+    }
+
+    void main() {
+      vec2 uv = vUv;
+      float aspect = uResolution.x / max(uResolution.y, 1.0);
+      float portrait = 1.0 - smoothstep(0.72, 1.05, aspect);
+      float time = uTime;
+
+      float currentA = fbm(uv * vec2(1.34, 1.08) + vec2(time * 0.032, -time * 0.022));
+      float currentB = fbm(uv * vec2(1.08, 1.46) + vec2(-time * 0.025, time * 0.029) + 9.3);
+      vec2 current = vec2(currentA - 0.5, currentB - 0.5);
+
+      vec2 pressureAxis = normalize(vec2(0.82, 0.44) + uPointer * uInteraction * 0.24);
+      vec2 spatial = (uv - 0.5) * vec2(aspect, 1.0);
+      float membraneBase = fbm(uv * vec2(2.18, 1.72) + current * 1.35 + vec2(time * 0.026, -time * 0.017));
+      float compressionPhase = dot(spatial, pressureAxis) * 6.6 + membraneBase * 4.5 - time * 0.12;
+      float compression = 0.5 + 0.5 * sin(compressionPhase);
+
+      vec2 globalLean = uPointer * uInteraction * vec2(0.006, 0.004);
+      float warpAmount = mix(0.008, 0.021, clamp(uPressure, 0.0, 1.0));
+      warpAmount += uImpulse * 0.004;
+      vec2 pressurePush = pressureAxis * (compression - 0.5) * warpAmount * 0.32;
+      vec2 warpedUv = uv + globalLean + current * warpAmount + pressurePush;
+
+      vec2 driftA = vec2(sin(time * 0.052), cos(time * 0.043)) * 0.008;
+      vec2 driftB = vec2(cos(time * 0.046 + 1.8), sin(time * 0.039 + 0.7)) * 0.011;
+      vec2 driftC = vec2(sin(time * 0.037 + 3.2), cos(time * 0.042 + 2.3)) * 0.009;
+      vec2 textureAScale = mix(vec2(0.66, 0.72), vec2(0.42, 0.48), portrait);
+      vec2 textureBScale = mix(vec2(0.7, 0.66), vec2(0.45, 0.44), portrait);
+      vec2 textureCScale = mix(vec2(0.64, 0.76), vec2(0.42, 0.5), portrait);
+      vec2 textureAOffset = mix(vec2(0.1, -0.035), vec2(0.16, 0.08), portrait);
+      vec2 textureBOffset = mix(vec2(-0.11, 0.065), vec2(-0.15, 0.14), portrait);
+      vec2 textureCOffset = mix(vec2(0.065, -0.085), vec2(0.15, -0.12), portrait);
+      vec2 textureAField = (rotateUv(warpedUv, 0.055) - 0.5) * textureAScale + 0.5 + textureAOffset + driftA;
+      vec2 textureBField = (rotateUv(warpedUv, -0.085) - 0.5) * textureBScale + 0.5 + textureBOffset + driftB;
+      vec2 textureCField = (rotateUv(warpedUv, 0.11) - 0.5) * textureCScale + 0.5 + textureCOffset + driftC;
+
+      float bankNoise = fbm(uv * vec2(1.42, 1.18) + current * 1.4 + vec2(time * 0.014, -time * 0.01) + 44.0);
+      float bankPressure = sin(clamp(uBankMix, 0.0, 1.0) * 3.14159265);
+      vec2 bankShear = (
+        current * vec2(0.016, 0.012)
+          + vec2(bankNoise - 0.5, 0.5 - bankNoise) * 0.007
+      ) * bankPressure;
+
+      vec2 textureAUv = clamp(coverUv(textureAField, uTextureASize, uResolution), 0.001, 0.999);
+      vec2 textureBUv = clamp(coverUv(textureBField + bankShear, uTextureBSize, uResolution), 0.001, 0.999);
+      vec2 textureCUv = clamp(coverUv(textureCField, uTextureCSize, uResolution), 0.001, 0.999);
+      vec2 incomingTextureUv = clamp(coverUv(textureBField - bankShear, uIncomingTextureSize, uResolution), 0.001, 0.999);
+      vec3 pigmentA = texture2D(uTextureA, textureAUv).rgb;
+      vec3 pigmentB = texture2D(uTextureB, textureBUv).rgb;
+      vec3 pigmentC = texture2D(uTextureC, textureCUv).rgb;
+      vec3 incomingPigment = texture2D(uIncomingTexture, incomingTextureUv).rgb;
+
+      float bankCoordinate = clamp(uv.x * 0.56 + (1.0 - uv.y) * 0.18 + bankNoise * 0.26, 0.0, 1.0);
+      float bankThreshold = uBankMix * 1.36 - 0.18;
+      float bankReveal = smoothstep(
+        bankCoordinate - 0.18,
+        bankCoordinate + 0.18,
+        bankThreshold
+      );
+      pigmentB = mix(pigmentB, incomingPigment, bankReveal);
+      float bankEdge = (
+        1.0 - smoothstep(0.04, 0.2, abs(bankCoordinate - bankThreshold))
+      ) * bankPressure;
+      pigmentB += mix(pigmentB, incomingPigment, 0.5) * bankEdge * 0.045;
+
+      float strataA = fbm(uv * vec2(1.68, 1.42) + current * 1.7 + vec2(time * 0.022, -time * 0.015) + 4.1);
+      float strataB = fbm(uv * vec2(2.06, 1.74) - current * 1.15 + vec2(-time * 0.018, time * 0.023) + 15.8);
+      float actB = smoothstep(0.18, 1.08, uDreamAct);
+      float actC = smoothstep(0.92, 1.82, uDreamAct);
+      float materialClock = time * 0.34 + uDreamAct * 0.52;
+      vec3 phaseWeights = 0.5 + 0.5 * cos(materialClock + vec3(0.0, -2.094395, -4.18879));
+      phaseWeights = pow(max(phaseWeights, vec3(0.0)), vec3(1.32)) + vec3(0.12);
+      phaseWeights /= dot(phaseWeights, vec3(1.0));
+
+      float materialSweep = 0.5 + 0.5 * sin(
+        dot(spatial, vec2(1.05, 0.48)) * 1.9 - materialClock * 1.12 + (membraneBase - 0.5) * 2.2
+      );
+      float sweepB = smoothstep(0.18, 0.82, materialSweep);
+      float sweepC = smoothstep(0.18, 0.82, 1.0 - materialSweep);
+      float mixBRaw = strataA + sin(uv.x * 2.4 + uv.y * 1.7 + materialClock * 0.48) * 0.09 + actB * 0.12;
+      float mixCRaw = strataB + cos(uv.x * 1.8 - uv.y * 2.2 - materialClock * 0.43) * 0.085 + actC * 0.12;
+      float mixB = smoothstep(0.41, 0.7, mixBRaw) * (0.6 + uPresence * 0.38) * mix(0.74, 1.06, sweepB);
+      float mixC = smoothstep(0.47, 0.75, mixCRaw) * (0.52 + uPresence * 0.4) * mix(0.7, 1.04, sweepC);
+      mixB = clamp(mixB, 0.0, 0.96);
+      mixC = clamp(mixC, 0.0, 0.94);
+
+      vec3 pigment = mix(pigmentA, pigmentB, mixB * mix(0.72, 0.94, actB));
+      pigment = mix(pigment, pigmentC, mixC * mix(0.68, 0.9, actC));
+      vec3 phasePigment = pigmentA * phaseWeights.x + pigmentB * phaseWeights.y + pigmentC * phaseWeights.z;
+      pigment = mix(pigment, phasePigment, 0.3 + uPresence * 0.14);
+      float pigmentLight = luminance(pigment);
+      pigment = mix(vec3(pigmentLight), pigment, 1.15);
+      pigment = clamp((pigment - vec3(0.38)) * 1.08 + vec3(0.41), 0.0, 1.0);
+
+      vec2 heightPoint = uv * vec2(2.18, 1.72) + current * 1.35 + vec2(time * 0.026, -time * 0.017);
+      float heightX = fbm(heightPoint + vec2(0.012, 0.0));
+      float heightY = fbm(heightPoint + vec2(0.0, 0.012));
+      vec3 normal = normalize(vec3(
+        (membraneBase - heightX) * (2.4 + uPressure * 1.6),
+        (membraneBase - heightY) * (2.4 + uPressure * 1.6),
+        0.32
+      ));
+      float membraneLight = clamp(dot(normal, normalize(vec3(-0.38, 0.28, 0.9))), 0.0, 1.0);
+
+      float revealCurrent = fbm(uv * vec2(1.28, 1.14) + current * 1.5 + vec2(time * 0.021, time * 0.016) + 24.0);
+      revealCurrent += sin(dot(spatial, pressureAxis) * 2.2 - time * 0.085) * 0.08;
+      float reveal = smoothstep(0.24, 0.7, revealCurrent);
+      float emergence = mix(0.62, 0.97, clamp(uPresence, 0.0, 1.0));
+      vec3 color = mix(vec3(0.012, 0.019, 0.014), pigment, clamp(emergence * mix(0.8, 1.04, reveal), 0.0, 1.0));
+      color *= mix(0.86, 1.18, membraneLight);
+
+      float blendBoundaryB = 1.0 - smoothstep(0.025, 0.13, abs(mixBRaw - 0.565));
+      float blendBoundaryC = 1.0 - smoothstep(0.025, 0.12, abs(mixCRaw - 0.62));
+      float materialBoundary = max(blendBoundaryB * mixB, blendBoundaryC * mixC);
+      vec3 boundaryColor = mix(vec3(0.17, 0.22, 0.09), vec3(0.3, 0.16, 0.07), actB);
+      boundaryColor = mix(boundaryColor, vec3(0.08, 0.2, 0.2), actC);
+      color += boundaryColor * materialBoundary * (0.025 + uPressure * 0.06);
+
+      float veinField = fbm(uv * vec2(3.7, 3.1) + current * 2.3 + vec2(-time * 0.01, time * 0.008) + 31.0);
+      float veinCoordinate = veinField * 2.8 + membraneBase * 1.25;
+      float veinDistance = abs(fract(veinCoordinate) - 0.5);
+      float charcoalVein = 1.0 - smoothstep(0.028, 0.09, veinDistance);
+      charcoalVein *= smoothstep(0.18, 0.78, revealCurrent);
+      color = mix(color, color * 0.64, charcoalVein * (0.1 + uPressure * 0.14));
+
+      float fold = pow(1.0 - abs(compression * 2.0 - 1.0), 5.0);
+      fold *= smoothstep(0.2, 0.82, membraneBase);
+      vec3 foldLight = mix(vec3(0.12, 0.18, 0.07), vec3(0.23, 0.13, 0.055), actB);
+      foldLight = mix(foldLight, vec3(0.06, 0.15, 0.16), actC);
+      color += foldLight * fold * (0.018 + uPressure * 0.045 + uImpulse * 0.03);
+
+      float fiberNoise = fbm(uv * vec2(5.4, 4.7) - current + vec2(time * 0.009, -time * 0.007));
+      float fibers = 0.5 + 0.5 * sin(uv.y * 92.0 + uv.x * 13.0 + fiberNoise * 9.0 - time * 0.045);
+      fibers = smoothstep(0.96, 0.995, fibers);
+      color += vec3(0.075, 0.082, 0.063) * fibers * (0.008 + uPressure * 0.02);
+
+      float impulseSweep = 0.5 + 0.5 * sin(dot(spatial, pressureAxis) * 7.2 - time * 0.22);
+      color += foldLight * impulseSweep * uImpulse * 0.04;
+
+      vec2 edge = abs(uv - 0.5);
+      float vignette = 1.0 - smoothstep(0.46, 0.76, length(edge * vec2(0.9, 1.08)));
+      color *= mix(0.72, 1.0, vignette);
+      color = pow(max(color, vec3(0.0)), vec3(0.9));
+
+      float grain = hash21(gl_FragCoord.xy * 0.71) - 0.5;
+      color += grain * 0.007;
+      color = mix(vec3(0.012, 0.019, 0.014), color, smoothstep(0.0, 1.0, uTextureMix));
+
+      gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
+    }
+  `;
+
+  const mountedFields = new WeakMap();
+
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const damp = (current, target, delta, speed) =>
+    current + (target - current) * (1 - Math.exp(-delta * speed));
+
+  function createPlaceholderTexture() {
+    const data = new Uint8Array([3, 6, 4, 255]);
+    const texture = new THREE.DataTexture(data, 1, 1, THREE.RGBAFormat);
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  function loadTexture(loader, source) {
+    if (!source) return Promise.reject(new Error("Texture source is empty."));
+
+    return loader.loadAsync(source).then((texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.generateMipmaps = true;
+      texture.needsUpdate = true;
+      return texture;
+    });
+  }
+
+  function mountPressureField(host) {
+    if (mountedFields.has(host)) return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const threshold = host.closest("[data-immersive-threshold]");
+    const compactViewport = () => window.innerWidth < 760;
+    const textureSources = (() => {
+      try {
+        return JSON.parse(host.dataset.pressureTextures || "[]");
+      } catch {
+        return [];
+      }
+    })();
+    const placeholder = createPlaceholderTexture();
+
+    let renderer;
+
+    try {
+      renderer = new THREE.WebGLRenderer({
+        alpha: false,
+        antialias: false,
+        depth: false,
+        stencil: false,
+        powerPreference: "high-performance",
+        preserveDrawingBuffer: true,
+      });
+    } catch (error) {
+      host.dataset.pressureFailed = "true";
+      console.warn("Immersive pressure field could not initialize.", error);
+      return;
+    }
+
+    renderer.setClearColor(0x020403, 1);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.NoToneMapping;
+    renderer.domElement.dataset.immersivePressureCanvas = "true";
+    renderer.domElement.setAttribute("aria-hidden", "true");
+    host.prepend(renderer.domElement);
+
+    const uniforms = {
+      uTime: { value: 0 },
+      uResolution: { value: new THREE.Vector2(1, 1) },
+      uTextureA: { value: placeholder },
+      uTextureB: { value: placeholder },
+      uTextureC: { value: placeholder },
+      uIncomingTexture: { value: placeholder },
+      uTextureASize: { value: new THREE.Vector2(3, 4) },
+      uTextureBSize: { value: new THREE.Vector2(3, 4) },
+      uTextureCSize: { value: new THREE.Vector2(3, 4) },
+      uIncomingTextureSize: { value: new THREE.Vector2(3, 4) },
+      uTextureMix: { value: 0 },
+      uBankMix: { value: 0 },
+      uPointer: { value: new THREE.Vector2(0, 0) },
+      uInteraction: { value: 0 },
+      uPresence: { value: 0.56 },
+      uPressure: { value: 0.42 },
+      uDreamAct: { value: 0 },
+      uImpulse: { value: 0 },
+    };
+
+    const material = new THREE.RawShaderMaterial({
+      vertexShader: VERTEX_SHADER,
+      fragmentShader: FRAGMENT_SHADER,
+      uniforms,
+      depthTest: false,
+      depthWrite: false,
+    });
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.frustumCulled = false;
+    const scene = new THREE.Scene();
+    const camera = new THREE.Camera();
+    scene.add(mesh);
+
+    const phaseTargets = {
+      awake: { presence: 0.56, pressure: 0.42 },
+      settling: { presence: 0.67, pressure: 0.53 },
+      contemplating: { presence: 0.78, pressure: 0.65 },
+      dreaming: { presence: 0.94, pressure: 0.82 },
+      waking: { presence: 0.7, pressure: 0.58 },
+    };
+    const dreamActs = { gathering: 0, dispersing: 1, reforming: 2 };
+    const bankSources = [textureSources[1], ...textureSources.slice(3)]
+      .filter(Boolean)
+      .filter((source, index, sources) => sources.indexOf(source) === index);
+    const bankTransitionDuration = 10.5;
+    const bankChapterInterval = 48;
+    const initialPhase = document.documentElement.dataset.presencePhase || "awake";
+    let targetPresence = phaseTargets[initialPhase]?.presence ?? phaseTargets.awake.presence;
+    let targetPressure = phaseTargets[initialPhase]?.pressure ?? phaseTargets.awake.pressure;
+    let currentPresence = targetPresence;
+    let currentPressure = targetPressure;
+    let targetDreamAct = dreamActs[document.documentElement.dataset.presenceDreamCycle] ?? 0;
+    let currentDreamAct = targetDreamAct;
+    let targetTextureMix = 0;
+    let currentTextureMix = 0;
+    let targetInteraction = 0;
+    let currentInteraction = 0;
+    let targetPointerX = 0;
+    let targetPointerY = 0;
+    let pointerX = 0;
+    let pointerY = 0;
+    let impulse = 0;
+    let elapsed = 0;
+    let raf = 0;
+    let lastFrame = 0;
+    let lastReducedFrame = 0;
+    let frameCount = 0;
+    let destroyed = false;
+    let loadedTextures = [];
+    let bankClock = 0;
+    let nextBankChapterAt = 38;
+    let bankSourceIndex = 0;
+    let pendingBankSourceIndex = -1;
+    let bankTransitionProgress = 0;
+    let bankTransitionStartedAt = 0;
+    let bankTransitionPausedAt = 0;
+    let bankTransitioning = false;
+    let bankLoading = false;
+    let pendingBankTexture = null;
+
+    const setTextureSize = (uniform, texture) => {
+      uniform.value.set(
+        texture.image?.naturalWidth || texture.image?.width || 3,
+        texture.image?.naturalHeight || texture.image?.height || 4,
+      );
+    };
+
+    const resize = () => {
+      const rect = host.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const maxDpr = compactViewport() ? 1.1 : 1.4;
+      renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio || 1, 1), maxDpr));
+      renderer.setSize(rect.width, rect.height, false);
+      uniforms.uResolution.value.set(renderer.domElement.width, renderer.domElement.height);
+    };
+
+    const applyPhase = (phase) => {
+      const target = phaseTargets[phase] || phaseTargets.awake;
+      targetPresence = target.presence;
+      targetPressure = target.pressure;
+      host.dataset.pressurePhase = phase;
+    };
+
+    const handlePresencePhase = (event) => {
+      applyPhase(event.detail?.phase || document.documentElement.dataset.presencePhase || "awake");
+      if (event.detail?.phase === "waking") impulse = Math.max(impulse, 0.32);
+    };
+
+    const handleDreamCycle = (event) => {
+      const cycle = event.detail?.cycle || document.documentElement.dataset.presenceDreamCycle || "gathering";
+      targetDreamAct = dreamActs[cycle] ?? 0;
+      host.dataset.pressureDreamCycle = cycle;
+      impulse = Math.max(impulse, cycle === "dispersing" ? 0.2 : 0.1);
+    };
+
+    const handlePointerMove = (event) => {
+      if (reducedMotion.matches) return;
+      const nextX = clamp((event.clientX / Math.max(window.innerWidth, 1)) * 2 - 1, -1, 1);
+      const nextY = clamp(1 - (event.clientY / Math.max(window.innerHeight, 1)) * 2, -1, 1);
+      const velocity = Math.hypot(nextX - targetPointerX, nextY - targetPointerY);
+      targetPointerX = nextX;
+      targetPointerY = nextY;
+      targetInteraction = Math.max(targetInteraction, clamp(velocity * 1.4, 0.03, 0.2));
+    };
+
+    const handlePointerLeave = () => {
+      targetPointerX = 0;
+      targetPointerY = 0;
+      targetInteraction = 0;
+    };
+
+    const handlePointerDown = () => {
+      if (reducedMotion.matches) return;
+      impulse = 0.62;
+    };
+
+    const handleMotionChange = () => {
+      if (reducedMotion.matches) {
+        targetPointerX = 0;
+        targetPointerY = 0;
+        targetInteraction = 0;
+        impulse = 0;
+      }
+      resize();
+    };
+
+    const handleVisibilityChange = () => {
+      if (!bankTransitioning) return;
+      if (document.hidden) {
+        bankTransitionPausedAt = performance.now();
+        return;
+      }
+      if (bankTransitionPausedAt > 0) {
+        bankTransitionStartedAt += performance.now() - bankTransitionPausedAt;
+        bankTransitionPausedAt = 0;
+      }
+    };
+
+    const releaseTexture = (texture) => {
+      if (!texture || texture === placeholder) return;
+      const remainsActive = [
+        uniforms.uTextureA.value,
+        uniforms.uTextureB.value,
+        uniforms.uTextureC.value,
+        pendingBankTexture,
+      ].includes(texture);
+      if (remainsActive) return;
+      texture.dispose();
+      loadedTextures = loadedTextures.filter((loadedTexture) => loadedTexture !== texture);
+    };
+
+    const finishBankTransition = () => {
+      if (!bankTransitioning || !pendingBankTexture) return;
+      const outgoingTexture = uniforms.uTextureB.value;
+
+      uniforms.uTextureB.value = pendingBankTexture;
+      setTextureSize(uniforms.uTextureBSize, pendingBankTexture);
+      uniforms.uIncomingTexture.value = pendingBankTexture;
+      setTextureSize(uniforms.uIncomingTextureSize, pendingBankTexture);
+      uniforms.uBankMix.value = 0;
+
+      bankSourceIndex = pendingBankSourceIndex;
+      bankTransitionProgress = 0;
+      bankTransitionStartedAt = 0;
+      bankTransitionPausedAt = 0;
+      bankTransitioning = false;
+      pendingBankTexture = null;
+      pendingBankSourceIndex = -1;
+      nextBankChapterAt = bankClock + bankChapterInterval;
+      host.dataset.pressureBankState = "resting";
+      host.dataset.pressureBankSource = bankSources[bankSourceIndex] || "";
+      releaseTexture(outgoingTexture);
+    };
+
+    const beginBankTransition = async () => {
+      if (
+        destroyed ||
+        bankLoading ||
+        bankTransitioning ||
+        bankSources.length < 2 ||
+        targetTextureMix < 1
+      ) return;
+
+      const nextSourceIndex = (bankSourceIndex + 1) % bankSources.length;
+      const nextSource = bankSources[nextSourceIndex];
+      bankLoading = true;
+      host.dataset.pressureBankState = "loading";
+
+      try {
+        const texture = await loadTexture(textureLoader, nextSource);
+        if (destroyed) {
+          texture.dispose();
+          return;
+        }
+
+        loadedTextures.push(texture);
+        pendingBankTexture = texture;
+        pendingBankSourceIndex = nextSourceIndex;
+        bankTransitionProgress = 0;
+        bankTransitionStartedAt = performance.now();
+        bankTransitionPausedAt = 0;
+        bankTransitioning = true;
+        uniforms.uIncomingTexture.value = texture;
+        setTextureSize(uniforms.uIncomingTextureSize, texture);
+        uniforms.uBankMix.value = 0;
+        host.dataset.pressureBankState = "transitioning";
+        host.dataset.pressureBankIncoming = nextSource;
+      } catch (error) {
+        host.dataset.pressureBankState = "retrying";
+        nextBankChapterAt = bankClock + 24;
+        console.warn("Immersive pigment chapter could not load.", error);
+      } finally {
+        bankLoading = false;
+      }
+    };
+
+    const destroy = () => {
+      if (destroyed) return;
+      destroyed = true;
+      window.cancelAnimationFrame(raf);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerdown", handlePointerDown);
+      document.documentElement.removeEventListener("pointerleave", handlePointerLeave);
+      window.removeEventListener("artist-stage:presence-phase", handlePresencePhase);
+      window.removeEventListener("artist-stage:presence-dream-cycle", handleDreamCycle);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      reducedMotion.removeEventListener?.("change", handleMotionChange);
+      loadedTextures.forEach((texture) => texture.dispose());
+      placeholder.dispose();
+      geometry.dispose();
+      material.dispose();
+      renderer.dispose();
+      renderer.domElement.remove();
+      delete host.__artistStagePressureSample;
+      delete host.__artistStagePressureAdvanceBank;
+      delete host.__artistStagePressureBankState;
+      mountedFields.delete(host);
+    };
+
+    const renderFrame = (now) => {
+      if (destroyed) return;
+      if (!host.isConnected) {
+        destroy();
+        return;
+      }
+      raf = window.requestAnimationFrame(renderFrame);
+
+      if (document.hidden) {
+        lastFrame = now;
+        return;
+      }
+      if (reducedMotion.matches && now - lastReducedFrame < 140) return;
+
+      const seconds = now * 0.001;
+      const rawDelta = lastFrame ? Math.max(seconds - lastFrame * 0.001, 0.001) : 0.016;
+      const delta = clamp(rawDelta, 0.001, 0.08);
+      lastFrame = now;
+      lastReducedFrame = now;
+      elapsed += delta * (reducedMotion.matches ? 0.055 : 0.68);
+      if (!reducedMotion.matches) bankClock += rawDelta;
+
+      if (
+        !reducedMotion.matches &&
+        !bankTransitioning &&
+        !bankLoading &&
+        bankClock >= nextBankChapterAt
+      ) {
+        void beginBankTransition();
+      }
+
+      if (bankTransitioning) {
+        bankTransitionProgress = clamp(
+          (now - bankTransitionStartedAt) / (bankTransitionDuration * 1000),
+          0,
+          1,
+        );
+        const easedBankMix = bankTransitionProgress
+          * bankTransitionProgress
+          * bankTransitionProgress
+          * (bankTransitionProgress * (bankTransitionProgress * 6 - 15) + 10);
+        uniforms.uBankMix.value = easedBankMix;
+        if (bankTransitionProgress >= 1) finishBankTransition();
+      }
+
+      currentPresence = damp(currentPresence, targetPresence, delta, 0.6);
+      currentPressure = damp(currentPressure, targetPressure, delta, 0.56);
+      currentDreamAct = damp(currentDreamAct, targetDreamAct, delta, 0.72);
+      currentTextureMix = damp(currentTextureMix, targetTextureMix, delta, 0.72);
+      pointerX = damp(pointerX, targetPointerX, delta, 0.7);
+      pointerY = damp(pointerY, targetPointerY, delta, 0.7);
+      currentInteraction = damp(currentInteraction, targetInteraction, delta, 1.0);
+      targetInteraction *= Math.exp(-delta * 0.82);
+      impulse *= Math.exp(-delta * 0.68);
+
+      uniforms.uTime.value = elapsed;
+      uniforms.uPresence.value = currentPresence;
+      uniforms.uPressure.value = currentPressure;
+      uniforms.uDreamAct.value = currentDreamAct;
+      uniforms.uTextureMix.value = currentTextureMix;
+      uniforms.uPointer.value.set(pointerX, pointerY);
+      uniforms.uInteraction.value = currentInteraction;
+      uniforms.uImpulse.value = impulse;
+      renderer.render(scene, camera);
+
+      frameCount += 1;
+      if (frameCount % 12 === 0) {
+        const bankLight = 0.055 + Math.sin(bankTransitionProgress * Math.PI) * 0.17 + currentPressure * 0.035;
+        host.style.setProperty("--pressure-live", currentPressure.toFixed(3));
+        host.style.setProperty("--presence-live", currentPresence.toFixed(3));
+        host.style.setProperty("--bank-transition-live", bankTransitionProgress.toFixed(3));
+        host.style.setProperty("--bank-light-live", bankLight.toFixed(3));
+        threshold?.style.setProperty("--pressure-live", currentPressure.toFixed(3));
+        threshold?.style.setProperty("--presence-live", currentPresence.toFixed(3));
+        threshold?.style.setProperty("--bank-transition-live", bankTransitionProgress.toFixed(3));
+        threshold?.style.setProperty("--bank-light-live", bankLight.toFixed(3));
+      }
+    };
+
+    const textureLoader = new THREE.TextureLoader();
+    const sources = [textureSources[0], textureSources[1], textureSources[2]].filter(Boolean);
+    const requests = sources.map((source) => loadTexture(textureLoader, source));
+    Promise.allSettled(requests).then((results) => {
+      if (destroyed) {
+        results.forEach((result) => {
+          if (result.status === "fulfilled") result.value.dispose();
+        });
+        return;
+      }
+
+      loadedTextures = results
+        .filter((result) => result.status === "fulfilled")
+        .map((result) => result.value);
+
+      if (loadedTextures.length === 0) {
+        host.dataset.pressureFailed = "true";
+        return;
+      }
+
+      const textureA = results[0]?.status === "fulfilled" ? results[0].value : loadedTextures[0];
+      const textureB = results[1]?.status === "fulfilled" ? results[1].value : textureA;
+      const textureC = results[2]?.status === "fulfilled" ? results[2].value : textureB;
+      uniforms.uTextureA.value = textureA;
+      uniforms.uTextureB.value = textureB;
+      uniforms.uTextureC.value = textureC;
+      uniforms.uIncomingTexture.value = textureB;
+      setTextureSize(uniforms.uTextureASize, textureA);
+      setTextureSize(uniforms.uTextureBSize, textureB);
+      setTextureSize(uniforms.uTextureCSize, textureC);
+      setTextureSize(uniforms.uIncomingTextureSize, textureB);
+      targetTextureMix = 1;
+      host.dataset.pressureBankState = bankSources.length > 1 ? "resting" : "fixed";
+      host.dataset.pressureBankSource = bankSources[0] || textureSources[1] || "";
+      host.dataset.pressureTexturesReady = "true";
+      host.dataset.pressureReady = "true";
+    });
+
+    const resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(resize) : null;
+    resizeObserver?.observe(host);
+    window.addEventListener("resize", resize, { passive: true });
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    window.addEventListener("pointerdown", handlePointerDown, { passive: true });
+    document.documentElement.addEventListener("pointerleave", handlePointerLeave, { passive: true });
+    window.addEventListener("artist-stage:presence-phase", handlePresencePhase);
+    window.addEventListener("artist-stage:presence-dream-cycle", handleDreamCycle);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    reducedMotion.addEventListener?.("change", handleMotionChange);
+
+    applyPhase(initialPhase);
+    resize();
+    renderer.render(scene, camera);
+    raf = window.requestAnimationFrame(renderFrame);
+
+    const samplePixels = () => {
+      renderer.render(scene, camera);
+      const gl = renderer.getContext();
+      const width = renderer.domElement.width;
+      const height = renderer.domElement.height;
+      const points = [
+        [0.18, 0.22],
+        [0.34, 0.62],
+        [0.52, 0.46],
+        [0.7, 0.58],
+        [0.84, 0.3],
+      ];
+      const pixel = new Uint8Array(4);
+      let checksum = 0;
+      const samples = points.map(([x, y]) => {
+        gl.readPixels(
+          Math.min(width - 1, Math.max(0, Math.round(width * x))),
+          Math.min(height - 1, Math.max(0, Math.round(height * y))),
+          1,
+          1,
+          gl.RGBA,
+          gl.UNSIGNED_BYTE,
+          pixel,
+        );
+        const value = Array.from(pixel);
+        checksum += value[0] * 3 + value[1] * 5 + value[2] * 7 + value[3];
+        return value;
+      });
+      return { width, height, checksum, samples, time: uniforms.uTime.value };
+    };
+
+    host.__artistStagePressureSample = samplePixels;
+    host.__artistStagePressureAdvanceBank = () => {
+      nextBankChapterAt = bankClock;
+      void beginBankTransition();
+    };
+    host.__artistStagePressureBankState = () => ({
+      activeSource: bankSources[bankSourceIndex] || "",
+      incomingSource: pendingBankSourceIndex >= 0 ? bankSources[pendingBankSourceIndex] : "",
+      loadedTextureCount: loadedTextures.length,
+      progress: bankTransitionProgress,
+      state: host.dataset.pressureBankState || "initializing",
+    });
+    mountedFields.set(host, { destroy });
+    window.addEventListener("pagehide", destroy, { once: true });
+  }
+
+  function mountAllPressureFields() {
+    document.querySelectorAll("[data-immersive-pressure-field]").forEach((host) => mountPressureField(host));
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mountAllPressureFields, { once: true });
+  } else {
+    mountAllPressureFields();
+  }
+
+  document.addEventListener("astro:page-load", mountAllPressureFields);
+</script>
+
+<style>
+  .immersive-pressure-field {
+    --pressure-live: 0.42;
+    --presence-live: 0.56;
+    --bank-transition-live: 0;
+    --bank-light-live: 0.07;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    background: #020403;
+    pointer-events: none;
+  }
+
+  .immersive-pressure-field__fallback {
+    position: absolute;
+    inset: -7%;
+    width: 114%;
+    height: 114%;
+    display: block;
+    object-fit: cover;
+    object-position: center;
+    opacity: 0.28;
+    filter: blur(14px) saturate(0.82) contrast(1.1) brightness(0.5);
+    transform: scale(1.03);
+    transition: opacity 1800ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .immersive-pressure-field[data-pressure-ready="true"] .immersive-pressure-field__fallback {
+    opacity: 0;
+  }
+
+  .immersive-pressure-field[data-pressure-failed="true"] .immersive-pressure-field__fallback {
+    opacity: 0.34;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .immersive-pressure-field__fallback {
+      transition: none;
+    }
+  }
+</style>
+
+<style is:global>
+  [data-immersive-pressure-field] canvas[data-immersive-pressure-canvas="true"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    opacity: 0;
+    transition: opacity 1600ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  [data-immersive-pressure-field][data-pressure-ready="true"] canvas[data-immersive-pressure-canvas="true"] {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-immersive-pressure-field] canvas[data-immersive-pressure-canvas="true"] {
+      transition: none;
+    }
+  }
+</style>

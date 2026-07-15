@@ -8,12 +8,12 @@ export function getInteractivePreviewPreset(config) {
     longerSideMm >= 1000 ? 3.15 : longerSideMm >= 800 ? 2.8 : 2.45;
   const frameLighting = {
     black: {
-      ambient: 0.38,
-      key: 0.96,
-      fill: 0.1,
-      rim: 0.18,
-      lowSide: 0.07,
-      topSkim: 0.12,
+      ambient: 0.58,
+      key: 1.08,
+      fill: 0.2,
+      rim: 0.22,
+      lowSide: 0.12,
+      topSkim: 0.18,
     },
     white: {
       ambient: 0.54,
@@ -84,10 +84,10 @@ export function getInteractivePreviewPreset(config) {
       topSkim: frameLighting.topSkim,
       wallColor: "#1a2130",
       wallOpacity: 0.42,
-      shadowOpacity: 0.26,
+      shadowOpacity: frameId === "black" ? 0.16 : 0.2,
     },
     renderer: {
-      exposure: frameId === "black" ? 0.96 : 1.04,
+      exposure: frameId === "black" ? 1.08 : 1.06,
     },
   };
 }

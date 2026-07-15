@@ -38,7 +38,10 @@ const displaySelectedWorks =
     ? selectedSeriesWorks
     : seriesWorks.slice(0, 4);
 
-const sequenceWorks = seriesWorks.length > 0 ? seriesWorks : displaySelectedWorks;
+const orderedSeriesWorks = flagshipWork
+  ? [flagshipWork, ...seriesWorks.filter((work) => work.slug !== flagshipWork.slug)]
+  : seriesWorks;
+const sequenceWorks = orderedSeriesWorks.length > 0 ? orderedSeriesWorks : displaySelectedWorks;
 const heroWorks = sequenceWorks;
 const sequenceLayouts = ["hero", "right", "left", "wide", "portrait", "standard", "offset-left", "offset-right"] as const;
 const seriesToneByMood = {
@@ -98,17 +101,68 @@ const getHeroSlot = (index: number, total: number) => {
     class={`series-chapter series-chapter--${series.slug}`}
     data-tone={seriesTone}
     data-works-atmosphere-field
+    data-series-chapter
+    data-series-slug={series.slug}
+    data-cinematic-idle-root
+    data-cinematic-idle-delay="6400"
+    data-cinematic-idle-reduced-delay="9800"
+    data-cinematic-idle-wake-duration="3900"
+    data-cinematic-idle-settle-duration="3200"
+    data-cinematic-idle-dream-duration="8800"
   >
+    <div class="series-chapter-arrival-field" aria-hidden="true"></div>
+    <script is:inline define:vars={{ chapterSlug: series.slug }}>
+      (() => {
+        const root = document.currentScript?.closest("[data-series-chapter]");
+        if (!root) return;
+
+        try {
+          const transition = JSON.parse(sessionStorage.getItem("artist-stage:cinematic-transition") || "null");
+          const handoff = JSON.parse(sessionStorage.getItem("artist-stage:series-constellation-handoff") || "null");
+          let referrerPath = "";
+          try {
+            referrerPath = document.referrer ? new URL(document.referrer).pathname.replace(/\/+$/, "") : "";
+          } catch {
+            referrerPath = "";
+          }
+          const isMapArrival =
+            document.documentElement.dataset.cinematicHandoffKind === "series-chapter" &&
+            transition?.slug === chapterSlug;
+          const isSeriesReturn = document.documentElement.dataset.cinematicHandoffKind === "series-return";
+          const isFreshHandoff =
+            handoff?.id === chapterSlug &&
+            Date.now() - Number(handoff?.at || 0) < 10000 &&
+            referrerPath === "/series";
+
+          if (!isMapArrival && !isSeriesReturn && !isFreshHandoff) return;
+          if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
+
+          const palette = transition?.palette || handoff?.palette || {};
+          root.dataset.seriesChapterArrival = "entering";
+          if (palette.accent) root.style.setProperty("--series-arrival-accent", palette.accent);
+          if (palette.wash) root.style.setProperty("--series-arrival-wash", palette.wash);
+          if (palette.ink) root.style.setProperty("--series-arrival-ink", palette.ink);
+
+          const settle = () => {
+            root.dataset.seriesChapterArrival = "settled";
+          };
+          window.addEventListener("artist-stage:cinematic-arrival-complete", settle, { once: true });
+          window.setTimeout(settle, 3600);
+        } catch {
+          // Direct loads keep the authored chapter composition.
+        }
+      })();
+    </script>
     <AtmosphericBackdropRoot />
 
     <section class="series-chapter-hero" data-series-hero data-atmosphere-section="series-chapter-hero">
       <div class="series-chapter-hero__copy">
-        <p class="series-chapter-kicker">SERIES / CINEMATIC CHAPTER</p>
-        <h1 class="series-chapter-title">{seriesDisplayTitle}</h1>
-        {series.subtitle ? <p class="series-chapter-subtitle">{series.subtitle}</p> : null}
-        <p class="series-chapter-copy">{series.statement}</p>
+        <p class="series-chapter-kicker" data-cinematic-idle="detail">SERIES / CINEMATIC CHAPTER</p>
+        <h1 class="series-chapter-title" data-cinematic-idle="anchor">{seriesDisplayTitle}</h1>
+        {series.subtitle ? <p class="series-chapter-subtitle" data-cinematic-idle="voice">{series.subtitle}</p> : null}
+        <p class="series-chapter-copy" data-cinematic-idle="voice">{series.statement}</p>
 
-        <div class="series-chapter-live-signal" aria-label="Active series signal">
+        <div class="series-chapter-live-signal" aria-label="Active series signal" data-cinematic-idle="line">
           <div>
             <span>Active work</span>
             <strong data-series-hero-active-title>
@@ -121,7 +175,7 @@ const getHeroSlot = (index: number, total: number) => {
           </div>
         </div>
 
-        <nav class="series-chapter-routes" aria-label="Series routes">
+        <nav class="series-chapter-routes" aria-label="Series routes" data-cinematic-idle="action">
           <a href="/series" data-series-return-map data-series-return-id={series.slug}>Return to chapter map</a>
           <a href={`/works?series=${series.slug}`}>Open works index</a>
           <a href="/process">Open process</a>
@@ -130,6 +184,9 @@ const getHeroSlot = (index: number, total: number) => {
               href={`/works/${heroWorks[0].slug}`}
               data-series-hero-active-link
               data-atmosphere-handoff-slug={getWorkAtmosphereSlug(heroWorks[0])}
+              data-series-work-route
+              data-series-work-slug={heroWorks[0].slug}
+              data-series-work-index="0"
             >
               Open active object
             </a>
@@ -138,7 +195,7 @@ const getHeroSlot = (index: number, total: number) => {
       </div>
 
       {heroWorks.length > 0 ? (
-        <div class="series-hero-carousel" data-series-hero-carousel aria-label={`${series.title} selected works`}>
+        <div class="series-hero-carousel" data-series-hero-carousel aria-label={`${series.title} selected works`} data-cinematic-idle="field">
           <div class="series-hero-carousel__field" aria-live="polite">
             {heroWorks.map((work, index) => {
               const image = getWorkImage(work, index === 0 ? 1500 : 1100);
@@ -171,6 +228,9 @@ const getHeroSlot = (index: number, total: number) => {
                       decoding="async"
                       data-cinematic-cover
                       data-cinematic-route-slug={work.slug}
+                      data-cinematic-arrival-slug={index === 0 ? series.slug : undefined}
+                      data-series-chapter-arrival-target={index === 0 ? "true" : undefined}
+                      data-cinematic-idle={index === 0 ? "image" : "trace"}
                     />
                     <figcaption>
                       <span>{String(index + 1).padStart(2, "0")}</span>
@@ -235,6 +295,9 @@ const getHeroSlot = (index: number, total: number) => {
                 data-series-inspect-href={`/works/${work.slug}`}
                 data-artwork-slug={work.slug}
                 data-atmosphere-handoff-slug={work.meta.atmosphereProfile || work.slug}
+                data-series-work-route
+                data-series-work-slug={work.slug}
+                data-series-work-index={index}
               >
                 <img
                   src={image.src}
@@ -246,6 +309,7 @@ const getHeroSlot = (index: number, total: number) => {
                   decoding="async"
                   data-cinematic-cover
                   data-cinematic-route-slug={work.slug}
+                  data-cinematic-idle="trace"
                 />
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 <strong>{work.meta.inventoryNumber ?? work.title}</strong>
@@ -271,6 +335,10 @@ const getHeroSlot = (index: number, total: number) => {
               href={`/works/${work.slug}`}
               data-artwork-slug={work.slug}
               data-atmosphere-handoff-slug={work.meta.atmosphereProfile || work.slug}
+              data-series-work-route
+              data-series-work-slug={work.slug}
+              data-series-work-index={index}
+              data-cinematic-idle="line"
             >
               <span>{String(work.meta.seriesOrder ?? index + 1).padStart(2, "0")}</span>
               <strong>{work.meta.inventoryNumber ?? work.title}</strong>
@@ -287,7 +355,7 @@ const getHeroSlot = (index: number, total: number) => {
       )}
     </section>
 
-    <nav class="series-chapter-neighbor-nav" aria-label="Adjacent series">
+    <nav class="series-chapter-neighbor-nav" aria-label="Adjacent series" data-cinematic-idle="action">
       {previousSeries ? (
         <a href={`/series/${previousSeries.slug}`} data-cinematic-route-slug={previousSeries.slug}>
           Previous / {previousSeries.title}
@@ -324,6 +392,7 @@ const getHeroSlot = (index: number, total: number) => {
               href="/works"
               data-series-inspector-work-link
               data-cinematic-source-selector="[data-series-inspector-image]"
+              data-series-work-route
             >
               View work
             </a>
@@ -341,18 +410,46 @@ const getHeroSlot = (index: number, total: number) => {
   </div>
 </BaseLayout>
 
-<script is:inline>
+<script is:inline define:vars={{ chapterSlug: series.slug }}>
   (() => {
     const RETURN_KEY = "artist-stage:series-constellation-return";
+    const HANDOFF_KEY = "artist-stage:series-constellation-handoff";
+    const RESUME_KEY = "artist-stage:series-chapter-resume";
+    const routeParams = new URLSearchParams(window.location.search);
+    const navigationEntry = performance.getEntriesByType?.("navigation")?.[0];
+    const isBackForwardNavigation = navigationEntry?.type === "back_forward";
+    const readResumeState = () => {
+      try {
+        return JSON.parse(sessionStorage.getItem(RESUME_KEY) || "null");
+      } catch {
+        return null;
+      }
+    };
+    let resumeState = readResumeState();
+
+    let referrerPath = "";
+    try {
+      referrerPath = document.referrer ? new URL(document.referrer).pathname : "";
+    } catch {
+      referrerPath = "";
+    }
+
+    let canUseResume =
+      resumeState?.seriesSlug === chapterSlug &&
+      Date.now() - Number(resumeState?.at || 0) < 30 * 60 * 1000 &&
+      (referrerPath.startsWith("/works/") || isBackForwardNavigation || routeParams.has("work"));
+    let requestedWorkSlug = routeParams.get("work") || (canUseResume ? resumeState?.workSlug : "") || "";
 
     document.querySelectorAll("[data-series-return-map]").forEach((link) => {
       link.addEventListener("click", () => {
         try {
+          const handoff = JSON.parse(sessionStorage.getItem(HANDOFF_KEY) || "null");
           sessionStorage.setItem(
             RETURN_KEY,
             JSON.stringify({
               id: link.dataset.seriesReturnId,
               slug: link.dataset.seriesReturnId,
+              map: handoff?.id === link.dataset.seriesReturnId ? handoff?.map : null,
               at: Date.now(),
             }),
           );
@@ -373,7 +470,8 @@ const getHeroSlot = (index: number, total: number) => {
     let syncHeroToInspectorFrame = () => {};
 
     if (hero && heroFrames.length) {
-      let activeHeroIndex = 0;
+      const requestedHeroIndex = heroFrames.findIndex((frame) => frame.dataset.cinematicRouteSlug === requestedWorkSlug);
+      let activeHeroIndex = requestedHeroIndex >= 0 ? requestedHeroIndex : 0;
       let autoplayTimer = 0;
       let pointerStartX = 0;
       let isHeroPaused = false;
@@ -402,9 +500,11 @@ const getHeroSlot = (index: number, total: number) => {
 
         heroFrames.forEach((frame, index) => {
           const isActive = index === activeHeroIndex;
+          const image = frame.querySelector("img");
           frame.dataset.slot = getSlot(index);
           frame.setAttribute("aria-current", isActive ? "true" : "false");
           frame.tabIndex = isActive || Math.abs(getCircularOffset(index)) <= 1 ? 0 : -1;
+          if (image) image.dataset.cinematicIdle = isActive ? "image" : "trace";
         });
 
         heroDots.forEach((dot, index) => {
@@ -417,6 +517,10 @@ const getHeroSlot = (index: number, total: number) => {
           if (heroActiveLink) {
             heroActiveLink.setAttribute("href", activeFrame.dataset.href || "/works");
             heroActiveLink.setAttribute("data-atmosphere-handoff-slug", activeFrame.dataset.atmosphereHandoffSlug || "");
+            heroActiveLink.dataset.cinematicRouteSlug = activeFrame.dataset.cinematicRouteSlug || "";
+            heroActiveLink.dataset.seriesWorkSlug = activeFrame.dataset.cinematicRouteSlug || "";
+            heroActiveLink.dataset.seriesWorkIndex = String(activeHeroIndex);
+            heroActiveLink.dataset.cinematicSourceSelector = `[data-series-hero-frame][data-frame-index="${activeHeroIndex}"] [data-cinematic-cover]`;
           }
 
           const atmosphereSlug = activeFrame.dataset.atmosphereHandoffSlug;
@@ -592,6 +696,62 @@ const getHeroSlot = (index: number, total: number) => {
       .filter((frame) => frame.src)
       .sort((a, b) => a.index - b.index);
 
+    const writeChapterResume = ({ workSlug, workIndex, origin = "chapter", restoreInspector = false }) => {
+      if (!workSlug) return;
+
+      try {
+        sessionStorage.setItem(
+          RESUME_KEY,
+          JSON.stringify({
+            seriesSlug: chapterSlug,
+            workSlug,
+            workIndex,
+            origin,
+            restoreInspector,
+            scrollY: window.scrollY,
+            at: Date.now(),
+          }),
+        );
+      } catch {
+        // Route continuity is progressive enhancement only.
+      }
+    };
+
+    const resolveWorkIndex = (workSlug, link) => {
+      const linkIndex = Number(link?.dataset?.seriesWorkIndex);
+      if (Number.isFinite(linkIndex)) return linkIndex;
+      return frames.findIndex((frame) => frame.slug === workSlug);
+    };
+
+    const handleCinematicWorkNavigation = (event) => {
+      const detail = event.detail;
+      if (detail?.fromPath !== window.location.pathname || detail?.routeType !== "works") return;
+
+      const workSlug = detail.slug || detail.link?.dataset?.seriesWorkSlug || "";
+      const workIndex = resolveWorkIndex(workSlug, detail.link);
+      const fromInspector = detail.link === inspectorWorkLink;
+      writeChapterResume({
+        workSlug,
+        workIndex,
+        origin: fromInspector ? inspectorOrigin : "hero",
+        restoreInspector: fromInspector,
+      });
+    };
+
+    window.addEventListener("artist-stage:cinematic-navigation-start", handleCinematicWorkNavigation);
+
+    document.querySelectorAll("[data-series-work-route]").forEach((link) => {
+      link.addEventListener("click", () => {
+        const workSlug = link.dataset.seriesWorkSlug || link.dataset.cinematicRouteSlug || link.dataset.artworkSlug || "";
+        writeChapterResume({
+          workSlug,
+          workIndex: resolveWorkIndex(workSlug, link),
+          origin: link.matches("[data-series-hero-active-link]") ? "hero" : "chapter",
+          restoreInspector: false,
+        });
+      });
+    });
+
     const lockScroll = () => {
       lockedScrollY = window.scrollY;
       previousBodyTouchAction = document.body.style.touchAction;
@@ -721,6 +881,8 @@ const getHeroSlot = (index: number, total: number) => {
         inspectorWorkLink.href = frame.href || "/works";
         inspectorWorkLink.dataset.cinematicRouteSlug = frame.slug || "";
         inspectorWorkLink.dataset.artworkSlug = frame.slug || "";
+        inspectorWorkLink.dataset.seriesWorkSlug = frame.slug || "";
+        inspectorWorkLink.dataset.seriesWorkIndex = String(activeIndex);
         inspectorWorkLink.dataset.atmosphereHandoffSlug = frame.atmosphereSlug || frame.slug || "";
         inspectorWorkLink.setAttribute("aria-label", `View work ${frame.title}`);
       }
@@ -1050,8 +1212,61 @@ const getHeroSlot = (index: number, total: number) => {
       }
     });
 
+    let restoredView = false;
+    const restoreRequestedView = ({ fromHistory = false } = {}) => {
+      if (restoredView || !requestedWorkSlug || !frames.length) return;
+      const requestedIndex = frames.findIndex((frame) => frame.slug === requestedWorkSlug);
+      if (requestedIndex < 0) return;
+
+      restoredView = true;
+      syncHeroToInspectorFrame(requestedIndex);
+
+      if (canUseResume && Number.isFinite(Number(resumeState?.scrollY))) {
+        window.scrollTo(0, Number(resumeState.scrollY));
+      }
+
+      const shouldRestoreInspector =
+        routeParams.get("view") === "inspector" ||
+        ((fromHistory || isBackForwardNavigation) && canUseResume && resumeState?.restoreInspector === true);
+      if (!shouldRestoreInspector) return;
+
+      let launched = false;
+      const launch = () => {
+        if (launched) return;
+        launched = true;
+        const sourceOverride = resumeState?.origin === "hero" ? heroFrames[requestedIndex] : null;
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => openInspector(requestedIndex, sourceOverride));
+        });
+
+        if (routeParams.has("work") || routeParams.has("view")) {
+          window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.hash}`);
+        }
+      };
+
+      if (document.documentElement.hasAttribute("data-cinematic-transition")) {
+        window.addEventListener("artist-stage:cinematic-arrival-complete", launch, { once: true });
+        window.setTimeout(launch, 2100);
+      } else {
+        launch();
+      }
+    };
+
     window.addEventListener("pagehide", forceCloseInspector);
-    window.addEventListener("pageshow", forceCloseInspector);
+    window.addEventListener("pageshow", (event) => {
+      const navigation = performance.getEntriesByType?.("navigation")?.[0];
+      if (!event.persisted && navigation?.type !== "back_forward") return;
+      forceCloseInspector();
+      resumeState = readResumeState();
+      canUseResume =
+        resumeState?.seriesSlug === chapterSlug &&
+        Date.now() - Number(resumeState?.at || 0) < 30 * 60 * 1000;
+      requestedWorkSlug = canUseResume ? resumeState?.workSlug || "" : "";
+      restoredView = false;
+      window.setTimeout(() => restoreRequestedView({ fromHistory: true }), 380);
+    });
+
+    restoreRequestedView({ fromHistory: isBackForwardNavigation });
 
     if (sequence && !planes.length) {
       sequence.hidden = true;
@@ -2041,12 +2256,153 @@ const getHeroSlot = (index: number, total: number) => {
     }
   }
 
+  @media (max-width: 520px) {
+    .series-inspector__toolbar {
+      left: 1rem;
+      right: 1rem;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.8rem;
+    }
+
+    .series-inspector__controls {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      width: 100%;
+      gap: 0.5rem;
+    }
+
+    .series-inspector__controls a,
+    .series-inspector__controls button {
+      width: 100%;
+      min-width: 0;
+      padding-inline: 0.45rem;
+    }
+
+    .series-inspector__work-link {
+      grid-column: 1 / -1;
+      justify-content: flex-end;
+      padding-inline: 3.7rem 0.12rem;
+    }
+  }
+
   /* V3-41 - Cinematic Series Chapter Surface */
   .series-chapter {
+    --series-arrival-accent: var(--artwork-accent);
+    --series-arrival-wash: var(--artwork-wash-strong);
+    --series-arrival-ink: var(--artwork-shadow-wash);
     padding: clamp(6rem, 8vw, 8rem) 0 clamp(6rem, 10vw, 10rem);
     background:
       linear-gradient(180deg, rgba(5, 8, 7, 0.38), rgba(2, 4, 4, 0.2) 26%, rgba(2, 4, 4, 0.62) 100%);
     isolation: isolate;
+  }
+
+  .series-chapter-arrival-field {
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 1;
+    height: min(68rem, 100svh);
+    pointer-events: none;
+    overflow: hidden;
+    background:
+      conic-gradient(
+        from 218deg at 61% 46%,
+        transparent 0 16%,
+        color-mix(in srgb, var(--series-arrival-wash), transparent 48%) 29%,
+        transparent 47%,
+        color-mix(in srgb, var(--series-arrival-accent), transparent 62%) 66%,
+        transparent 84%
+      ),
+      linear-gradient(
+        118deg,
+        color-mix(in srgb, var(--series-arrival-ink), black 22%),
+        transparent 48%,
+        color-mix(in srgb, var(--series-arrival-wash), transparent 66%) 72%,
+        transparent 92%
+      );
+    background-size: 146% 146%, 138% 154%;
+    background-position: 46% 52%, 28% 44%;
+    mix-blend-mode: screen;
+    mask-image: linear-gradient(180deg, black 0, black 76%, transparent 100%);
+    opacity: 0;
+    transform: scale(1.035);
+  }
+
+  .series-chapter[data-series-chapter-arrival="entering"] .series-chapter-arrival-field {
+    animation: seriesChapterArrivalCurrent 2200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  html[data-cinematic-transition="arriving"] .series-chapter[data-series-chapter-arrival="entering"] .series-chapter-hero__copy,
+  html[data-cinematic-transition="arriving"] .series-chapter[data-series-chapter-arrival="entering"] .series-hero-carousel__controls,
+  html[data-cinematic-transition="arriving"] .series-chapter[data-series-chapter-arrival="entering"] .series-hero-frame:not([data-slot="active"]) {
+    opacity: 0;
+  }
+
+  html[data-cinematic-transition="arriving-active"] .series-chapter[data-series-chapter-arrival="entering"] .series-chapter-hero__copy {
+    animation: seriesChapterArrivalCopy 1380ms 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  html[data-cinematic-transition="arriving-active"] .series-chapter[data-series-chapter-arrival="entering"] .series-hero-carousel__controls {
+    animation: seriesChapterArrivalControls 1180ms 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  html[data-cinematic-transition="arriving-active"] .series-chapter[data-series-chapter-arrival="entering"] .series-hero-frame:not([data-slot="active"]) {
+    animation: seriesChapterArrivalPeripheral 1440ms 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes seriesChapterArrivalCurrent {
+    0% {
+      opacity: 0.82;
+      background-position: 42% 56%, 24% 48%;
+      transform: scale(1.08);
+    }
+
+    46% {
+      opacity: 0.54;
+    }
+
+    100% {
+      opacity: 0;
+      background-position: 58% 43%, 76% 52%;
+      transform: scale(1.015);
+    }
+  }
+
+  @keyframes seriesChapterArrivalCopy {
+    0% {
+      opacity: 0;
+      filter: blur(4px);
+      transform: translate3d(-1.4rem, 0.5rem, 0);
+    }
+
+    100% {
+      opacity: 1;
+      filter: blur(0);
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes seriesChapterArrivalControls {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, 0.7rem, 0);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes seriesChapterArrivalPeripheral {
+    0% {
+      opacity: 0;
+      filter: blur(3px) brightness(0.58);
+    }
+
+    100% {
+      opacity: var(--series-hero-opacity);
+      filter: blur(var(--series-hero-blur)) brightness(var(--series-hero-brightness));
+    }
   }
 
   .series-chapter .atmosphere-root {
@@ -2673,6 +3029,25 @@ const getHeroSlot = (index: number, total: number) => {
     .series-hero-frame,
     .series-inspector {
       transition: none;
+    }
+
+    .series-chapter[data-series-chapter-arrival="entering"] .series-chapter-arrival-field {
+      animation: none;
+      opacity: 0;
+    }
+
+    html[data-cinematic-transition] .series-chapter[data-series-chapter-arrival="entering"] .series-chapter-hero__copy,
+    html[data-cinematic-transition] .series-chapter[data-series-chapter-arrival="entering"] .series-hero-carousel__controls {
+      animation: none;
+      opacity: 1;
+      filter: none;
+      transform: none;
+    }
+
+    html[data-cinematic-transition] .series-chapter[data-series-chapter-arrival="entering"] .series-hero-frame:not([data-slot="active"]) {
+      animation: none;
+      opacity: var(--series-hero-opacity);
+      filter: blur(var(--series-hero-blur)) brightness(var(--series-hero-brightness));
     }
   }
 </style>

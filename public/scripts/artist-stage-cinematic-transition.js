@@ -2,9 +2,32 @@
   const TRANSITION_STORAGE_KEY = "artist-stage:cinematic-transition";
   const ACTIVE_ATTRIBUTE = "data-cinematic-transition";
   const MAX_PAYLOAD_AGE = 8000;
-  const LEAVE_DURATION = 220;
-  const ARRIVE_DURATION = 820;
-  const PEAK_VEIL_OPACITY = 0.72;
+  const DEFAULT_TRANSITION = {
+    leaveDuration: 300,
+    arriveDuration: 920,
+    peakVeilOpacity: 0.72,
+    departureScale: 1.012,
+  };
+  const TRANSITION_PRESETS = {
+    "series-chapter": {
+      leaveDuration: 460,
+      arriveDuration: 1280,
+      peakVeilOpacity: 0.68,
+      departureScale: 1.025,
+    },
+    "series-work": {
+      leaveDuration: 380,
+      arriveDuration: 1080,
+      peakVeilOpacity: 0.76,
+      departureScale: 1.016,
+    },
+    "series-return": {
+      leaveDuration: 420,
+      arriveDuration: 1160,
+      peakVeilOpacity: 0.72,
+      departureScale: 1.02,
+    },
+  };
   const COVER_SELECTOR = [
     "[data-cinematic-cover]",
     ".manifestation-entry__img",
@@ -81,6 +104,26 @@
     };
   };
 
+  const getTransitionKind = (routeData, link) => {
+    if (link?.dataset?.cinematicTransitionKind) {
+      return link.dataset.cinematicTransitionKind;
+    }
+
+    const fromPath = window.location.pathname;
+
+    if (/^\/series\/?$/.test(fromPath) && routeData.routeType === "series") {
+      return "series-chapter";
+    }
+
+    if (/^\/series\/[^/]+\/?$/.test(fromPath) && routeData.routeType === "works") {
+      return "series-work";
+    }
+
+    return "default";
+  };
+
+  const getTransitionPreset = (kind) => TRANSITION_PRESETS[kind] || DEFAULT_TRANSITION;
+
   const isCollectionIndexPath = (pathname) => /^\/(?:works|series)\/?$/.test(pathname || "");
 
   const getSourceElement = (link) => {
@@ -116,6 +159,44 @@
     height: rect.height,
   });
 
+  const getDepartureRect = (rect, scale = DEFAULT_TRANSITION.departureScale) => ({
+    left: rect.left - rect.width * (scale - 1) * 0.5,
+    top: rect.top - rect.height * (scale - 1) * 0.5,
+    width: rect.width * scale,
+    height: rect.height * scale,
+  });
+
+  const readFirstCustomProperty = (styles, names) => {
+    for (const style of styles) {
+      if (!style) continue;
+      for (const name of names) {
+        const value = style.getPropertyValue(name).trim();
+        if (value) return value;
+      }
+    }
+
+    return "";
+  };
+
+  const getTransitionPalette = (sourceElement) => {
+    const localOwner = sourceElement.closest?.(
+      "[data-series-node], [data-artwork-slug], [data-object-chamber], [data-series-hero-frame]",
+    );
+    const seriesField = document.querySelector("[data-series-webgl-backdrop]");
+    const styles = [
+      localOwner ? window.getComputedStyle(localOwner) : null,
+      window.getComputedStyle(sourceElement),
+      seriesField ? window.getComputedStyle(seriesField) : null,
+      window.getComputedStyle(document.documentElement),
+    ];
+
+    return {
+      accent: readFirstCustomProperty(styles, ["--node-accent", "--series-pigment-a", "--work-accent", "--artwork-accent"]),
+      wash: readFirstCustomProperty(styles, ["--series-pigment-b", "--work-wash", "--artwork-wash-strong", "--artwork-glow"]),
+      ink: readFirstCustomProperty(styles, ["--series-deep", "--work-shadow", "--artwork-shadow-wash", "--atmo-bottom"]),
+    };
+  };
+
   const createBridgeLayer = ({
     src,
     alt = "",
@@ -126,6 +207,8 @@
     background = "",
     veilOpacity = 0,
     reusePreBridge = false,
+    palette = null,
+    transitionKind = "default",
   }) => {
     if (reusePreBridge) {
       const existingLayer = document.querySelector("[data-cinematic-prebridge]");
@@ -134,6 +217,10 @@
 
       if (existingLayer && existingVeil && existingImage) {
         existingLayer.removeAttribute("data-cinematic-prebridge");
+        existingLayer.dataset.cinematicBridgeKind = transitionKind;
+        if (palette?.accent) existingLayer.style.setProperty("--cinematic-bridge-accent", palette.accent);
+        if (palette?.wash) existingLayer.style.setProperty("--cinematic-bridge-wash", palette.wash);
+        if (palette?.ink) existingLayer.style.setProperty("--cinematic-bridge-ink", palette.ink);
         existingVeil.style.opacity = String(veilOpacity);
         existingImage.alt = alt;
         existingImage.decoding = "async";
@@ -159,6 +246,10 @@
     const layer = document.createElement("div");
     layer.className = "cinematic-bridge-layer";
     layer.setAttribute("aria-hidden", "true");
+    layer.dataset.cinematicBridgeKind = transitionKind;
+    if (palette?.accent) layer.style.setProperty("--cinematic-bridge-accent", palette.accent);
+    if (palette?.wash) layer.style.setProperty("--cinematic-bridge-wash", palette.wash);
+    if (palette?.ink) layer.style.setProperty("--cinematic-bridge-ink", palette.ink);
 
     const veil = document.createElement("div");
     veil.className = "cinematic-bridge-veil";
@@ -261,6 +352,7 @@
     const transitionName = normalizeTransitionName(slug);
     const sourceRect = sourceElement ? getPlainRect(sourceElement.getBoundingClientRect()) : null;
     const sourceSrc = sourceElement ? getElementImageSource(sourceElement) : "";
+    const transitionKind = getTransitionKind(routeData, link);
 
     if (!slug || !transitionName || !sourceElement || !sourceRect || sourceRect.width < 8 || sourceRect.height < 8) {
       return null;
@@ -276,7 +368,24 @@
       sourceRect,
       sourceSrc,
       alt: sourceElement instanceof HTMLImageElement ? sourceElement.alt : "",
+      transitionKind,
+      palette: getTransitionPalette(sourceElement),
     };
+  };
+
+  const announceNavigationStart = (link, data) => {
+    window.dispatchEvent(new CustomEvent("artist-stage:cinematic-navigation-start", {
+      detail: {
+        href: data.href,
+        fromPath: window.location.pathname,
+        toPath: data.pathname,
+        slug: data.slug,
+        routeType: data.routeType,
+        transitionKind: data.transitionKind,
+        link,
+        sourceElement: data.sourceElement,
+      },
+    }));
   };
 
   const prepareRouteHandoff = (link, pathname) => {
@@ -291,6 +400,7 @@
 
   const startNativeNavigation = (link, data) => {
     safeClearPayload();
+    announceNavigationStart(link, data);
     prepareRouteHandoff(link, data.pathname);
 
     data.sourceElement.style.viewTransitionName = data.transitionName;
@@ -306,6 +416,8 @@
     if (isNavigating) return;
     isNavigating = true;
 
+    announceNavigationStart(link, data);
+
     event.preventDefault();
     event.stopImmediatePropagation?.();
 
@@ -316,6 +428,8 @@
         slug: data.slug,
         routeType: data.routeType,
         transitionName: data.transitionName,
+        transitionKind: data.transitionKind,
+        palette: data.palette,
         at: Date.now(),
       });
       prepareRouteHandoff(link, data.pathname);
@@ -324,6 +438,8 @@
     }
 
     const computed = window.getComputedStyle(data.sourceElement);
+    const preset = getTransitionPreset(data.transitionKind);
+    const departureRect = getDepartureRect(data.sourceRect, preset.departureScale);
     const payload = {
       mode: "controlled-route",
       href: data.href,
@@ -332,11 +448,17 @@
       transitionName: data.transitionName,
       src: data.sourceSrc,
       alt: data.alt,
-      sourceRect: data.sourceRect,
+      sourceRect: departureRect,
+      originRect: data.sourceRect,
       objectFit: computed.objectFit || "contain",
       borderRadius: computed.borderRadius || "0px",
       boxShadow: computed.boxShadow || "",
       background: computed.backgroundColor || "",
+      transitionKind: data.transitionKind,
+      palette: data.palette,
+      leaveDuration: preset.leaveDuration,
+      arriveDuration: preset.arriveDuration,
+      peakVeilOpacity: preset.peakVeilOpacity,
       at: Date.now(),
     };
 
@@ -356,22 +478,38 @@
       boxShadow: payload.boxShadow,
       background: payload.background,
       veilOpacity: 0,
+      palette: payload.palette,
+      transitionKind: payload.transitionKind,
     });
 
-    bridge.veil.animate([{ opacity: 0 }, { opacity: PEAK_VEIL_OPACITY }], {
-      duration: LEAVE_DURATION,
+    bridge.veil.animate([{ opacity: 0 }, { opacity: preset.peakVeilOpacity }], {
+      duration: preset.leaveDuration,
       easing: "cubic-bezier(0.16, 1, 0.3, 1)",
       fill: "forwards",
     });
+
+    animateBridgeImage(
+      bridge.image,
+      data.sourceRect,
+      departureRect,
+      preset.leaveDuration,
+      "cubic-bezier(0.22, 0.72, 0.18, 1)",
+    );
 
     window.setTimeout(() => {
       if (isNavigating) {
         window.location.href = data.href;
       }
-    }, LEAVE_DURATION);
+    }, preset.leaveDuration);
   };
 
   const findArrivalTarget = (payload) => {
+    const explicitTarget = [...document.querySelectorAll("[data-cinematic-arrival-slug]")].find((element) => {
+      return element.dataset?.cinematicArrivalSlug === payload.slug;
+    });
+
+    if (explicitTarget) return explicitTarget;
+
     const slugTarget = [...document.querySelectorAll("[data-cinematic-cover]")].find((element) => {
       const routeSlug = element.dataset?.cinematicRouteSlug || element.closest?.("[data-cinematic-route-slug]")?.dataset?.cinematicRouteSlug;
       return routeSlug === payload.slug;
@@ -390,12 +528,24 @@
       return document.querySelector(".object-chamber-media[data-cinematic-cover]");
     }
 
+    if (payload.routeType === "series") {
+      return document.querySelector("[data-series-chapter-arrival-target], .series-hero-frame[data-slot='active'] [data-cinematic-cover]");
+    }
+
     return null;
+  };
+
+  const clearHandoffVisualState = () => {
+    delete document.documentElement.dataset.cinematicHandoffKind;
+    document.documentElement.style.removeProperty("--cinematic-handoff-accent");
+    document.documentElement.style.removeProperty("--cinematic-handoff-wash");
+    document.documentElement.style.removeProperty("--cinematic-handoff-ink");
   };
 
   const revealFailedArrival = () => {
     safeClearPayload();
     document.documentElement.removeAttribute(ACTIVE_ATTRIBUTE);
+    clearHandoffVisualState();
     isArriving = false;
     document.querySelectorAll("[data-cinematic-target-hidden]").forEach((element) => {
       element.removeAttribute("data-cinematic-target-hidden");
@@ -418,6 +568,7 @@
     isNavigating = false;
     isArriving = false;
     document.documentElement.removeAttribute(ACTIVE_ATTRIBUTE);
+    clearHandoffVisualState();
 
     if (clearPayload) {
       safeClearPayload();
@@ -434,7 +585,11 @@
     if (isArriving) return;
 
     const payload = safeReadPayload();
-    if (!payload || payload.mode !== "controlled-route") return;
+    if (!payload) return;
+    if (payload.mode !== "controlled-route") {
+      safeClearPayload();
+      return;
+    }
 
     isArriving = true;
 
@@ -467,8 +622,10 @@
       borderRadius: payload.borderRadius || "0px",
       boxShadow: payload.boxShadow || "",
       background: payload.background || "",
-      veilOpacity: PEAK_VEIL_OPACITY,
+      veilOpacity: Number(payload.peakVeilOpacity) || DEFAULT_TRANSITION.peakVeilOpacity,
       reusePreBridge: true,
+      palette: payload.palette,
+      transitionKind: payload.transitionKind || "default",
     });
 
     await waitForImageReady(bridge.image, 100);
@@ -496,12 +653,23 @@
     }
 
     const targetStyle = window.getComputedStyle(target);
+    const arriveDuration = Number(payload.arriveDuration) || DEFAULT_TRANSITION.arriveDuration;
+    const peakVeilOpacity = Number(payload.peakVeilOpacity) || DEFAULT_TRANSITION.peakVeilOpacity;
     bridge.image.style.objectFit = targetStyle.objectFit || payload.objectFit || "contain";
     bridge.image.style.borderRadius = targetStyle.borderRadius || payload.borderRadius || "0px";
     document.documentElement.setAttribute(ACTIVE_ATTRIBUTE, "arriving-active");
 
-    bridge.veil.animate([{ opacity: PEAK_VEIL_OPACITY }, { opacity: 0 }], {
-      duration: Math.min(ARRIVE_DURATION, 620),
+    window.dispatchEvent(new CustomEvent("artist-stage:cinematic-arrival-start", {
+      detail: {
+        slug: payload.slug,
+        routeType: payload.routeType,
+        transitionKind: payload.transitionKind || "default",
+        target,
+      },
+    }));
+
+    bridge.veil.animate([{ opacity: peakVeilOpacity }, { opacity: 0 }], {
+      duration: Math.min(arriveDuration, 780),
       easing: "cubic-bezier(0.16, 1, 0.3, 1)",
       fill: "forwards",
     });
@@ -510,7 +678,7 @@
       bridge.image,
       startRect,
       finalRect,
-      ARRIVE_DURATION,
+      arriveDuration,
       "cubic-bezier(0.16, 1, 0.3, 1)",
     );
 
@@ -526,9 +694,18 @@
         safeClearPayload();
         isArriving = false;
         document.documentElement.removeAttribute(ACTIVE_ATTRIBUTE);
+        clearHandoffVisualState();
+        window.dispatchEvent(new CustomEvent("artist-stage:cinematic-arrival-complete", {
+          detail: {
+            slug: payload.slug,
+            routeType: payload.routeType,
+            transitionKind: payload.transitionKind || "default",
+            target,
+          },
+        }));
       });
     };
-    const safetyTimer = window.setTimeout(finishArrival, ARRIVE_DURATION + 360);
+    const safetyTimer = window.setTimeout(finishArrival, arriveDuration + 420);
 
     animation.finished
       .catch(() => undefined)

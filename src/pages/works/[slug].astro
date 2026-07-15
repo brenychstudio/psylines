@@ -118,7 +118,16 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
   <LivingAtmosphereOverride mood={workAtmosphereMood} />
   <ArtworkAtmosphereBridge slug={artworkMeta.atmosphereProfile || work.slug} mode="work-detail" />
 
-  <main class="work-detail-atmosphere-frame" data-work-detail-atmosphere="dominant">
+  <main
+    class="work-detail-atmosphere-frame"
+    data-work-detail-atmosphere="dominant"
+    data-cinematic-idle-root
+    data-cinematic-idle-delay="7200"
+    data-cinematic-idle-reduced-delay="10800"
+    data-cinematic-idle-settle-duration="3400"
+    data-cinematic-idle-dream-duration="9800"
+    data-cinematic-idle-wake-duration="3800"
+  >
     <ObjectChamberHero
       work={work}
       artworkMeta={artworkMeta}
@@ -441,6 +450,11 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
       document.documentElement.classList.remove("is-object-inspecting");
       delete document.documentElement.dataset.artworkAtmosphereState;
     }
+
+    window.__ARTIST_STAGE_INTERIOR_PREVIEW__ = {
+      open: openInteriorPreview,
+      close: closeInteriorPreview,
+    };
 
     const surfaceLensZoom = 1.68;
     let isSurfaceLensActive = false;
@@ -784,12 +798,16 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
       const originalLabel = button.textContent;
 
       button.setAttribute("aria-busy", "true");
-      button.textContent = "Loading...";
+      button.textContent = "Preparing...";
 
       try {
-        await openWorkArPreview();
+        const preview = await openWorkArPreview();
+        if (!preview) {
+          window.__ARTIST_STAGE_INTERIOR_PREVIEW__?.open?.();
+        }
       } catch (error) {
         console.error("[ARTIST STAGE] Failed to open AR preview.", error);
+        window.__ARTIST_STAGE_INTERIOR_PREVIEW__?.open?.();
       } finally {
         button.removeAttribute("aria-busy");
         button.textContent = originalLabel;
@@ -6384,204 +6402,74 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
     gap: 0.55rem 0.85rem;
   }
 
-  /* V3 Object Field - Collector details as a cinematic overlay, not layout expansion */
-  .object-chamber-v3 .collector-instrument,
-  .object-chamber-v3 .floating-acquisition-field {
-    overflow: visible;
-  }
-
+  /* Work detail owns placement; the commerce component owns the record content. */
   .object-chamber-v3 .collector-details {
     position: relative;
-    z-index: 24;
-  }
-
-  .object-chamber-v3 .collector-instrument__logistics[open] {
-    display: block;
-  }
-
-  .object-chamber-v3 .collector-instrument__logistics[open] summary {
-    margin-bottom: 0;
-    color: rgba(247, 250, 242, 0.78);
+    z-index: 4;
+    display: grid;
+    gap: 0;
+    margin-top: 0.25rem;
   }
 
   .object-chamber-v3 .collector-details::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: 18;
+    position: absolute;
+    inset: -0.7rem -0.9rem auto;
+    z-index: 0;
+    height: 0;
     background:
-      radial-gradient(circle at 67% 50%, rgba(107, 151, 76, 0.11), transparent 34%),
-      rgba(2, 4, 3, 0.18);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 360ms cubic-bezier(0.16, 1, 0.3, 1);
+      radial-gradient(circle at 42% 0%, color-mix(in srgb, var(--artwork-glow), transparent 72%), transparent 58%),
+      linear-gradient(90deg, rgba(245, 248, 242, 0), rgba(245, 248, 242, 0.08), rgba(245, 248, 242, 0));
+    filter: blur(18px);
   }
 
   .object-chamber-v3 .collector-details[open]::before {
-    opacity: 1;
+    height: calc(100% + 1.4rem);
+    opacity: 0.48;
   }
 
-  .object-chamber-v3 .collector-details-list {
-    position: absolute;
-    top: auto;
-    right: 0;
-    bottom: calc(100% + 0.82rem);
-    z-index: 20;
-    width: min(43rem, calc(100vw - 3rem));
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 1.4rem;
-    margin: 0;
-    padding: 1.15rem 1.35rem 1.25rem;
-    overflow: visible;
-    border: 1px solid rgba(232, 238, 228, 0.1);
-    border-left-color: rgba(232, 238, 228, 0.2);
-    border-radius: 0;
-    background:
-      radial-gradient(circle at 28% 0%, rgba(120, 166, 86, 0.12), transparent 34%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012)),
-      rgba(4, 7, 5, 0.94);
+  .object-chamber-v3 .collector-details-panel {
+    position: relative !important;
+    inset: auto !important;
+    z-index: 2;
+    width: 100%;
+    max-width: none;
+    max-height: 0 !important;
+    gap: 0;
+    margin-top: 0;
+    padding: 0 1.02rem;
+    transform: translate3d(0, -0.3rem, 0) !important;
+    transform-origin: top center;
+    clip-path: inset(0 0 100% 0 round 8px);
     box-shadow:
-      0 34px 90px rgba(0, 0, 0, 0.58),
-      inset 0 1px 0 rgba(255, 255, 255, 0.055);
-    opacity: 0;
-    pointer-events: none;
-    transform: translate3d(0, 0.85rem, 0) scale(0.985);
-    transform-origin: bottom right;
-    clip-path: inset(100% 0 0 0);
-    transition:
-      opacity 260ms ease,
-      transform 420ms cubic-bezier(0.16, 1, 0.3, 1),
-      clip-path 520ms cubic-bezier(0.16, 1, 0.3, 1);
+      0 18px 64px rgba(0, 0, 0, 0.28),
+      0 0 42px color-mix(in srgb, var(--artwork-glow), transparent 88%),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 
-  .object-chamber-v3 .collector-details[open] .collector-details-list {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translate3d(0, 0, 0) scale(1);
-    clip-path: inset(0 0 0 0);
-  }
-
-  .object-chamber-v3 .collector-details-list div {
-    min-width: 0;
-    grid-template-columns: minmax(5.8rem, 0.34fr) minmax(0, 0.66fr);
-    gap: 0.62rem;
-    padding: 0.68rem 0;
-  }
-
-  .object-chamber-v3 .collector-details-list div:first-child {
-    padding-top: 0;
-    border-top: 0;
-  }
-
-  .object-chamber-v3 .collector-details-list [data-collector-detail-priority="secondary"] {
-    display: none;
-  }
-
-  .object-chamber-v3 .collector-details-list [data-collector-detail="availability"],
-  .object-chamber-v3 .collector-details-list [data-collector-detail="routes"] {
-    grid-column: 1 / -1;
-  }
-
-  .object-chamber-v3 .collector-details-list [data-collector-detail="availability"] dd {
-    max-width: 32rem;
-    font-size: 0.82rem;
-    color: rgba(241, 246, 236, 0.74);
-  }
-
-  .object-chamber-v3 .collector-details-list dt {
-    font-size: 0.54rem;
-    letter-spacing: 0.16em;
-  }
-
-  .object-chamber-v3 .collector-details-list dd {
-    min-width: 0;
-    font-size: 0.74rem;
-    line-height: 1.36;
-  }
-
-  .object-chamber-v3 .collector-details-list [data-collector-detail="method"] dd,
-  .object-chamber-v3 .collector-details-list [data-collector-detail="paper"] dd,
-  .object-chamber-v3 .collector-details-list [data-collector-detail="surface"] dd {
-    display: -webkit-box;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-  }
-
-  .object-chamber-v3 .collector-details-close {
-    appearance: none;
-    position: absolute;
-    right: 1.35rem;
-    top: auto;
-    bottom: calc(100% + 1.05rem);
-    z-index: 21;
-    padding: 0 0 0.18rem;
+  .object-chamber-v3 .collector-details-panel::after {
+    inset: 0;
+    width: auto;
+    height: auto;
     border: 0;
-    border-bottom: 1px solid rgba(232, 238, 228, 0.22);
-    border-radius: 0;
-    background: transparent;
-    color: rgba(232, 238, 228, 0.48);
-    font: inherit;
-    font-size: 0.58rem;
-    font-weight: 800;
-    letter-spacing: 0.2em;
-    line-height: 1;
-    text-transform: uppercase;
-    cursor: pointer;
-    opacity: 0;
-    pointer-events: none;
-    transform: translate3d(0, 0.35rem, 0);
-    transition:
-      opacity 220ms ease,
-      transform 360ms cubic-bezier(0.16, 1, 0.3, 1),
-      color 260ms ease;
+    background:
+      linear-gradient(180deg, rgba(245, 248, 242, 0.045), transparent 30%),
+      linear-gradient(90deg, color-mix(in srgb, var(--artwork-glow), transparent 88%), transparent 34%);
+    opacity: 0.62;
+    transform: none;
   }
 
-  .object-chamber-v3 .collector-details[open] .collector-details-close {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translate3d(0, 0, 0);
-    transition-delay: 120ms;
-  }
-
-  .object-chamber-v3 .collector-details-close:hover,
-  .object-chamber-v3 .collector-details-close:focus-visible {
-    color: rgba(247, 250, 242, 0.9);
-    outline: none;
-  }
-
-  @media (max-width: 760px) {
-    .object-chamber-v3 .collector-details-list {
-      position: fixed;
-      left: 1rem;
-      right: 1rem;
-      top: auto;
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
-      width: auto;
-      grid-template-columns: 1fr;
-      max-height: none;
-      transform-origin: bottom center;
-    }
-
-    .object-chamber-v3 .collector-details-list [data-collector-detail="format"],
-    .object-chamber-v3 .collector-details-list [data-collector-detail="surface"],
-    .object-chamber-v3 .collector-details-list [data-collector-detail="paper"] {
-      display: none;
-    }
-
-    .object-chamber-v3 .collector-details-close {
-      position: fixed;
-      right: 2rem;
-      top: auto;
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 25rem);
-    }
+  .object-chamber-v3 .collector-details[open] .collector-details-panel {
+    max-height: 26rem !important;
+    gap: 0.9rem;
+    margin-top: 0.78rem;
+    padding: 1rem 1.02rem 1.05rem;
+    transform: translate3d(0, 0, 0) !important;
+    clip-path: inset(0 0 0 0 round 8px);
   }
 
   @media (max-width: 640px) {
-    .collector-details-list div {
-      grid-template-columns: 1fr;
-      gap: 0.25rem;
+    .object-chamber-v3 .collector-details[open] .collector-details-panel {
+      max-height: 32rem !important;
     }
 
     .collector-object-record {

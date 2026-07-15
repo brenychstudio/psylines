@@ -1,0 +1,970 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Living Background Environment v1.1</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --black: #050806;
+        --ink: #111713;
+        --paper: #edf0e9;
+        --white: #f5f7f1;
+        --muted: #aab1a8;
+        --line: rgba(235, 241, 232, 0.18);
+        --green: #8dbd31;
+        --oxide: #b94a2e;
+        --ochre: #d1a13c;
+        --cyan: #75afb0;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        background: #202420;
+        color: var(--white);
+        font-family: Inter, Arial, Helvetica, sans-serif;
+        font-size: 11pt;
+        line-height: 1.42;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      body { padding: 18px 0; }
+
+      .page {
+        position: relative;
+        width: 210mm;
+        height: 297mm;
+        margin: 0 auto 18px;
+        overflow: hidden;
+        break-after: page;
+        page-break-after: always;
+        background: var(--black);
+      }
+
+      .page:last-child { break-after: auto; page-break-after: auto; }
+
+      .page--light { background: var(--paper); color: var(--ink); }
+
+      .page-inner {
+        position: relative;
+        z-index: 2;
+        height: 100%;
+        padding: 19mm 17mm 17mm;
+      }
+
+      h1, h2, h3, p, ul, ol, pre, table { margin-top: 0; }
+      h1, h2, h3 { letter-spacing: 0; }
+
+      h1 {
+        max-width: 166mm;
+        margin-bottom: 7mm;
+        font-size: 35pt;
+        font-weight: 420;
+        line-height: 0.98;
+      }
+
+      h2 {
+        max-width: 150mm;
+        margin-bottom: 7mm;
+        font-size: 24pt;
+        font-weight: 440;
+        line-height: 1.04;
+      }
+
+      h3 {
+        margin-bottom: 3mm;
+        font-size: 11pt;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      p { margin-bottom: 4mm; }
+      strong { font-weight: 700; }
+
+      ul, ol { margin-bottom: 5mm; padding-left: 5mm; }
+      li { margin-bottom: 2mm; }
+
+      code, pre {
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        letter-spacing: 0;
+      }
+
+      code { font-size: 0.9em; }
+
+      pre {
+        margin-bottom: 5mm;
+        padding: 4mm;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        background: rgba(242, 246, 240, 0.055);
+        color: #e9eee7;
+        font-size: 8.3pt;
+        line-height: 1.45;
+        white-space: pre-wrap;
+      }
+
+      .page--light pre {
+        border-color: rgba(17, 23, 19, 0.16);
+        background: #e2e7de;
+        color: #1a211c;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 8.7pt;
+      }
+
+      th, td {
+        padding: 2.7mm 2.4mm;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th { color: var(--muted); font-size: 7.2pt; text-transform: uppercase; }
+      .page--light th, .page--light td { border-color: rgba(17, 23, 19, 0.18); }
+      .page--light th { color: #687169; }
+
+      .eyebrow {
+        margin-bottom: 4mm;
+        color: var(--green);
+        font-size: 7.5pt;
+        font-weight: 750;
+        text-transform: uppercase;
+      }
+
+      .lead {
+        max-width: 150mm;
+        color: #d7ddd5;
+        font-size: 14pt;
+        line-height: 1.4;
+      }
+
+      .page--light .lead { color: #374138; }
+
+      .muted { color: var(--muted); }
+      .page--light .muted { color: #646d65; }
+
+      .accent-green { color: var(--green); }
+      .accent-oxide { color: var(--oxide); }
+      .accent-ochre { color: var(--ochre); }
+      .accent-cyan { color: var(--cyan); }
+
+      .rule {
+        width: 100%;
+        height: 1px;
+        margin: 7mm 0;
+        background: var(--line);
+      }
+
+      .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; }
+      .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; }
+      .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; }
+      .split-wide { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 10mm; }
+
+      .block {
+        padding-top: 4mm;
+        border-top: 1px solid var(--line);
+      }
+
+      .page--light .block { border-color: rgba(17, 23, 19, 0.18); }
+
+      .metric strong {
+        display: block;
+        margin-bottom: 1mm;
+        font-size: 20pt;
+        font-weight: 450;
+      }
+
+      .metric span { color: var(--muted); font-size: 7.5pt; text-transform: uppercase; }
+      .page--light .metric span { color: #697169; }
+
+      .quote {
+        max-width: 164mm;
+        margin: 15mm 0 0;
+        font-size: 25pt;
+        font-weight: 420;
+        line-height: 1.12;
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        margin: 7mm 0;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .flow > div {
+        position: relative;
+        min-height: 27mm;
+        padding: 5mm 3mm;
+        border-right: 1px solid var(--line);
+      }
+
+      .flow > div:last-child { border-right: 0; }
+      .flow b { display: block; margin-bottom: 2mm; font-size: 8pt; text-transform: uppercase; }
+      .flow span { color: var(--muted); font-size: 7.8pt; }
+
+      .architecture {
+        display: grid;
+        grid-template-columns: 1fr 11mm 1fr;
+        gap: 3mm;
+        align-items: stretch;
+        margin-top: 8mm;
+      }
+
+      .arch-column { display: grid; gap: 3mm; }
+      .arch-node {
+        padding: 4mm;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.025);
+      }
+
+      .arch-node b { display: block; margin-bottom: 1.5mm; font-size: 8pt; text-transform: uppercase; }
+      .arch-node span { color: var(--muted); font-size: 8.4pt; }
+      .arch-arrow { display: grid; place-items: center; color: var(--green); font-size: 20pt; }
+
+      .art-strip {
+        display: grid;
+        grid-template-columns: 1.1fr 0.8fr 1fr;
+        height: 74mm;
+        margin: 8mm 0;
+        overflow: hidden;
+      }
+
+      .art-strip img { width: 100%; height: 100%; object-fit: cover; }
+
+      .texture-stack {
+        position: relative;
+        height: 102mm;
+        margin-top: 8mm;
+      }
+
+      .texture-card {
+        position: absolute;
+        width: 58mm;
+        height: 82mm;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        box-shadow: 0 8mm 18mm rgba(0, 0, 0, 0.34);
+      }
+
+      .texture-card img { width: 100%; height: 100%; object-fit: cover; }
+      .texture-card:nth-child(1) { left: 5mm; top: 13mm; transform: rotate(-5deg); }
+      .texture-card:nth-child(2) { left: 54mm; top: 3mm; transform: rotate(2deg); }
+      .texture-card:nth-child(3) { left: 105mm; top: 17mm; transform: rotate(6deg); }
+
+      .texture-label {
+        position: absolute;
+        left: 3mm;
+        bottom: 3mm;
+        padding: 1.5mm 2mm;
+        background: rgba(3, 6, 4, 0.76);
+        font-size: 7pt;
+        text-transform: uppercase;
+      }
+
+      .timeline {
+        position: relative;
+        height: 62mm;
+        margin: 12mm 0 7mm;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .timeline::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 31mm;
+        height: 1px;
+        background: var(--line);
+      }
+
+      .timeline-point {
+        position: absolute;
+        top: 27.5mm;
+        width: 7mm;
+        height: 7mm;
+        border: 1px solid var(--green);
+        border-radius: 50%;
+        background: var(--black);
+      }
+
+      .timeline-point span {
+        position: absolute;
+        left: 50%;
+        width: 34mm;
+        transform: translateX(-50%);
+        text-align: center;
+        font-size: 7.5pt;
+      }
+
+      .timeline-point span:first-child { bottom: 10mm; color: var(--white); }
+      .timeline-point span:last-child { top: 10mm; color: var(--muted); }
+
+      .handoff-frames {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 2mm;
+        height: 62mm;
+        margin: 9mm 0 8mm;
+      }
+
+      .handoff-frame {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,.18);
+        background: #0d120e;
+      }
+
+      .handoff-frame img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .handoff-frame img:last-of-type { clip-path: polygon(0 0, 0 0, 0 100%, 0 100%); }
+      .handoff-frame:nth-child(2) img:last-of-type { clip-path: polygon(0 0, 34% 0, 18% 100%, 0 100%); }
+      .handoff-frame:nth-child(3) img:last-of-type { clip-path: polygon(0 0, 64% 0, 48% 100%, 0 100%); }
+      .handoff-frame:nth-child(4) img:last-of-type { clip-path: polygon(0 0, 88% 0, 76% 100%, 0 100%); }
+      .handoff-frame:nth-child(5) img:last-of-type { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+
+      .handoff-frame span {
+        position: absolute;
+        z-index: 2;
+        left: 2mm;
+        bottom: 2mm;
+        padding: 1mm 1.5mm;
+        background: rgba(2,5,3,.75);
+        color: #edf2eb;
+        font-size: 6.5pt;
+      }
+
+      .signal-list { display: grid; gap: 3mm; margin-top: 7mm; }
+      .signal-row {
+        display: grid;
+        grid-template-columns: 30mm 1fr 31mm;
+        gap: 4mm;
+        align-items: center;
+        padding-bottom: 3mm;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .signal-row b { font-size: 8pt; text-transform: uppercase; }
+      .signal-row p { margin: 0; color: var(--muted); font-size: 8.4pt; }
+      .signal-row span { color: var(--green); font-size: 7.5pt; text-align: right; }
+
+      .checklist { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 8mm; padding: 0; list-style: none; }
+      .checklist li { position: relative; padding: 0 0 2.4mm 6mm; border-bottom: 1px solid var(--line); }
+      .checklist li::before { content: "+"; position: absolute; left: 0; color: var(--green); font-weight: 800; }
+
+      .cover-bg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: 58% 50%;
+        filter: saturate(1.08) contrast(1.06);
+      }
+
+      .cover-veil {
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(90deg, rgba(2,5,3,.96) 0%, rgba(2,5,3,.78) 42%, rgba(2,5,3,.12) 77%),
+          linear-gradient(180deg, rgba(2,5,3,.12), rgba(2,5,3,.76));
+      }
+
+      .cover-copy {
+        position: absolute;
+        z-index: 2;
+        left: 17mm;
+        bottom: 26mm;
+        width: 124mm;
+      }
+
+      .cover-copy h1 { margin-bottom: 8mm; font-size: 44pt; }
+      .cover-copy .lead { max-width: 102mm; font-size: 13pt; }
+
+      .cover-index {
+        position: absolute;
+        z-index: 2;
+        right: 15mm;
+        top: 16mm;
+        color: rgba(245,247,241,.74);
+        font-size: 7pt;
+        text-align: right;
+        text-transform: uppercase;
+      }
+
+      .full-image {
+        width: 100%;
+        height: 112mm;
+        object-fit: cover;
+        object-position: center;
+        border: 1px solid var(--line);
+      }
+
+      .footer {
+        position: absolute;
+        z-index: 4;
+        left: 17mm;
+        right: 17mm;
+        bottom: 8mm;
+        display: flex;
+        justify-content: space-between;
+        padding-top: 2.5mm;
+        border-top: 1px solid var(--line);
+        color: rgba(235, 241, 232, 0.52);
+        font-size: 6.5pt;
+        text-transform: uppercase;
+      }
+
+      .page--light .footer {
+        border-color: rgba(17, 23, 19, 0.18);
+        color: #707970;
+      }
+
+      .page-number { color: var(--green); }
+
+      @page { size: A4; margin: 0; }
+
+      @media screen {
+        body:has(.page:target) .page:not(:target) { display: none; }
+        body:has(.page:target) .page:target { margin-bottom: 0; }
+      }
+
+      @media print {
+        html, body { background: transparent; }
+        body { padding: 0; }
+        .page { margin: 0; box-shadow: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="page" id="page-01">
+      <img class="cover-bg" src="assets/living-background-environment/artist-stage-home-awake.webp" alt="" />
+      <div class="cover-veil"></div>
+      <div class="cover-index">ARTIST STAGE / REUSABLE SYSTEM<br />REFERENCE EDITION / 2026</div>
+      <div class="cover-copy">
+        <p class="eyebrow">Universal cinematic environment tool / v1.1</p>
+        <h1>Living<br />Background<br />Environment</h1>
+        <p class="lead">Як перетворити реальні зображення проекту на живий матеріальний простір: пам'ять, тиск, світло, рух і безперервність маршруту.</p>
+      </div>
+      <div class="footer"><span>Concept / architecture / implementation / reuse</span><span class="page-number">01</span></div>
+    </section>
+
+    <section class="page page--light" id="page-02">
+      <div class="page-inner">
+        <p class="eyebrow">01 / Definition</p>
+        <h2>Не фон. Середовище, породжене роботою.</h2>
+        <p class="lead">LBE перетворює реальне зображення на часовий простір, у якому pigment, memory, pressure і directed light працюють як одна система.</p>
+        <p class="quote">“Картина не розміщується поверх середовища. Картина <span class="accent-oxide">генерує</span> середовище.”</p>
+        <div class="rule"></div>
+        <div class="grid-3">
+          <div class="block"><h3>Матеріал</h3><p>Оригінальний живопис стає джерелом кольору, зерна, лінії й просторового рельєфу.</p></div>
+          <div class="block"><h3>Час</h3><p>Поле рухається автономно. Взаємодія змінює його енергію, але не є єдиною причиною життя.</p></div>
+          <div class="block"><h3>Режисура</h3><p>Активна робота, copy, фон і світло мають спільну домінанту та одну експозиційну логіку.</p></div>
+        </div>
+        <div class="art-strip">
+          <img src="../public/generated/artworks/test-painting-2/mt-10-640.webp" alt="MT-10" />
+          <img src="../public/generated/artworks/test-painting-2/mt-3-640.webp" alt="MT-3" />
+          <img src="../public/generated/artworks/test-painting-2/mt-1-640.webp" alt="MT-1" />
+        </div>
+        <p class="muted">Reference source: authentic ARTIST STAGE paintings. Magnification and abstraction preserve authorship; unrelated generated imagery is outside the contract.</p>
+      </div>
+      <div class="footer"><span>Living Background Environment</span><span class="page-number">02</span></div>
+    </section>
+
+    <section class="page" id="page-03">
+      <div class="page-inner">
+        <p class="eyebrow">02 / Design principles</p>
+        <h2>П'ять правил, які утримують ілюзію цілісного живого простору.</h2>
+        <div class="grid-2">
+          <div class="block"><h3>01. Source integrity</h3><p>Тільки канонічні зображення проекту. Матеріал можна збільшувати, змішувати й рефрагувати, але не підміняти.</p></div>
+          <div class="block"><h3>02. Continuous life</h3><p>Поле змінюється без вводу. Після scroll або pointer impulse воно повертається до autonomous breathing.</p></div>
+          <div class="block"><h3>03. Cinematic hierarchy</h3><p>Foreground залишається чітким. Background абстрагується. Світло не розподіляється рівномірно.</p></div>
+          <div class="block"><h3>04. Spatial continuity</h3><p>Hero та довга editorial route мають одну експозицію, без сірих секцій, меж і різких atmosphere cuts.</p></div>
+          <div class="block"><h3>05. Reversibility</h3><p>WebGL не є єдиною точкою відмови. Reduced motion і fallback зберігають живу матеріальну присутність.</p></div>
+          <div class="block"><h3>Не робити</h3><p class="muted">Static crop, cursor dent, fast opacity crossfade, archive-wide texture preload, flat route illumination.</p></div>
+        </div>
+        <div class="rule"></div>
+        <div class="grid-4">
+          <div class="metric"><strong>2</strong><span>textures at rest</span></div>
+          <div class="metric"><strong>3</strong><span>during handoff</span></div>
+          <div class="metric"><strong>5.2s</strong><span>reference transition</span></div>
+          <div class="metric"><strong>320ms</strong><span>intent dwell</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Principles before effects</span><span class="page-number">03</span></div>
+    </section>
+
+    <section class="page" id="page-04">
+      <div class="page-inner">
+        <p class="eyebrow">03 / Architecture</p>
+        <h2>Одна система, три синхронізовані площини.</h2>
+        <p class="lead">WebGL material, narrative target director і DOM exposure director споживають одну активну artwork identity.</p>
+        <div class="architecture">
+          <div class="arch-column">
+            <div class="arch-node"><b>Artwork data</b><span>slug / responsive source / palette / canonical route</span></div>
+            <div class="arch-node"><b>Target director</b><span>Hero / scroll dominance / focus / route return</span></div>
+            <div class="arch-node"><b>Texture lifecycle</b><span>current / memory / temporary incoming / disposal</span></div>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-column">
+            <div class="arch-node"><b>WebGL material</b><span>crop / FBM current / memory / handoff / relief / finish</span></div>
+            <div class="arch-node"><b>Presence adapter</b><span>settling / contemplating / dreaming / waking</span></div>
+            <div class="arch-node"><b>DOM light director</b><span>key / negative fill / quiet pocket / wrapper veil</span></div>
+          </div>
+        </div>
+        <div class="rule"></div>
+        <h3>Reference implementation</h3>
+        <pre>HomePrologueField.astro              WebGL renderer + shader + lifecycle
+HomeLivingEditorialSurface.tsx      dominance + dwell + light target
+homeLivingField.ts                  authored spatial route
+index.astro                         continuity bridge + exposure layers
+CinematicIdleField.astro            global presence behavior</pre>
+      </div>
+      <div class="footer"><span>Portable core + project adapter</span><span class="page-number">04</span></div>
+    </section>
+
+    <section class="page page--light" id="page-05">
+      <div class="page-inner">
+        <p class="eyebrow">04 / Experience grammar</p>
+        <h2>Discrete state керує пам'яттю. Continuous signals керують поведінкою.</h2>
+        <div class="flow">
+          <div><b>Loading</b><span>current source first</span></div>
+          <div><b>Resting</b><span>current + memory</span></div>
+          <div><b>Transitioning</b><span>+ temporary incoming</span></div>
+          <div><b>Settling</b><span>roles rotate / old memory disposed</span></div>
+          <div><b>Resting</b><span>two textures again</span></div>
+        </div>
+        <div class="grid-2">
+          <div>
+            <h3>Continuous signals</h3>
+            <ul>
+              <li>internal time and crop journey;</li>
+              <li>pointer lean and interaction energy;</li>
+              <li>scroll progress, velocity and direction;</li>
+              <li>presence depth and dream act;</li>
+              <li>dominant artwork target.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Signal rule</h3>
+            <p>Raw events never drive pixels directly. Every input is clamped, damped and translated into a broad material response.</p>
+            <pre>velocity  -> short impulse
+journey   -> slow crop migration
+target    -> 320ms intent dwell
+presence  -> pressure / aperture depth
+pointer   -> broad field lean</pre>
+          </div>
+        </div>
+        <img class="full-image" src="assets/living-background-environment/artist-stage-home-reference.webp" alt="ARTIST STAGE living background in a deep presence state" />
+      </div>
+      <div class="footer"><span>State is authored; motion is continuous</span><span class="page-number">05</span></div>
+    </section>
+
+    <section class="page" id="page-06">
+      <div class="page-inner">
+        <p class="eyebrow">05 / Texture lifecycle</p>
+        <h2>Пам'ять без texture-cache вибуху.</h2>
+        <p class="lead">Попередня робота залишається матеріальним слідом. Наступна існує в GPU лише на час переходу.</p>
+        <div class="texture-stack">
+          <div class="texture-card"><img src="../public/generated/artworks/test-painting-2/mt-1-640.webp" alt="Memory" /><span class="texture-label">Memory / previous</span></div>
+          <div class="texture-card"><img src="../public/generated/artworks/test-painting-2/mt-3-640.webp" alt="Current" /><span class="texture-label">Current / active</span></div>
+          <div class="texture-card"><img src="../public/generated/artworks/test-painting-2/mt-10-640.webp" alt="Incoming" /><span class="texture-label">Incoming / temporary</span></div>
+        </div>
+        <div class="grid-3">
+          <div class="block"><h3>Rest</h3><p><strong>2</strong> resident textures. Current and previous memory.</p></div>
+          <div class="block"><h3>Handoff</h3><p><strong>3</strong> resident textures. Incoming is temporary.</p></div>
+          <div class="block"><h3>Finish</h3><p>Previous memory disposed. Incoming becomes current.</p></div>
+        </div>
+        <pre>memory  &lt;- previous current
+current &lt;- incoming
+dispose &lt;- previous memory</pre>
+      </div>
+      <div class="footer"><span>Two at rest / three in transition</span><span class="page-number">06</span></div>
+    </section>
+
+    <section class="page page--light" id="page-07">
+      <div class="page-inner">
+        <p class="eyebrow">06 / Shader anatomy</p>
+        <h2>Material pipeline замість набору випадкових ефектів.</h2>
+        <div class="flow">
+          <div><b>01 / UV</b><span>cover + aspect + crop journey</span></div>
+          <div><b>02 / Flow</b><span>multi-scale FBM current</span></div>
+          <div><b>03 / Layers</b><span>current / memory / incoming</span></div>
+          <div><b>04 / Relief</b><span>fronts / ridges / detail return</span></div>
+          <div><b>05 / Finish</b><span>exposure / vignette / split</span></div>
+        </div>
+        <div class="grid-2">
+          <div class="block"><h3>Autonomous current</h3><p>Low-frequency waves with different speeds create one coherent pressure field. The background remains visibly alive at rest.</p></div>
+          <div class="block"><h3>Crop migration</h3><p>A slow route journey changes the dominant pigment fragment. Deformation alone cannot rescue a static wallpaper crop.</p></div>
+          <div class="block"><h3>Memory apertures</h3><p>The prior work reappears through moving, irregular regions instead of a global crossfade or second rectangle.</p></div>
+          <div class="block"><h3>Detail return</h3><p>Fine source sampling returns after broad warp, protecting grain, charcoal and brush structure from blur.</p></div>
+          <div class="block"><h3>Directional relief</h3><p>Luminance differences, ridges and palette light create fronts and folds without pretending to be literal 3D.</p></div>
+          <div class="block"><h3>Chromatic restraint</h3><p>Color separation is subtle, temporal and subordinate to source integrity. No digital RGB spectacle.</p></div>
+        </div>
+        <div class="art-strip">
+          <img src="../public/generated/artworks/test-painting-2/mt-6-640.webp" alt="MT-6" />
+          <img src="../public/generated/artworks/test-painting-2/mt-9-640.webp" alt="MT-9" />
+          <img src="../public/generated/artworks/test-painting-2/mt-5-640.webp" alt="MT-5" />
+        </div>
+      </div>
+      <div class="footer"><span>Preserve the hand inside the shader</span><span class="page-number">07</span></div>
+    </section>
+
+    <section class="page" id="page-08">
+      <div class="page-inner">
+        <p class="eyebrow">07 / Cinematic handoff</p>
+        <h2>Перехід має переживатися як зміна матеріалу, а не зміна слайда.</h2>
+        <div class="handoff-frames" aria-label="Five stages of a current-to-incoming material handoff">
+          <div class="handoff-frame"><img src="../public/generated/artworks/test-painting-2/mt-3-640.webp" alt="" /><img src="../public/generated/artworks/test-painting-2/mt-10-640.webp" alt="" /><span>0.0s / current</span></div>
+          <div class="handoff-frame"><img src="../public/generated/artworks/test-painting-2/mt-3-640.webp" alt="" /><img src="../public/generated/artworks/test-painting-2/mt-10-640.webp" alt="" /><span>1.3s / opening</span></div>
+          <div class="handoff-frame"><img src="../public/generated/artworks/test-painting-2/mt-3-640.webp" alt="" /><img src="../public/generated/artworks/test-painting-2/mt-10-640.webp" alt="" /><span>2.6s / pressure</span></div>
+          <div class="handoff-frame"><img src="../public/generated/artworks/test-painting-2/mt-3-640.webp" alt="" /><img src="../public/generated/artworks/test-painting-2/mt-10-640.webp" alt="" /><span>3.9s / release</span></div>
+          <div class="handoff-frame"><img src="../public/generated/artworks/test-painting-2/mt-3-640.webp" alt="" /><img src="../public/generated/artworks/test-painting-2/mt-10-640.webp" alt="" /><span>5.2s / rest</span></div>
+        </div>
+        <div class="grid-2">
+          <div>
+            <h3>Reference curve</h3>
+            <pre>const t = clamp((now - startedAt) / 5200, 0, 1);
+const eased = t * t * t *
+  (t * (t * 6 - 15) + 10);</pre>
+          </div>
+          <div>
+            <h3>Visible choreography</h3>
+            <ul>
+              <li>broad diagonal transition coordinate;</li>
+              <li>FBM irregularity and wide reveal band;</li>
+              <li>opposing current/incoming shear;</li>
+              <li>midpoint pressure peak;</li>
+              <li>temporary pigment boundary edge.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="rule"></div>
+        <p class="lead">Головна умова якості: усі transition-only складові повинні повністю зникнути у resting state. Інакше пульсація читається як flicker або rendering bug.</p>
+      </div>
+      <div class="footer"><span>Reference duration / 5200ms</span><span class="page-number">08</span></div>
+    </section>
+
+    <section class="page page--light" id="page-09">
+      <div class="page-inner">
+        <p class="eyebrow">08 / Interaction direction</p>
+        <h2>Взаємодія додає енергію. Вона не ламає поверхню в точці курсора.</h2>
+        <div class="signal-list">
+          <div class="signal-row"><b>Pointer</b><p>Broad global lean, velocity-derived energy, smooth return.</p><span>≈ 0.007 × 0.005 UV</span></div>
+          <div class="signal-row"><b>Scroll velocity</b><p>Short pressure impulse that decays quickly after movement.</p><span>fast damping</span></div>
+          <div class="signal-row"><b>Scroll journey</b><p>Slow crop migration and route-depth progression.</p><span>slow damping</span></div>
+          <div class="signal-row"><b>Direction</b><p>Biases shear/front movement without reversing the whole shader.</p><span>-1 / +1</span></div>
+          <div class="signal-row"><b>Dominance</b><p>Changes the target only after the candidate remains authored and visible.</p><span>320ms dwell</span></div>
+          <div class="signal-row"><b>Presence</b><p>Controls pressure, aperture depth and exposure targets.</p><span>continuous 0..1</span></div>
+        </div>
+        <div class="rule"></div>
+        <div class="grid-2">
+          <div class="block"><h3>Avoid cursor dents</h3><p>Радіальне спотворення в місці курсора видає техніку й руйнує відчуття цілісної мембрани.</p></div>
+          <div class="block"><h3>Separate intent from motion</h3><p>Scroll crossing не дорівнює вибору. Короткий dwell захищає п'ятисекундний handoff від випадкових запусків.</p></div>
+        </div>
+        <p class="quote">Raw input → clamp → damp → authored material response.</p>
+      </div>
+      <div class="footer"><span>Interaction without a visible joint</span><span class="page-number">09</span></div>
+    </section>
+
+    <section class="page" id="page-10">
+      <div class="page-inner">
+        <p class="eyebrow">09 / Directed exposure</p>
+        <h2>WebGL створює матеріал. DOM lighting створює сцену.</h2>
+        <div class="grid-2">
+          <div>
+            <h3>Viewport light director</h3>
+            <ul>
+              <li>sticky key light follows dominant artwork x-axis;</li>
+              <li>opposing negative fill creates depth;</li>
+              <li>copy receives a dark soft quiet pocket;</li>
+              <li>artwork wrappers carry edge veil and local sheen;</li>
+              <li>active work gets stronger separation than peripheral works.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Image stability contract</h3>
+            <p>Canonical artwork pixels remain filter-neutral. Exposure lives in wrappers and pseudo-layers, preserving real color, paper and detail.</p>
+            <pre>artwork image: no destructive filter
+wrapper: shadow + edge veil
+::before: local pigment pocket
+::after: key reflection / sheen</pre>
+          </div>
+        </div>
+        <div class="rule"></div>
+        <h3>Hero → editorial continuity</h3>
+        <p class="lead">A 38rem masked bridge continues the outgoing Hero exposure, then dissolves. No horizontal border, gray panel or near-opaque section surface may cut the fixed field.</p>
+        <div class="flow">
+          <div><b>Hero</b><span>active artwork + full material field</span></div>
+          <div><b>Bridge</b><span>same exposure / masked dissolve</span></div>
+          <div><b>Route entry</b><span>copy pocket appears</span></div>
+          <div><b>Dominance</b><span>key light follows work</span></div>
+          <div><b>Chapter</b><span>peripheral half-light</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Light directs attention, not decoration</span><span class="page-number">10</span></div>
+    </section>
+
+    <section class="page page--light" id="page-11">
+      <div class="page-inner">
+        <p class="eyebrow">10 / Presence integration</p>
+        <h2>Idle не зупиняє сторінку. Він змінює її тип життя.</h2>
+        <div class="timeline">
+          <div class="timeline-point" style="left: 2%"><span>Awake</span><span>clear route</span></div>
+          <div class="timeline-point" style="left: 24%"><span>Settling</span><span>lower energy</span></div>
+          <div class="timeline-point" style="left: 47%"><span>Contemplating</span><span>deeper memory</span></div>
+          <div class="timeline-point" style="left: 70%"><span>Dreaming</span><span>authored acts</span></div>
+          <div class="timeline-point" style="left: 94%"><span>Waking</span><span>damped return</span></div>
+        </div>
+        <div class="grid-2">
+          <div class="block"><h3>One director</h3><p>LBE consumes the global presence state. It does not create a competing timer or restart its shader on every phase.</p></div>
+          <div class="block"><h3>Continuous waves</h3><p>Dream acts change targets for pressure, aperture and light. Temporal waves remain continuous across state boundaries.</p></div>
+          <div class="block"><h3>No image blink</h3><p>Canonical images never oscillate toward zero opacity. Deep idle belongs to material and text behavior.</p></div>
+          <div class="block"><h3>Wake through damping</h3><p>Ordinary activity restores clarity progressively. Hidden-tab time is excluded from active transitions.</p></div>
+        </div>
+        <p class="quote">Stillness becomes another authored chapter, not the end of animation.</p>
+      </div>
+      <div class="footer"><span>Presence Director compatible</span><span class="page-number">11</span></div>
+    </section>
+
+    <section class="page" id="page-12">
+      <div class="page-inner">
+        <p class="eyebrow">11 / Portable contract</p>
+        <h2>Project-specific input, neutral renderer API.</h2>
+        <div class="grid-2">
+          <div>
+            <h3>Texture model</h3>
+            <pre>type LivingBackgroundTexture = {
+  slug: string;
+  src: string;
+  width?: number;
+  height?: number;
+  palette?: {
+    field: string;
+    glow: string;
+    accent: string;
+  };
+};</pre>
+          </div>
+          <div>
+            <h3>Controller</h3>
+            <pre>type LivingBackgroundController = {
+  setTarget(detail): void;
+  setPresence(depth, act?): void;
+  setJourney(progress,
+    velocity?, direction?): void;
+  getState(): DebugState;
+  destroy(): void;
+};</pre>
+          </div>
+        </div>
+        <h3>Neutral target event</h3>
+        <pre>window.dispatchEvent(
+  new CustomEvent("living-background:target", {
+    detail: { slug: "work-03", source: "scroll" }
+  })
+);</pre>
+        <div class="rule"></div>
+        <p class="lead">Renderer не повинен знати, чи target прийшов із carousel, scroll chapter, CMS route, installation controller або keyboard navigation.</p>
+        <p class="muted">ARTIST STAGE adapter currently maps this contract to <code>artist-stage:home-prologue-target</code>.</p>
+      </div>
+      <div class="footer"><span>Reusable core / replaceable adapter</span><span class="page-number">12</span></div>
+    </section>
+
+    <section class="page page--light" id="page-13">
+      <div class="page-inner">
+        <p class="eyebrow">12 / Adaptation</p>
+        <h2>Одна технологія, різна драматургія.</h2>
+        <table>
+          <thead><tr><th>Context</th><th>Motion</th><th>Transition</th><th>Memory</th><th>Lighting</th></tr></thead>
+          <tbody>
+            <tr><td>Artist site</td><td>slow pigment current</td><td>4.8-6.2s</td><td>previous work</td><td>authored key + copy pocket</td></tr>
+            <tr><td>Museum archive</td><td>very slow / low contrast</td><td>5.5-7s</td><td>previous object</td><td>neutral directional exposure</td></tr>
+            <tr><td>Fashion editorial</td><td>stronger flow / chroma</td><td>3.8-5.2s</td><td>previous look</td><td>narrow moving key</td></tr>
+            <tr><td>Performance</td><td>pressure responsive</td><td>3.5-5.5s</td><td>prior scene</td><td>high-contrast cues</td></tr>
+            <tr><td>Product story</td><td>subtle surface drift</td><td>3.2-4.8s</td><td>previous material</td><td>object-safe separation</td></tr>
+          </tbody>
+        </table>
+        <div class="rule"></div>
+        <h3>Tune in this order</h3>
+        <div class="flow">
+          <div><b>01</b><span>source crop</span></div>
+          <div><b>02</b><span>exposure hierarchy</span></div>
+          <div><b>03</b><span>autonomous speed</span></div>
+          <div><b>04</b><span>handoff duration</span></div>
+          <div><b>05</b><span>interaction + idle</span></div>
+        </div>
+        <p class="quote">Слабкий результат частіше спричинений flat exposure або poor crop, а не недостатньою кількістю noise.</p>
+      </div>
+      <div class="footer"><span>Adapt the direction, preserve the contract</span><span class="page-number">13</span></div>
+    </section>
+
+    <section class="page" id="page-14">
+      <div class="page-inner">
+        <p class="eyebrow">13 / Production contract</p>
+        <h2>Performance, access і fallback є частиною art direction.</h2>
+        <div class="grid-3">
+          <div class="block">
+            <h3>Performance</h3>
+            <ul>
+              <li>responsive 1400-2400px assets;</li>
+              <li>bounded DPR;</li>
+              <li>2/3 texture policy;</li>
+              <li>clamped frame delta;</li>
+              <li>resource disposal;</li>
+              <li>no archive preload.</li>
+            </ul>
+          </div>
+          <div class="block">
+            <h3>Accessibility</h3>
+            <ul>
+              <li>semantic content outside canvas;</li>
+              <li>keyboard/touch parity;</li>
+              <li>no essential motion encoding;</li>
+              <li>no flashes;</li>
+              <li>stable focus and fixed controls.</li>
+            </ul>
+          </div>
+          <div class="block">
+            <h3>Fallback</h3>
+            <ul>
+              <li>artwork-derived cover;</li>
+              <li>slow autonomous drift;</li>
+              <li>palette veil;</li>
+              <li>same route hierarchy;</li>
+              <li>memory failure never blocks current.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="rule"></div>
+        <div class="grid-4">
+          <div class="metric"><strong>140ms</strong><span>reduced frame interval</span></div>
+          <div class="metric"><strong>0.05</strong><span>reduced internal speed</span></div>
+          <div class="metric"><strong>0.82</strong><span>normal internal speed</span></div>
+          <div class="metric"><strong>sRGB</strong><span>texture color space</span></div>
+        </div>
+        <p class="lead" style="margin-top: 12mm">Reduced motion does not mean a frozen black background. It means a stable, low-frequency living material state.</p>
+      </div>
+      <div class="footer"><span>Resilient by design</span><span class="page-number">14</span></div>
+    </section>
+
+    <section class="page page--light" id="page-15">
+      <div class="page-inner">
+        <p class="eyebrow">14 / QA gate</p>
+        <h2>Живе середовище повинно бути вимірюваним.</h2>
+        <ul class="checklist">
+          <li>Field changes with no pointer or scroll input.</li>
+          <li>Foreground artwork stays crisp and legible.</li>
+          <li>No cursor-local seam or pressure joint.</li>
+          <li>Mid-transition frames remain continuous.</li>
+          <li>Transition artifacts disappear at rest.</li>
+          <li>Completed handoff returns to 2 textures.</li>
+          <li>Rapid targets retain only the latest queue.</li>
+          <li>Hero target restores after upward return.</li>
+          <li>No gray section seam after Hero.</li>
+          <li>Key light follows dominant artwork.</li>
+          <li>Hidden-tab time does not skip handoff.</li>
+          <li>Fallback remains alive without WebGL.</li>
+          <li>Reduced motion preserves readable presence.</li>
+          <li>No horizontal overflow on all target viewports.</li>
+          <li>No application console errors.</li>
+          <li>Build and route smoke checks pass.</li>
+        </ul>
+        <div class="rule"></div>
+        <h3>Debug surface</h3>
+        <pre>host.__artistStageHomePrologueState()
+// currentSlug / memorySlug / incomingSlug / loadedTextureCount
+// progress / journey / scrollVelocity / state
+
+host.__artistStageHomePrologueSample()
+// canvas size / time-separated checksum / pixel samples / internal time</pre>
+        <p class="lead">“Здається, фон застиг” стає перевіркою часу, checksum, state і resident texture count.</p>
+      </div>
+      <div class="footer"><span>Visual judgment + runtime evidence</span><span class="page-number">15</span></div>
+    </section>
+
+    <section class="page" id="page-16">
+      <div class="page-inner">
+        <p class="eyebrow">15 / Integration recipe</p>
+        <h2>Від канонічних джерел до production-ready living field.</h2>
+        <div class="grid-2">
+          <ol>
+            <li>Вибрати 3-8 canonical source artworks.</li>
+            <li>Підготувати responsive compressed assets.</li>
+            <li>Визначити stable slugs і palette metadata.</li>
+            <li>Змонтувати fixed full-viewport renderer.</li>
+            <li>Реалізувати 2/3 texture lifecycle.</li>
+            <li>Побудувати autonomous flow до interaction.</li>
+            <li>Додати memory apertures.</li>
+          </ol>
+          <ol start="8">
+            <li>Побудувати completely settling handoff.</li>
+            <li>Підключити target adapter.</li>
+            <li>Додати scroll dominance + dwell.</li>
+            <li>Зрежисувати DOM light hierarchy.</li>
+            <li>Створити continuity bridge.</li>
+            <li>Підключити Presence Director.</li>
+            <li>Реалізувати fallback, debug hooks і QA.</li>
+          </ol>
+        </div>
+        <div class="rule"></div>
+        <h3>ARTIST STAGE reference parameters</h3>
+        <pre>Three.js / full-viewport plane / real 2000px WebP sources
+2 textures at rest / 3 during transition / 5200ms smootherstep
+320ms target dwell / 38rem continuity bridge / 344rem authored route
+broad pointer lean / scroll impulse / Presence Director integration</pre>
+        <p class="quote">LBE v1.0 готовий як патерн і reference implementation. Наступний технічний крок — extraction renderer core у незалежний пакет.</p>
+      </div>
+      <div class="footer"><span>Reference edition / 2026-07-15</span><span class="page-number">16</span></div>
+    </section>
+
+    <section class="page page--light" id="page-17">
+      <div class="page-inner">
+        <p class="eyebrow">16 / Route cinematography v2</p>
+        <h2>Share the living system, not one repeated visual result.</h2>
+        <p class="lead">Lifecycle, presence signals and resource discipline may be universal. Image construction, exposure, transition direction and even the decision to use WebGL must remain route-specific.</p>
+        <div class="grid-2">
+          <div class="block">
+            <h3>Process / trace field</h3>
+            <p>Softened charcoal sampling, line emphasis and a slow diagonal raking light. The handoff reads as a working layer entering the surface.</p>
+          </div>
+          <div class="block">
+            <h3>Artist / palimpsest</h3>
+            <p>Current and remembered paintings occupy localized dissolved planes. Independent warm and cool exposures create accumulated practice rather than wallpaper.</p>
+          </div>
+          <div class="block">
+            <h3>Contact / signal chamber</h3>
+            <p>A near-black field reveals pigment only through broad crossing corridors. Motion is slow and the contact action remains dominant.</p>
+          </div>
+          <div class="block">
+            <h3>Works / archive light</h3>
+            <p>No full-screen artwork renderer. Broad tone-aware museum light follows hover and focus, then retains a short memory while canonical images stay crisp.</p>
+          </div>
+        </div>
+        <div class="rule"></div>
+        <h3>Implementation rule</h3>
+        <pre>shared: 2 / 3 / 2 texture lifecycle, damped signals, reduced motion, teardown
+authored: UV construction, memory masks, light map, tempo, target policy
+exception: choose canvas-free light when WebGL duplicates or weakens the content</pre>
+        <p class="quote">Route identity is structural. A palette swap is not art direction.</p>
+      </div>
+      <div class="footer"><span>Route direction extension / 2026-07-15</span><span class="page-number">17</span></div>
+    </section>
+  </body>
+</html>

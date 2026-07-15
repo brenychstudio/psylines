@@ -1,7 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import AtmosphericBackdropRoot from "../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
 import ArtworkAtmosphereBridge from "../components/artwork-atmosphere/ArtworkAtmosphereBridge.astro";
+import HomePrologueField from "../components/home/HomePrologueField.astro";
 import HomeLivingEditorialSurface, {
   type HomeLivingEditorialItem,
 } from "../components/home/HomeLivingEditorialSurface";
@@ -49,6 +49,12 @@ const getWorkImageSrcSet = (work: HomeFieldWork) => {
   return getResponsivePublicImage(resolvePublicAsset(assetPath) ?? assetPath, { defaultWidth: 960 }).srcset ?? "";
 };
 
+const getWorkFieldTextureSrc = (work: HomeFieldWork) => {
+  const visualWork = work as HomeVisualWork;
+  const assetPath = readAssetSrc(visualWork.image) || readAssetSrc(visualWork.cover);
+  return getResponsivePublicImage(resolvePublicAsset(assetPath) ?? assetPath, { defaultWidth: 2000 }).src;
+};
+
 const getWorkImageAlt = (work: HomeFieldWork) => {
   const visualWork = work as HomeVisualWork;
   return readAssetAlt(visualWork.image) || readAssetAlt(visualWork.cover) || work.title || "Selected artwork";
@@ -59,6 +65,14 @@ const getWorkContextLabel = (work: HomeFieldWork) => work.series?.title ?? "Inde
 const getWorkAtmosphereSlug = (work: HomeFieldWork) => work.meta?.atmosphereProfile || work.slug;
 
 const activeHandoffSlug = getWorkAtmosphereSlug(activeSelectedWork);
+const homePrologueTextures = homeLivingWorks.map((work) => ({
+  slug: work.slug,
+  src: getWorkFieldTextureSrc(work),
+}));
+const homePrologueMemorySlug =
+  homeLivingWorks.find((work) => work.slug === "mt-9")?.slug ??
+  homeLivingWorks.find((work) => work.slug !== activeSelectedWork.slug)?.slug ??
+  activeSelectedWork.slug;
 const livingDepths = ["hero", "near", "mid", "hero", "trace", "near", "mid", "near", "trace"] as const;
 const getLivingTone = (work: HomeFieldWork): HomeLivingEditorialItem["tone"] => {
   if (["mt-1", "mt-2", "mt-4", "mt-7", "mt-9", "mt-10", "quiet-red-interval"].includes(work.slug)) return "red";
@@ -110,29 +124,45 @@ const livingEditorialItems: HomeLivingEditorialItem[] = homeLivingWorks.map((wor
   description="A living collector field for selected manifestations, series, works, editions, originals, and spatial continuations."
   canonicalPath="/"
 >
-  <AtmosphericBackdropRoot />
   <ArtworkAtmosphereBridge slug={activeHandoffSlug} mode="home" />
-
-  <div class="home-manifestation-field" data-home-selected-field data-works-atmosphere-field>
+  <HomePrologueField
+    textures={homePrologueTextures}
+    initialSlug={activeSelectedWork.slug}
+    memorySlug={homePrologueMemorySlug}
+  />
+  <div
+    class="home-manifestation-field"
+    data-home-selected-field
+    data-works-atmosphere-field
+    data-cinematic-idle-root
+    data-cinematic-idle-delay="6400"
+    data-cinematic-idle-reduced-delay="10000"
+    data-cinematic-idle-wake-duration="3900"
+    data-cinematic-idle-settle-duration="3200"
+    data-cinematic-idle-dream-duration="8800"
+  >
     <section
       class="home-threshold-field"
       aria-label="ARTIST STAGE selected manifestations field"
       data-atmosphere-section="home-threshold"
     >
       <div class="home-threshold-copy">
-        <p class="home-kicker">AUTHORIAL PRACTICE / SELECTED MANIFESTATIONS</p>
-        <h1 class="home-title">Meta-bodies emerge as presences, not representations.</h1>
-        <p class="home-copy">
-          Enter a living field of selected works, authored series, object chambers, and collector routes.
+        <p class="home-kicker" data-cinematic-idle="detail">AUTHORIAL PRACTICE / LIVING MANIFESTATION FIELD</p>
+        <h1 class="home-title" data-cinematic-idle="anchor">
+          <span>ARTIST</span>
+          <span>STAGE</span>
+        </h1>
+        <p class="home-manifesto" data-cinematic-idle="voice">
+          Meta-bodies emerge as presences, not representations.
         </p>
-        <p class="home-secondary-line">
-          Selected manifestations from the current field form the threshold into the whole artwork system.
+        <p class="home-copy" data-cinematic-idle="voice">
+          A living artwork system of selected works, authored series, material traces, and spatial continuations.
         </p>
-        <p class="home-active-context" data-home-active-context>
+        <p class="home-active-context" data-home-active-context data-cinematic-idle="detail">
           {getWorkContextLabel(activeSelectedWork)}
         </p>
 
-        <nav class="home-route-signals" aria-label="Home routes">
+        <nav class="home-route-signals" aria-label="Home routes" data-cinematic-idle="action">
           <a href="/works" data-home-handoff-link data-atmosphere-handoff-slug={activeHandoffSlug}>
             Enter works field
           </a>
@@ -155,6 +185,7 @@ const livingEditorialItems: HomeLivingEditorialItem[] = homeLivingWorks.map((wor
         tabindex="0"
         data-home-hero-stage
       >
+        <p class="home-field-chapter" data-cinematic-idle="detail">FIELD 01 / OVERTURE</p>
         <a
           class="home-selected-plane home-selected-plane--active"
           href={`/works/${activeSelectedWork.slug}`}
@@ -181,6 +212,7 @@ const livingEditorialItems: HomeLivingEditorialItem[] = homeLivingWorks.map((wor
             decoding="async"
             data-cinematic-cover
             data-home-active-image
+            data-cinematic-idle="image"
           />
           <span data-home-active-caption>
             Active manifestation / {getWorkDisplayLabel(activeSelectedWork)}
@@ -224,8 +256,21 @@ const livingEditorialItems: HomeLivingEditorialItem[] = homeLivingWorks.map((wor
           ))}
         </div>
 
-        <p class="home-selected-field-hint">Scroll inside the field to shift works</p>
-        <button class="home-field-next" type="button" data-home-field-next aria-label="Continue to selected manifestations">
+        <aside class="home-field-register" aria-label="Current field state" data-cinematic-idle="detail">
+          <div>
+            <span>Field</span>
+            <strong>Active</strong>
+          </div>
+          <div>
+            <span>Work</span>
+            <strong data-home-active-register>{getWorkDisplayLabel(activeSelectedWork)}</strong>
+          </div>
+          <div>
+            <span>Manifestations</span>
+            <strong>{String(homeLivingWorks.length).padStart(2, "0")}</strong>
+          </div>
+        </aside>
+        <button class="home-field-next" type="button" data-home-field-next data-cinematic-idle="action" aria-label="Continue to selected manifestations">
           <span class="home-field-next__line" aria-hidden="true"></span>
           Next
         </button>
@@ -245,6 +290,7 @@ const livingEditorialItems: HomeLivingEditorialItem[] = homeLivingWorks.map((wor
     const activeImage = root.querySelector("[data-home-active-image]");
     const activeCaption = root.querySelector("[data-home-active-caption]");
     const activeContext = root.querySelector("[data-home-active-context]");
+    const activeRegister = root.querySelector("[data-home-active-register]");
     const activeObjectRoute = root.querySelector("[data-home-active-object-route]");
     const handoffLinks = root.querySelectorAll("[data-home-handoff-link]");
     const heroStage = root.querySelector("[data-home-hero-stage]");
@@ -451,6 +497,10 @@ const livingEditorialItems: HomeLivingEditorialItem[] = homeLivingWorks.map((wor
         activeContext.textContent = context;
       }
 
+      if (activeRegister) {
+        activeRegister.textContent = label;
+      }
+
       if (activeObjectRoute) {
         activeObjectRoute.setAttribute("href", `/works/${slug}`);
         activeObjectRoute.setAttribute("data-atmosphere-handoff-slug", atmosphere);
@@ -461,6 +511,15 @@ const livingEditorialItems: HomeLivingEditorialItem[] = homeLivingWorks.map((wor
       });
 
       syncActiveStates(slug);
+
+      window.dispatchEvent(
+        new CustomEvent("artist-stage:home-prologue-target", {
+          detail: {
+            slug,
+            source: "home-selected",
+          },
+        }),
+      );
 
       if (shouldAnimateImage) {
         activeImageAnimation?.cancel?.();
@@ -2330,10 +2389,17 @@ const livingEditorialItems: HomeLivingEditorialItem[] = homeLivingWorks.map((wor
       position: relative;
       right: auto;
       top: auto;
-      width: min(100%, 32rem);
+      box-sizing: border-box;
+      width: 100%;
+      max-width: 32rem;
       margin: 1.6rem auto 0;
       padding-left: 1rem;
       transform: none;
+      animation: homeFocusMobileCopyIn 620ms 80ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .home-living-focus[data-closing="true"] .home-living-focus__copy {
+      animation: homeFocusMobileCopyOut 380ms cubic-bezier(0.7, 0, 0.84, 0) both;
     }
 
     .home-living-focus__copy h3 {
@@ -2469,6 +2535,836 @@ const livingEditorialItems: HomeLivingEditorialItem[] = homeLivingWorks.map((wor
     to {
       opacity: 1;
       transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+
+  @keyframes homeFocusMobileCopyIn {
+    from {
+      opacity: 0;
+      filter: blur(10px);
+      transform: translate3d(0, 1rem, 0);
+    }
+
+    to {
+      opacity: 1;
+      filter: blur(0);
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes homeFocusMobileCopyOut {
+    from {
+      opacity: 1;
+      filter: blur(0);
+      transform: translate3d(0, 0, 0);
+    }
+
+    to {
+      opacity: 0;
+      filter: blur(8px);
+      transform: translate3d(0, 0.75rem, 0);
+    }
+  }
+
+  /* Home Living Overture - one material field from threshold to archive. */
+  .home-manifestation-field {
+    z-index: 1;
+    isolation: isolate;
+    padding: 0 0 clamp(3.5rem, 6vw, 6rem);
+    background: transparent;
+  }
+
+  .home-manifestation-field::before {
+    position: fixed;
+    inset: var(--site-header-height) 0 0;
+    height: auto;
+    z-index: -1;
+    background:
+      linear-gradient(90deg, rgba(2, 5, 4, 0.12), transparent 42%, rgba(2, 5, 4, 0.035)),
+      linear-gradient(180deg, rgba(2, 5, 4, 0.01), rgba(2, 5, 4, 0.1) 58%, rgba(2, 5, 4, 0.48));
+    opacity: 1;
+  }
+
+  .home-threshold-field {
+    min-height: calc(100svh - var(--site-header-height) - 2rem);
+    padding-inline: var(--site-frame-gutter);
+    grid-template-columns: minmax(350px, 40rem) minmax(0, 1fr);
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .home-threshold-field > * {
+    transform: none;
+  }
+
+  .home-threshold-field::before {
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(90deg, rgba(2, 5, 4, 0.9) 0%, rgba(2, 5, 4, 0.7) 24%, rgba(2, 5, 4, 0.24) 48%, rgba(2, 5, 4, 0.025) 68%, rgba(2, 5, 4, 0.1) 100%),
+      linear-gradient(180deg, rgba(2, 5, 4, 0.16), transparent 32%, transparent 72%, rgba(2, 5, 4, 0.52));
+    background-size: auto;
+    mask-image: none;
+    opacity: 1;
+  }
+
+  .home-threshold-copy {
+    z-index: 18;
+    width: min(40rem, 42vw);
+    max-width: 40rem;
+    background: none;
+  }
+
+  .home-threshold-copy::before {
+    inset: -12% -18% -12% -8%;
+    background: linear-gradient(90deg, rgba(2, 5, 4, 0.72), rgba(2, 5, 4, 0.24) 68%, transparent);
+    filter: blur(8px);
+  }
+
+  .home-kicker {
+    margin-bottom: clamp(0.85rem, 1.7svh, 1.15rem);
+    color: rgba(235, 240, 232, 0.58);
+  }
+
+  .home-title {
+    max-width: 8ch;
+    font-size: 6.2rem;
+    line-height: 0.82;
+    letter-spacing: 0;
+    text-wrap: nowrap;
+  }
+
+  .home-title span {
+    display: block;
+  }
+
+  .home-title span:last-child {
+    color: rgba(245, 248, 242, 0.72);
+  }
+
+  .home-manifesto {
+    max-width: 19ch;
+    margin: clamp(1rem, 2svh, 1.45rem) 0 0;
+    color: rgba(245, 248, 242, 0.88);
+    font-size: 1.75rem;
+    font-weight: 300;
+    line-height: 1.08;
+    text-wrap: balance;
+  }
+
+  .home-copy {
+    max-width: 35rem;
+    margin-top: clamp(0.8rem, 1.5svh, 1.1rem);
+    color: rgba(235, 240, 232, 0.62);
+    font-size: 0.98rem;
+    line-height: 1.55;
+  }
+
+  .home-active-context {
+    margin-top: 0.7rem;
+    color: rgba(235, 240, 232, 0.5);
+    letter-spacing: 0;
+  }
+
+  .home-route-signals {
+    margin-top: clamp(0.95rem, 2svh, 1.35rem);
+  }
+
+  .home-route-signals a,
+  .home-selected-route-actions a {
+    letter-spacing: 0;
+  }
+
+  .home-selected-field {
+    inset: 0 var(--site-frame-gutter) 0;
+    min-height: 100%;
+    cursor: default;
+    perspective-origin: 70% 48%;
+  }
+
+  .home-selected-field::after {
+    content: "";
+    position: absolute;
+    left: 48%;
+    right: 2%;
+    bottom: 5.1rem;
+    z-index: 1;
+    height: 1px;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(235, 240, 232, 0.12), transparent);
+  }
+
+  .home-selected-plane--active {
+    left: 71.5%;
+    top: 48.5%;
+    width: clamp(320px, 25.5vw, 560px);
+  }
+
+  .home-selected-orbit::before {
+    background: none;
+  }
+
+  .home-selected-plane--active,
+  .home-selected-plane--orbit {
+    isolation: isolate;
+  }
+
+  .home-selected-plane--active::before {
+    inset: -20% -24%;
+    background:
+      radial-gradient(ellipse at 50% 48%, rgba(1, 4, 3, 0.82) 0%, rgba(1, 4, 3, 0.58) 38%, rgba(1, 4, 3, 0.18) 62%, transparent 78%),
+      radial-gradient(ellipse at 52% 56%, var(--artwork-glow), transparent 64%);
+    opacity: 0.88;
+    filter: blur(14px);
+  }
+
+  .home-selected-plane--orbit::before {
+    inset: -28% -30%;
+    background:
+      radial-gradient(ellipse at 50% 50%, rgba(1, 4, 3, 0.76) 0%, rgba(1, 4, 3, 0.48) 42%, rgba(1, 4, 3, 0.12) 66%, transparent 80%),
+      radial-gradient(ellipse at 50% 55%, var(--artwork-shadow), transparent 72%);
+    opacity: 0.82;
+    filter: blur(12px);
+    transform: scale(1);
+  }
+
+  .home-selected-plane--active img {
+    max-height: min(66svh, 720px);
+    filter: saturate(1.04) brightness(1.015) contrast(1.025);
+    box-shadow:
+      0 48px 128px rgba(0, 0, 0, 0.56),
+      0 0 0 1px rgba(255, 255, 255, 0.07);
+  }
+
+  .home-selected-plane--orbit {
+    opacity: 0.54;
+  }
+
+  .home-selected-plane--orbit img {
+    filter: saturate(1.03) brightness(1.02) contrast(1.035);
+    box-shadow:
+      0 28px 82px rgba(0, 0, 0, 0.66),
+      0 0 0 1px rgba(245, 248, 242, 0.065);
+  }
+
+  .home-selected-plane--orbit[data-home-slot="-3"],
+  .home-selected-plane--orbit[data-home-slot="3"] {
+    opacity: 0.34;
+  }
+
+  .home-selected-plane--orbit[data-home-slot="-2"] {
+    opacity: 0.5;
+  }
+
+  .home-selected-plane--orbit[data-home-slot="-1"] {
+    left: 55%;
+    opacity: 0.76;
+  }
+
+  .home-selected-plane--orbit[data-home-slot="1"] {
+    left: 89%;
+    opacity: 0.72;
+  }
+
+  .home-selected-plane--orbit[data-home-slot="2"] {
+    opacity: 0.46;
+  }
+
+  .home-selected-plane--orbit.is-active,
+  .home-selected-plane--orbit[data-home-slot="active"] {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .home-selected-plane--orbit:not(.is-active):not([data-home-slot="active"]) {
+    visibility: visible;
+  }
+
+  .home-selected-plane--active span,
+  .home-selected-plane--orbit span,
+  .home-field-next,
+  .home-field-register,
+  .home-field-chapter {
+    letter-spacing: 0;
+  }
+
+  .home-field-chapter {
+    position: absolute;
+    top: clamp(1.25rem, 3svh, 2.5rem);
+    right: 0;
+    z-index: 15;
+    margin: 0;
+    color: rgba(235, 240, 232, 0.44);
+    font-size: 0.62rem;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .home-field-register {
+    position: absolute;
+    right: 0;
+    bottom: 5.75rem;
+    z-index: 15;
+    width: min(13rem, 15vw);
+    border-top: 1px solid rgba(235, 240, 232, 0.14);
+    border-left: 1px solid rgba(235, 240, 232, 0.08);
+    padding: 0.72rem 0 0 0.85rem;
+    color: rgba(235, 240, 232, 0.52);
+    font-size: 0.58rem;
+    text-transform: uppercase;
+  }
+
+  .home-field-register div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    padding: 0.34rem 0;
+  }
+
+  .home-field-register span {
+    color: rgba(235, 240, 232, 0.34);
+  }
+
+  .home-field-register strong {
+    color: rgba(245, 248, 242, 0.72);
+    font-weight: 500;
+  }
+
+  .home-field-next {
+    right: 0;
+    bottom: 1.55rem;
+  }
+
+  .home-living-editorial {
+    --home-field-cold: rgba(51, 106, 112, 0.12);
+    --home-field-warm: rgba(151, 91, 39, 0.1);
+    --home-light-x: 64%;
+    --home-light-strength: 0.56;
+    --home-light-opacity: 0.73;
+    --home-light-sheen-opacity: 0.56;
+    min-height: 344rem;
+    margin-top: 0;
+    border-top: 0;
+    background: transparent;
+  }
+
+  .home-living-editorial::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 0;
+    height: 38rem;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg, rgba(2, 5, 4, 0.9) 0%, rgba(2, 5, 4, 0.7) 24%, rgba(2, 5, 4, 0.24) 48%, rgba(2, 5, 4, 0.025) 68%, rgba(2, 5, 4, 0.1) 100%),
+      linear-gradient(180deg, rgba(2, 5, 4, 0.52), rgba(2, 5, 4, 0.3) 36%, rgba(2, 5, 4, 0.08) 72%, transparent 100%);
+    -webkit-mask-image: linear-gradient(180deg, black 0%, rgba(0, 0, 0, 0.82) 24%, rgba(0, 0, 0, 0.28) 70%, transparent 100%);
+    mask-image: linear-gradient(180deg, black 0%, rgba(0, 0, 0, 0.82) 24%, rgba(0, 0, 0, 0.28) 70%, transparent 100%);
+  }
+
+  .home-living-editorial__atmosphere {
+    z-index: 0;
+    overflow: clip;
+    background:
+      linear-gradient(96deg, rgba(1, 4, 3, 0.7) 0%, rgba(1, 4, 3, 0.38) 18%, transparent 46%, transparent 74%, rgba(1, 4, 3, 0.3) 100%),
+      linear-gradient(180deg, transparent 0%, rgba(1, 4, 3, 0.08) 18%, rgba(1, 4, 3, 0.2) 58%, rgba(1, 4, 3, 0.32) 100%);
+    -webkit-mask-image: linear-gradient(
+      180deg,
+      transparent 0,
+      rgba(0, 0, 0, 0.08) 8rem,
+      black 34rem,
+      black calc(100% - 28rem),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      180deg,
+      transparent 0,
+      rgba(0, 0, 0, 0.08) 8rem,
+      black 34rem,
+      black calc(100% - 28rem),
+      transparent 100%
+    );
+  }
+
+  .home-living-editorial__light {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: 100svh;
+    pointer-events: none;
+    transform-origin: var(--home-light-x) 50%;
+    background:
+      radial-gradient(
+        ellipse 46vw 72vh at var(--home-light-x) 48%,
+        color-mix(in srgb, var(--artwork-glow), white 7%) 0%,
+        color-mix(in srgb, var(--artwork-glow), transparent 46%) 34%,
+        transparent 74%
+      ),
+      radial-gradient(
+        ellipse 24vw 62vh at calc(var(--home-light-x) + 4%) 46%,
+        color-mix(in srgb, var(--artwork-accent), transparent 84%) 0%,
+        transparent 76%
+      );
+    opacity: var(--home-light-opacity);
+    animation: homeEditorialLightBreath 18s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+
+  .home-living-editorial__light::before,
+  .home-living-editorial__light::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .home-living-editorial__light::before {
+    background:
+      radial-gradient(
+        ellipse 34vw 68vh at calc(var(--home-light-x) - 34%) 54%,
+        rgba(0, 0, 0, 0.58) 0%,
+        rgba(0, 0, 0, 0.28) 42%,
+        transparent 76%
+      ),
+      linear-gradient(92deg, rgba(0, 0, 0, 0.38), transparent 30%, transparent 76%, rgba(0, 0, 0, 0.22));
+  }
+
+  .home-living-editorial__light::after {
+    background: radial-gradient(
+      ellipse 14vw 58vh at calc(var(--home-light-x) + 1.5%) 49%,
+      color-mix(in srgb, var(--artwork-glow), transparent 72%) 0%,
+      transparent 78%
+    );
+    opacity: var(--home-light-sheen-opacity);
+  }
+
+  .home-living-editorial__grid {
+    z-index: 1;
+    background-size: 10rem 10rem;
+    opacity: 0.12;
+  }
+
+  .home-living-editorial__threshold {
+    position: absolute;
+    top: 1.15rem;
+    left: var(--site-frame-gutter);
+    right: var(--site-frame-gutter);
+    z-index: 14;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0;
+    color: rgba(235, 240, 232, 0.4);
+    font-size: 0.58rem;
+    text-transform: uppercase;
+  }
+
+  .home-living-editorial__threshold p {
+    margin: 0;
+  }
+
+  .home-living-editorial__threshold span {
+    color: rgba(235, 240, 232, 0.28);
+  }
+
+  .home-living-editorial__spine {
+    z-index: 2;
+    margin-left: 36%;
+    opacity: 0.24;
+  }
+
+  .home-living-copy {
+    top: clamp(5.8rem, 11svh, 7.4rem);
+    width: min(28rem, 30vw);
+    min-height: 27rem;
+    margin-left: var(--site-frame-gutter);
+    isolation: isolate;
+  }
+
+  .home-living-copy::before {
+    content: "";
+    position: absolute;
+    inset: -2.6rem -5rem -3.2rem -2.4rem;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at 25% 38%,
+      rgba(1, 4, 3, 0.84) 0%,
+      rgba(1, 4, 3, 0.62) 42%,
+      rgba(1, 4, 3, 0.18) 68%,
+      transparent 82%
+    );
+    filter: blur(12px);
+  }
+
+  .home-living-copy h2 {
+    max-width: 8.6ch;
+    font-size: 4.8rem;
+  }
+
+  .home-living-copy p,
+  .home-living-copy small,
+  .home-living-card__caption span,
+  .home-living-card__caption small,
+  .home-living-note {
+    letter-spacing: 0;
+  }
+
+  .home-living-card {
+    min-width: 12rem;
+  }
+
+  .home-living-card figure {
+    background: transparent;
+    isolation: isolate;
+  }
+
+  .home-living-card figure::before {
+    inset: -1.8rem -2.1rem;
+    background:
+      radial-gradient(ellipse at 52% 46%, var(--artwork-glow), transparent 68%),
+      radial-gradient(ellipse at 50% 52%, rgba(1, 4, 3, var(--card-vignette-alpha)), rgba(1, 4, 3, 0.16) 58%, transparent 78%),
+      linear-gradient(145deg, rgba(245, 248, 242, var(--card-sheen-alpha)), transparent 48%, rgba(0, 0, 0, 0.34));
+    opacity: 1;
+    filter: blur(5px);
+  }
+
+  .home-living-card figure::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      linear-gradient(132deg, rgba(245, 248, 242, var(--image-key-alpha)) 0%, transparent 38%),
+      linear-gradient(148deg, rgba(1, 4, 3, var(--image-edge-alpha)) 0%, rgba(1, 4, 3, var(--image-veil-alpha)) 52%, rgba(1, 4, 3, 0.025) 100%);
+  }
+
+  .home-living-card img {
+    box-shadow:
+      0 var(--image-shadow-y) var(--image-shadow-blur) rgba(0, 0, 0, 0.64),
+      0 0 var(--image-glow-blur) color-mix(in srgb, var(--artwork-glow), transparent 58%),
+      0 0 0 1px rgba(245, 248, 242, 0.065);
+  }
+
+  @keyframes homeEditorialLightBreath {
+    0%,
+    100% {
+      transform: translate3d(-1.1%, 0.4%, 0) scale(1.025);
+    }
+
+    48% {
+      transform: translate3d(1.35%, -0.65%, 0) scale(1.045);
+    }
+
+    76% {
+      transform: translate3d(0.25%, 0.8%, 0) scale(1.032);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .home-living-editorial__light {
+      animation: none;
+      transform: none;
+    }
+  }
+
+  .home-living-card__caption strong {
+    letter-spacing: 0;
+  }
+
+  @media (min-width: 1800px) {
+    .home-title {
+      font-size: 7.8rem;
+    }
+
+    .home-manifesto {
+      font-size: 2rem;
+    }
+
+    .home-living-copy h2 {
+      font-size: 5.8rem;
+    }
+  }
+
+  @media (max-width: 1280px) and (min-width: 981px) {
+    .home-title {
+      font-size: 5.35rem;
+    }
+
+    .home-manifesto {
+      font-size: 1.55rem;
+    }
+
+    .home-living-copy h2 {
+      font-size: 4.2rem;
+    }
+  }
+
+  @media (max-width: 980px) {
+    .home-threshold-field {
+      display: block;
+      min-height: calc(100svh - var(--site-header-height) - 1.25rem);
+      padding-inline: var(--site-frame-gutter-mobile);
+    }
+
+    .home-threshold-copy {
+      width: min(31rem, 52vw);
+      max-width: 31rem;
+      padding-top: clamp(2.2rem, 7svh, 4.5rem);
+    }
+
+    .home-title {
+      font-size: 4.7rem;
+    }
+
+    .home-manifesto {
+      font-size: 1.45rem;
+    }
+
+    .home-living-copy h2 {
+      font-size: 4rem;
+    }
+
+    .home-selected-field {
+      inset: 0 var(--site-frame-gutter-mobile);
+      min-height: 100%;
+    }
+
+    .home-selected-plane--active {
+      left: 72%;
+      top: 57%;
+      width: min(390px, 39vw);
+    }
+
+    .home-field-chapter {
+      right: 0;
+    }
+
+    .home-field-register {
+      right: 0;
+      width: min(18rem, 34vw);
+    }
+
+    .home-field-next {
+      right: 0;
+    }
+
+    .home-living-editorial {
+      min-height: auto;
+      padding: 4.5rem var(--site-frame-gutter-mobile) 6rem;
+    }
+
+    .home-living-editorial__threshold {
+      position: relative;
+      inset: auto;
+      margin-bottom: 4rem;
+    }
+
+    .home-living-copy {
+      width: min(100%, 42rem);
+      margin-inline: 0;
+    }
+
+    .home-living-field {
+      width: 100%;
+    }
+  }
+
+  @media (min-width: 700px) and (max-width: 980px) {
+    .home-selected-plane--active {
+      left: 77%;
+      top: 59%;
+      width: min(360px, 36vw);
+    }
+  }
+
+  @media (max-width: 699px) {
+    .home-manifestation-field {
+      padding-top: 0;
+    }
+
+    .home-threshold-field {
+      min-height: calc(100svh - var(--site-header-height) - 0.75rem);
+      padding-inline: var(--site-frame-gutter-mobile);
+    }
+
+    .home-threshold-field::before {
+      background:
+        linear-gradient(180deg, rgba(2, 5, 4, 0.7) 0%, rgba(2, 5, 4, 0.38) 48%, rgba(2, 5, 4, 0.1) 72%, rgba(2, 5, 4, 0.48) 100%),
+        linear-gradient(90deg, rgba(2, 5, 4, 0.64), rgba(2, 5, 4, 0.035));
+    }
+
+    .home-threshold-copy {
+      width: min(92%, 29rem);
+      max-width: 29rem;
+      padding-top: clamp(1.2rem, 4.2svh, 2.3rem);
+    }
+
+    .home-threshold-copy::before {
+      inset: -8% -12% -8% -8%;
+    }
+
+    .home-kicker {
+      margin-bottom: 0.62rem;
+      font-size: 0.56rem;
+    }
+
+    .home-title {
+      max-width: 8ch;
+      font-size: 3.25rem;
+      line-height: 0.82;
+      overflow-wrap: normal;
+    }
+
+    .home-manifesto {
+      max-width: 18ch;
+      margin-top: 0.72rem;
+      font-size: 1.2rem;
+      line-height: 1.08;
+    }
+
+    .home-copy {
+      max-width: 29rem;
+      margin-top: 0.62rem;
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+
+    .home-active-context {
+      margin-top: 0.5rem;
+      font-size: 0.56rem;
+    }
+
+    .home-route-signals {
+      display: flex;
+      gap: 0.55rem 0.8rem;
+      margin-top: 0.66rem;
+    }
+
+    .home-route-signals a {
+      font-size: 0.56rem;
+    }
+
+    .home-selected-plane--active {
+      left: 72%;
+      top: 70%;
+      width: min(44vw, 230px);
+    }
+
+    .home-selected-plane--active img {
+      max-height: 39svh;
+    }
+
+    .home-selected-plane--active span {
+      display: none;
+    }
+
+    .home-selected-plane--orbit {
+      display: none;
+      width: clamp(72px, 19vw, 112px);
+      opacity: 0.28;
+    }
+
+    .home-selected-plane--orbit[data-home-slot="-1"] {
+      display: block;
+      left: 25%;
+      top: 72%;
+      width: clamp(82px, 23vw, 126px);
+      opacity: 0.48;
+    }
+
+    .home-selected-plane--orbit[data-home-slot="1"] {
+      display: block;
+      left: 92%;
+      top: 61%;
+      width: clamp(72px, 20vw, 112px);
+      opacity: 0.44;
+    }
+
+    .home-selected-plane--orbit-3,
+    .home-selected-plane--orbit-4,
+    .home-selected-plane--orbit-5,
+    .home-selected-plane--orbit-6 {
+      display: none;
+    }
+
+    .home-field-chapter {
+      top: 0.85rem;
+      font-size: 0.52rem;
+    }
+
+    .home-field-register {
+      left: 0;
+      right: auto;
+      bottom: 0.8rem;
+      width: 9.5rem;
+      padding-top: 0.42rem;
+      font-size: 0.5rem;
+    }
+
+    .home-field-register div {
+      padding: 0.18rem 0;
+    }
+
+    .home-field-register div:last-child {
+      display: none;
+    }
+
+    .home-selected-field::after {
+      left: 0;
+      bottom: 3.5rem;
+    }
+
+    .home-field-next {
+      bottom: 0.8rem;
+      font-size: 0.54rem;
+    }
+
+    .home-living-editorial {
+      padding: 3.8rem var(--site-frame-gutter-mobile) 5rem;
+    }
+
+    .home-living-editorial__threshold {
+      align-items: flex-start;
+      margin-bottom: 3.4rem;
+      font-size: 0.5rem;
+    }
+
+    .home-living-editorial__threshold span {
+      max-width: 10rem;
+      text-align: right;
+    }
+
+    .home-living-copy {
+      min-height: 21rem;
+      margin-bottom: 2.75rem;
+    }
+
+    .home-living-copy h2 {
+      font-size: 3.25rem;
+    }
+
+    .home-living-field {
+      gap: 2.75rem;
+    }
+  }
+
+  @media (max-width: 699px) and (max-height: 700px) {
+    .home-threshold-copy {
+      padding-top: 0.75rem;
+    }
+
+    .home-copy {
+      display: none;
+    }
+
+    .home-selected-plane--active {
+      top: 68%;
+      width: min(38vw, 190px);
     }
   }
 </style>

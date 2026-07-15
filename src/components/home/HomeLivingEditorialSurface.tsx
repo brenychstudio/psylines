@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   homeLivingCopy,
   homeLivingFieldLayouts,
@@ -69,6 +70,9 @@ export default function HomeLivingEditorialSurface({ items }: Props) {
   const rafId = useRef(0);
   const targetProgress = useRef(0);
   const currentProgress = useRef(0);
+  const activeCopyRef = useRef<HomeLivingCopyKey>("selected");
+  const lastPrologueSlugRef = useRef("");
+  const fieldEngagedRef = useRef(false);
   const [activeCopy, setActiveCopy] = useState<HomeLivingCopyKey>("selected");
   const [focusedItem, setFocusedItem] = useState<FocusState | null>(null);
   const [isClosingFocus, setIsClosingFocus] = useState(false);
@@ -93,18 +97,92 @@ export default function HomeLivingEditorialSurface({ items }: Props) {
     const root = rootRef.current;
     if (!root) return;
 
+    let pendingPrologueTimer = 0;
+    let pendingPrologueSlug = "";
+    let pendingPrologueFromSlug = "";
+    let currentLightX = 64;
+    let targetLightX = 64;
+    let currentLightStrength = 0.56;
+    let targetLightStrength = 0.56;
+
+    const cancelPendingPrologue = () => {
+      if (pendingPrologueTimer) window.clearTimeout(pendingPrologueTimer);
+      pendingPrologueTimer = 0;
+      pendingPrologueSlug = "";
+      pendingPrologueFromSlug = "";
+    };
+
+    const schedulePrologueTarget = (slug: string, atmosphereSlug: string) => {
+      if (!slug) return;
+      if (slug === lastPrologueSlugRef.current) {
+        if (pendingPrologueSlug && pendingPrologueSlug !== slug) cancelPendingPrologue();
+        return;
+      }
+      if (pendingPrologueSlug === slug) return;
+
+      cancelPendingPrologue();
+      pendingPrologueSlug = slug;
+      pendingPrologueFromSlug = lastPrologueSlugRef.current;
+      pendingPrologueTimer = window.setTimeout(() => {
+        const wasSuperseded =
+          lastPrologueSlugRef.current !== pendingPrologueFromSlug &&
+          lastPrologueSlugRef.current !== slug;
+        if (!fieldEngagedRef.current || pendingPrologueSlug !== slug || wasSuperseded) {
+          pendingPrologueTimer = 0;
+          pendingPrologueSlug = "";
+          pendingPrologueFromSlug = "";
+          return;
+        }
+
+        pendingPrologueTimer = 0;
+        pendingPrologueSlug = "";
+        pendingPrologueFromSlug = "";
+        lastPrologueSlugRef.current = slug;
+        window.dispatchEvent(
+          new CustomEvent("artist-stage:home-prologue-target", {
+            detail: { slug, source: "home-living-field" },
+          }),
+        );
+        window.ArtistStageAtmosphereOrchestrator?.setTarget?.(atmosphereSlug, {
+          source: "home-living-field",
+          immediate: false,
+        });
+      }, 320);
+    };
+
     const updateTarget = () => {
       const rect = root.getBoundingClientRect();
       const scrollable = Math.max(1, rect.height - window.innerHeight);
+      const nextFieldEngaged = rect.top <= window.innerHeight * 0.76 && rect.bottom > window.innerHeight * 0.12;
       targetProgress.current = clamp(-rect.top / scrollable, 0, 1);
+
+      if (fieldEngagedRef.current && !nextFieldEngaged && rect.top > 0) {
+        cancelPendingPrologue();
+        const activeHeroSlug = document.querySelector<HTMLElement>("[data-home-active-link]")?.dataset.artworkSlug;
+        if (activeHeroSlug && lastPrologueSlugRef.current !== activeHeroSlug) {
+          lastPrologueSlugRef.current = activeHeroSlug;
+          window.dispatchEvent(
+            new CustomEvent("artist-stage:home-prologue-target", {
+              detail: { slug: activeHeroSlug, source: "home-hero-return" },
+            }),
+          );
+        }
+      }
+
+      if (!nextFieldEngaged && rect.bottom <= window.innerHeight * 0.12) cancelPendingPrologue();
+
+      fieldEngagedRef.current = nextFieldEngaged;
       if (!rafId.current) rafId.current = window.requestAnimationFrame(render);
     };
 
     const render = () => {
       currentProgress.current += (targetProgress.current - currentProgress.current) * 0.08;
       const progress = currentProgress.current;
-      let dominantKey: HomeLivingCopyKey = activeCopy;
+      let dominantKey: HomeLivingCopyKey = activeCopyRef.current;
+      let dominantItemId = "";
+      let dominantAtmosphereSlug = "";
       let dominantScore = -1;
+      let dominantLightX = targetLightX;
 
       fieldItems.forEach((item, index) => {
         const card = cardRefs.current.get(item.id);
@@ -118,18 +196,31 @@ export default function HomeLivingEditorialSurface({ items }: Props) {
         const tx = item.driftX * scrollDelta * motion.drift + (wave - 0.5) * 18 * motion.drift;
         const ty = item.driftY * scrollDelta * motion.drift - emphasis * 36 * motion.drift;
         const scale = item.baseScale + emphasis * motion.scale;
-        const opacity = clamp(item.baseOpacity + emphasis * motion.opacity - distance * 0.18, 0.22, 1);
+        const opacity = clamp(item.baseOpacity + emphasis * motion.opacity - distance * 0.14, 0.34, 1);
+        const lightingFocus = Math.pow(emphasis, 1.45);
 
         card.style.setProperty("--tx", `${tx.toFixed(2)}px`);
         card.style.setProperty("--ty", `${ty.toFixed(2)}px`);
         card.style.setProperty("--scale", scale.toFixed(4));
         card.style.setProperty("--opacity", opacity.toFixed(3));
-        card.style.setProperty("--focus", emphasis.toFixed(3));
+        card.style.setProperty("--focus", lightingFocus.toFixed(3));
+        card.style.setProperty("--card-vignette-alpha", (0.62 - lightingFocus * 0.22).toFixed(3));
+        card.style.setProperty("--card-sheen-alpha", (0.025 + lightingFocus * 0.075).toFixed(3));
+        card.style.setProperty("--image-veil-alpha", (0.22 - lightingFocus * 0.18).toFixed(3));
+        card.style.setProperty("--image-edge-alpha", (0.32 - lightingFocus * 0.2).toFixed(3));
+        card.style.setProperty("--image-key-alpha", (0.01 + lightingFocus * 0.055).toFixed(3));
+        card.style.setProperty("--image-shadow-y", `${(36 + lightingFocus * 18).toFixed(2)}px`);
+        card.style.setProperty("--image-shadow-blur", `${(104 + lightingFocus * 44).toFixed(2)}px`);
+        card.style.setProperty("--image-glow-blur", `${(16 + lightingFocus * 38).toFixed(2)}px`);
 
         const score = emphasis * (item.depth === "hero" ? 1.24 : item.depth === "near" ? 1 : 0.84);
         if (score > dominantScore) {
           dominantScore = score;
           dominantKey = item.copyKey;
+          dominantItemId = item.id;
+          dominantAtmosphereSlug = item.atmosphereSlug;
+          const parsedLightX = Number.parseFloat(item.left);
+          if (Number.isFinite(parsedLightX)) dominantLightX = clamp(parsedLightX, 38, 91);
         }
 
         const note = noteRefs.current.get(item.id);
@@ -140,11 +231,29 @@ export default function HomeLivingEditorialSurface({ items }: Props) {
         }
       });
 
-      if (dominantKey !== activeCopy && dominantScore > 0.18) {
+      targetLightX = dominantLightX;
+      targetLightStrength = clamp(0.42 + dominantScore * 0.4, 0.42, 0.94);
+      currentLightX += (targetLightX - currentLightX) * 0.055;
+      currentLightStrength += (targetLightStrength - currentLightStrength) * 0.045;
+      root.style.setProperty("--home-light-x", `${currentLightX.toFixed(2)}%`);
+      root.style.setProperty("--home-light-strength", currentLightStrength.toFixed(3));
+      root.style.setProperty("--home-light-opacity", (0.54 + currentLightStrength * 0.34).toFixed(3));
+      root.style.setProperty("--home-light-sheen-opacity", (0.32 + currentLightStrength * 0.42).toFixed(3));
+
+      if (dominantKey !== activeCopyRef.current && dominantScore > 0.18) {
+        activeCopyRef.current = dominantKey;
         setActiveCopy(dominantKey);
       }
 
-      if (Math.abs(targetProgress.current - currentProgress.current) > 0.001) {
+      if (dominantItemId && dominantScore > 0.24 && fieldEngagedRef.current) {
+        schedulePrologueTarget(dominantItemId, dominantAtmosphereSlug);
+      }
+
+      const lightingIsMoving =
+        Math.abs(targetLightX - currentLightX) > 0.02 ||
+        Math.abs(targetLightStrength - currentLightStrength) > 0.002;
+
+      if (Math.abs(targetProgress.current - currentProgress.current) > 0.001 || lightingIsMoving) {
         rafId.current = window.requestAnimationFrame(render);
       } else {
         rafId.current = 0;
@@ -159,8 +268,9 @@ export default function HomeLivingEditorialSurface({ items }: Props) {
       window.removeEventListener("scroll", updateTarget);
       window.removeEventListener("resize", updateTarget);
       if (rafId.current) window.cancelAnimationFrame(rafId.current);
+      cancelPendingPrologue();
     };
-  }, [activeCopy, fieldItems]);
+  }, [fieldItems]);
 
   const getFocusTarget = (source: DOMRect) => {
     const viewportWidth = window.innerWidth;
@@ -199,6 +309,12 @@ export default function HomeLivingEditorialSurface({ items }: Props) {
     });
     setIsClosingFocus(false);
     document.documentElement.setAttribute("data-home-focus-open", "true");
+    lastPrologueSlugRef.current = item.id;
+    window.dispatchEvent(
+      new CustomEvent("artist-stage:home-prologue-target", {
+        detail: { slug: item.id, source: "home-living-focus" },
+      }),
+    );
   };
 
   const closeFocus = () => {
@@ -258,17 +374,25 @@ export default function HomeLivingEditorialSurface({ items }: Props) {
       className="home-living-editorial"
       data-home-living-editorial
       data-atmosphere-section="home-living-field"
+      data-cinematic-idle="field"
     >
-      <div className="home-living-editorial__atmosphere" aria-hidden="true" />
+      <div className="home-living-editorial__atmosphere" aria-hidden="true">
+        <div className="home-living-editorial__light" />
+      </div>
       <div className="home-living-editorial__grid" aria-hidden="true" />
 
-      <aside className="home-living-copy" aria-live="polite">
+      <header className="home-living-editorial__threshold" data-cinematic-idle="line">
+        <p>Selected manifestations / authored route</p>
+        <span>{String(items.length).padStart(2, "0")} works in the living field</span>
+      </header>
+
+      <aside className="home-living-copy" aria-live="polite" data-cinematic-idle="presence">
         {Object.entries(homeLivingCopy).map(([key, copy]) => (
           <div key={key} className="home-living-copy__state" data-active={activeCopy === key ? "true" : "false"}>
-            <p>{copy.kicker}</p>
-            <h2>{copy.title}</h2>
-            <span>{copy.body}</span>
-            <small>{copy.index}</small>
+            <p data-cinematic-idle="detail">{copy.kicker}</p>
+            <h2 data-cinematic-idle="anchor">{copy.title}</h2>
+            <span data-cinematic-idle="voice">{copy.body}</span>
+            <small data-cinematic-idle="detail">{copy.index}</small>
           </div>
         ))}
       </aside>
@@ -296,6 +420,14 @@ export default function HomeLivingEditorialSurface({ items }: Props) {
                 "--scale": item.baseScale,
                 "--opacity": item.baseOpacity,
                 "--focus": "0",
+                "--card-vignette-alpha": "0.62",
+                "--card-sheen-alpha": "0.025",
+                "--image-veil-alpha": "0.22",
+                "--image-edge-alpha": "0.32",
+                "--image-key-alpha": "0.01",
+                "--image-shadow-y": "36px",
+                "--image-shadow-blur": "104px",
+                "--image-glow-blur": "16px",
               } as React.CSSProperties
             }
             data-home-living-card
@@ -307,7 +439,7 @@ export default function HomeLivingEditorialSurface({ items }: Props) {
             data-cinematic-manual="true"
             onClick={(event) => openFocus(event, item)}
           >
-            <figure>
+            <figure data-cinematic-idle="image">
               <img
                 src={item.image}
                 srcSet={item.srcset}
@@ -319,7 +451,7 @@ export default function HomeLivingEditorialSurface({ items }: Props) {
                 data-cinematic-route-slug={normalizeTransitionSlug(item.href)}
               />
             </figure>
-            <div className="home-living-card__caption">
+            <div className="home-living-card__caption" data-cinematic-idle="trace">
               <span>{String(index + 1).padStart(2, "0")}</span>
               <strong>{item.title}</strong>
               <small>{item.kicker}</small>
@@ -337,6 +469,7 @@ export default function HomeLivingEditorialSurface({ items }: Props) {
               else noteRefs.current.delete(item.id);
             }}
             className="home-living-note"
+            data-cinematic-idle="trace"
             style={
               {
                 "--note-x": "0px",
@@ -350,8 +483,9 @@ export default function HomeLivingEditorialSurface({ items }: Props) {
         ))}
       </div>
 
-      {focusedItem ? (
-        <div
+      {focusedItem && typeof document !== "undefined"
+        ? createPortal(
+            <div
           className="home-living-focus"
           role="dialog"
           aria-modal="true"
@@ -388,11 +522,11 @@ export default function HomeLivingEditorialSurface({ items }: Props) {
           >
             <img src={focusedItem.item.image} srcSet={focusedItem.item.srcset} alt={focusedItem.item.alt} />
           </figure>
-          <aside className="home-living-focus__copy">
-            <p>{focusedItem.item.kicker}</p>
-            <h3>{focusedItem.item.title}</h3>
-            <span>{focusedItem.item.description}</span>
-            <dl>
+          <aside className="home-living-focus__copy" data-cinematic-idle="presence">
+            <p data-cinematic-idle="detail">{focusedItem.item.kicker}</p>
+            <h3 data-cinematic-idle="anchor">{focusedItem.item.title}</h3>
+            <span data-cinematic-idle="voice">{focusedItem.item.description}</span>
+            <dl data-cinematic-idle="line">
               <div>
                 <dt>Year</dt>
                 <dd>{focusedItem.item.year || "Field"}</dd>
@@ -402,7 +536,7 @@ export default function HomeLivingEditorialSurface({ items }: Props) {
                 <dd>{focusedItem.item.context}</dd>
               </div>
             </dl>
-            <div>
+            <div data-cinematic-idle="action">
               <button type="button" onClick={openFocusedRoute}>
                 Open work
               </button>
@@ -411,8 +545,10 @@ export default function HomeLivingEditorialSurface({ items }: Props) {
               </button>
             </div>
           </aside>
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </section>
   );
 }

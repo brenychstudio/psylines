@@ -42,7 +42,7 @@ export type WorksIndexContext = {
 const FIELD_LIMIT = 12;
 
 function normalizeView(view?: string | null): WorksViewMode {
-  return view === "index" ? "index" : "field";
+  return view === "field" ? "field" : "index";
 }
 
 function normalizeRegister(register?: string | null): WorksRegisterQuery {

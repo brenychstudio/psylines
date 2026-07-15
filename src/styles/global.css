@@ -82,6 +82,9 @@ html[data-cinematic-transition="arriving-active"] .site-shell {
 }
 
 .cinematic-bridge-layer {
+  --cinematic-bridge-accent: rgba(178, 207, 146, 0.34);
+  --cinematic-bridge-wash: rgba(104, 124, 78, 0.28);
+  --cinematic-bridge-ink: rgba(4, 6, 5, 0.96);
   position: fixed;
   inset: 0;
   z-index: 2147483000;
@@ -94,8 +97,19 @@ html[data-cinematic-transition="arriving-active"] .site-shell {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 50% 42%, rgba(244, 241, 234, 0.08), transparent 34%),
-    rgba(4, 6, 5, 0.78);
+    linear-gradient(
+      118deg,
+      color-mix(in srgb, var(--cinematic-bridge-wash), transparent 22%),
+      transparent 42%,
+      color-mix(in srgb, var(--cinematic-bridge-accent), transparent 72%) 68%,
+      transparent 88%
+    ),
+    linear-gradient(
+      24deg,
+      color-mix(in srgb, var(--cinematic-bridge-ink), black 18%),
+      color-mix(in srgb, var(--cinematic-bridge-ink), transparent 12%) 58%,
+      rgba(4, 6, 5, 0.84)
+    );
   opacity: 0;
 }
 
@@ -116,6 +130,13 @@ html[data-cinematic-transition="arriving-active"] .site-shell {
     0 48px 140px rgba(0, 0, 0, 0.62),
     0 0 0 1px rgba(255, 255, 255, 0.055);
   background: rgba(6, 8, 7, 0.88);
+}
+
+.cinematic-bridge-layer[data-cinematic-bridge-kind="series-chapter"] .cinematic-bridge-image {
+  box-shadow:
+    0 54px 160px rgba(0, 0, 0, 0.58),
+    0 0 96px color-mix(in srgb, var(--cinematic-bridge-accent), transparent 70%),
+    0 0 0 1px rgba(255, 255, 255, 0.055);
 }
 
 @keyframes artistStageRootLeave {

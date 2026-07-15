@@ -19,13 +19,13 @@ const adjacentWorks = relatedWorks.map((entry) => ({
   <section class="adjacent-section adjacent-trace-field" aria-labelledby="adjacent-title">
     <div class="adjacent-head adjacent-trace-head">
       <div>
-        <p class="adjacent-kicker">same field</p>
-        <h2 id="adjacent-title" class="adjacent-title">
+        <p class="adjacent-kicker" data-cinematic-idle="detail">same field</p>
+        <h2 id="adjacent-title" class="adjacent-title" data-cinematic-idle="anchor">
           Adjacent traces
         </h2>
       </div>
 
-      <p class="adjacent-copy">
+      <p class="adjacent-copy" data-cinematic-idle="voice">
         Related states held as quiet traces from the same cycle. Scroll sideways to continue the field.
       </p>
     </div>
@@ -33,7 +33,7 @@ const adjacentWorks = relatedWorks.map((entry) => ({
     <div class="adjacent-grid adjacent-trace-strip" data-adjacent-carousel aria-label="Related works carousel">
       {adjacentWorks.map((entry) => (
         <a href={`/works/${entry.slug}`} class="adjacent-card adjacent-trace-link">
-          <div class="adjacent-image-shell adjacent-trace-image">
+          <div class="adjacent-image-shell adjacent-trace-image" data-cinematic-idle="trace">
             {entry.coverSrc ? (
               <img
                 src={entry.coverImage.src}
@@ -48,7 +48,7 @@ const adjacentWorks = relatedWorks.map((entry) => ({
             )}
           </div>
 
-          <div class="adjacent-meta">
+          <div class="adjacent-meta" data-cinematic-idle="line">
             <span class="adjacent-relation">field trace</span>
 
             <div class="adjacent-name-row">

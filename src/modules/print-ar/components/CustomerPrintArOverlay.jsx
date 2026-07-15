@@ -45,11 +45,13 @@ export default function CustomerPrintArOverlay() {
   const [hostedAssetState, setHostedAssetState] = useState(buildDefaultAndroidState);
   const [hostedIosState, setHostedIosState] = useState(buildDefaultIosState);
   const [selectedFramePresetId, setSelectedFramePresetId] = useState("black");
+  const [previewMode, setPreviewMode] = useState("scale");
 
   const open = useCallback((nextPayload) => {
     if (!nextPayload) return null;
     setPayload(nextPayload);
     setSelectedFramePresetId(String(nextPayload?.frame?.id || "black"));
+    setPreviewMode("scale");
     setRuntimeStatus("loading");
     setHostedAssetState(buildDefaultAndroidState());
     setHostedIosState(buildDefaultIosState());
@@ -213,16 +215,21 @@ export default function CustomerPrintArOverlay() {
 
   if (!isOpen || !payload) return null;
 
-  const stateHeading = customerState.mobilePreviewReady
-    ? "Mobile wall route"
+  const isMobileMode = previewMode === "mobile";
+  const stateHeading = isMobileMode
+    ? customerState.mobilePreviewReady
+      ? "Mobile AR ready"
+      : "Mobile AR pending"
     : customerState.interactiveReady
       ? "Scale field active"
       : "Scale field forming";
 
-  const stateCopy = customerState.mobilePreviewReady
-    ? "A mobile wall placement is available for this selected format."
+  const stateCopy = isMobileMode
+    ? customerState.mobilePreviewReady
+      ? "Open the selected object on a supported phone or tablet for wall placement."
+      : "This exact variant is still waiting for production GLB/USDZ hosting. The scale field remains available here."
     : customerState.interactiveReady
-      ? "The interactive scale field is active. Mobile AR will unlock when the exact GLB or USDZ object is attached."
+      ? "Use the live 3D field to judge frame, paper size, depth, and room scale before opening mobile AR."
       : "The scale environment is loading for this selected format.";
 
   const framePresetOptions = payload.framePresetOptions || FRAME_PRESETS.map((preset) => ({
@@ -268,6 +275,25 @@ export default function CustomerPrintArOverlay() {
           </div>
 
           <aside className="customer-print-ar-summary">
+            <div className="customer-print-ar-mode-switch" aria-label="Preview mode">
+              <button
+                type="button"
+                className={`customer-print-ar-mode-button${previewMode === "scale" ? " is-active" : ""}`}
+                aria-pressed={previewMode === "scale"}
+                onClick={() => setPreviewMode("scale")}
+              >
+                Scale field
+              </button>
+              <button
+                type="button"
+                className={`customer-print-ar-mode-button${previewMode === "mobile" ? " is-active" : ""}`}
+                aria-pressed={previewMode === "mobile"}
+                onClick={() => setPreviewMode("mobile")}
+              >
+                Mobile AR
+              </button>
+            </div>
+
             <div className="customer-print-ar-frame-picker">
               <div className="customer-print-ar-frame-picker__label">Frame material</div>
               <div className="customer-print-ar-frame-picker__controls">
@@ -308,7 +334,7 @@ export default function CustomerPrintArOverlay() {
               <p>{stateCopy}</p>
             </div>
 
-            {customerState.primaryAction === "android" ? (
+            {isMobileMode && customerState.primaryAction === "android" ? (
               <button
                 type="button"
                 className="customer-print-ar-btn customer-print-ar-btn--primary customer-print-ar-btn--full"
@@ -322,7 +348,7 @@ export default function CustomerPrintArOverlay() {
               </button>
             ) : null}
 
-            {customerState.primaryAction === "ios" ? (
+            {isMobileMode && customerState.primaryAction === "ios" ? (
               <button
                 type="button"
                 className="customer-print-ar-btn customer-print-ar-btn--primary customer-print-ar-btn--full"
@@ -336,7 +362,7 @@ export default function CustomerPrintArOverlay() {
               </button>
             ) : null}
 
-            {customerState.secondaryAction === "ios" ? (
+            {isMobileMode && customerState.secondaryAction === "ios" ? (
               <button
                 type="button"
                 className="customer-print-ar-btn customer-print-ar-btn--secondary customer-print-ar-btn--full"
@@ -348,7 +374,11 @@ export default function CustomerPrintArOverlay() {
               </button>
             ) : null}
 
-            {!customerState.interactiveReady ? (
+            {isMobileMode && !customerState.mobilePreviewReady ? (
+              <p className="customer-print-ar-note">
+                Stay in Scale field on desktop; switch to Mobile AR again once hosted assets are attached for this exact format.
+              </p>
+            ) : !customerState.interactiveReady ? (
               <p className="customer-print-ar-note">
                 This format is waiting for its scale object.
               </p>

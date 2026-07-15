@@ -10,7 +10,7 @@ Atmosphere is alive inside pages, but route changes can still feel like page res
 Previous artwork atmosphere becomes the starting residue on the next route. The new route target then takes over through a smooth drift.
 
 ## Scope
-Frontend only. Session memory only. No analytics. No backend. No WebGL. No AR/XR. No full page transition.
+Frontend only. Session memory only. No analytics or backend. The original atmosphere-only handoff now coexists with a full artwork bridge on supported Series/Work routes.
 
 ## Signals
 - current artwork slug
@@ -53,8 +53,20 @@ Frontend only. Session memory only. No analytics. No backend. No WebGL. No AR/XR
 - `npm run build` passed.
 - `npm run dev -- --force` is running at `http://localhost:4321/`.
 
+## Current Route Bridge Extension
+
+The original atmosphere-memory pass has since been extended for the Series path:
+
+- `/series -> /series/[slug]` carries the selected artwork, palette, and source geometry;
+- Series Inspector -> Work Detail starts from the fullscreen artwork;
+- Work Detail -> chapter restores the same hero frame and Inspector;
+- browser Back and explicit return share the same chapter resume contract;
+- return to the Series map restores selected series and compatible map pan;
+- reduced motion keeps the state handoff but skips the visual bridge.
+
+See `docs/artist-stage-v3-series-route-continuity.md` for the current contract.
+
 ## Remaining issues
-- This is not a full page transition; only the atmosphere carries memory.
 - Direct route screenshot QA must use a clean browser session, otherwise pagehide fallback correctly provides session residue.
 - Work detail adjacent links were left untouched to keep this pass inside the requested file scope; global navigation/back-to-Works still carries the current page slug.
 - If future visual tuning finds the residue too persistent, reduce `ROUTE_ENTER_DURATION` from 900ms toward 650ms.

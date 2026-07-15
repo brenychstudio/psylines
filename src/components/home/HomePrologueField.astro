@@ -1,0 +1,979 @@
+---
+type HomePrologueTexture = {
+  slug: string;
+  src: string;
+};
+
+interface Props {
+  textures?: HomePrologueTexture[];
+  initialSlug?: string;
+  memorySlug?: string;
+}
+
+const { textures = [], initialSlug = "", memorySlug = "" } = Astro.props;
+const initialTexture = textures.find((texture) => texture.slug === initialSlug) ?? textures[0];
+const memoryTexture =
+  textures.find((texture) => texture.slug === memorySlug) ??
+  textures.find((texture) => texture.slug !== initialTexture?.slug) ??
+  initialTexture;
+---
+
+<div
+  class="home-prologue-field"
+  data-home-prologue-field
+  data-home-prologue-textures={JSON.stringify(textures)}
+  data-home-prologue-initial={initialTexture?.slug ?? ""}
+  data-home-prologue-memory={memoryTexture?.slug ?? ""}
+  aria-hidden="true"
+>
+  {initialTexture ? (
+    <img
+      class="home-prologue-field__fallback"
+      src={initialTexture.src}
+      alt=""
+      loading="eager"
+      decoding="async"
+    />
+  ) : null}
+</div>
+
+<script>
+  import * as THREE from "three";
+
+  const VERTEX_SHADER = `
+    precision highp float;
+
+    attribute vec3 position;
+    attribute vec2 uv;
+
+    varying vec2 vUv;
+
+    void main() {
+      vUv = uv;
+      gl_Position = vec4(position.xy, 0.0, 1.0);
+    }
+  `;
+
+  const FRAGMENT_SHADER = `
+    precision highp float;
+
+    uniform float uTime;
+    uniform vec2 uResolution;
+    uniform sampler2D uCurrentTexture;
+    uniform sampler2D uMemoryTexture;
+    uniform sampler2D uIncomingTexture;
+    uniform vec2 uCurrentTextureSize;
+    uniform vec2 uMemoryTextureSize;
+    uniform vec2 uIncomingTextureSize;
+    uniform float uTransition;
+    uniform float uTextureMix;
+    uniform vec2 uPointer;
+    uniform float uInteraction;
+    uniform float uPresence;
+    uniform float uScroll;
+    uniform float uJourney;
+    uniform float uScrollVelocity;
+    uniform float uScrollDirection;
+    uniform float uImpulse;
+
+    varying vec2 vUv;
+
+    float hash21(vec2 point) {
+      point = fract(point * vec2(123.34, 456.21));
+      point += dot(point, point + 45.32);
+      return fract(point.x * point.y);
+    }
+
+    float noise(vec2 point) {
+      vec2 cell = floor(point);
+      vec2 local = fract(point);
+      vec2 curve = local * local * (3.0 - 2.0 * local);
+      float a = hash21(cell);
+      float b = hash21(cell + vec2(1.0, 0.0));
+      float c = hash21(cell + vec2(0.0, 1.0));
+      float d = hash21(cell + vec2(1.0, 1.0));
+      return mix(mix(a, b, curve.x), mix(c, d, curve.x), curve.y);
+    }
+
+    float fbm(vec2 point) {
+      float value = 0.0;
+      float amplitude = 0.52;
+      mat2 turn = mat2(0.82, -0.57, 0.57, 0.82);
+
+      for (int index = 0; index < 4; index++) {
+        value += noise(point) * amplitude;
+        point = turn * point * 2.03 + vec2(7.1, 3.7);
+        amplitude *= 0.5;
+      }
+
+      return value;
+    }
+
+    vec2 coverUv(vec2 uv, vec2 imageSize, vec2 screenSize) {
+      float imageAspect = imageSize.x / max(imageSize.y, 1.0);
+      float screenAspect = screenSize.x / max(screenSize.y, 1.0);
+      vec2 sampleScale = screenAspect > imageAspect
+        ? vec2(1.0, imageAspect / screenAspect)
+        : vec2(screenAspect / imageAspect, 1.0);
+      return (uv - 0.5) * sampleScale + 0.5;
+    }
+
+    vec2 rotateUv(vec2 uv, float angle) {
+      float sine = sin(angle);
+      float cosine = cos(angle);
+      mat2 rotation = mat2(cosine, -sine, sine, cosine);
+      return rotation * (uv - 0.5) + 0.5;
+    }
+
+    float luminance(vec3 color) {
+      return dot(color, vec3(0.2126, 0.7152, 0.0722));
+    }
+
+    void main() {
+      vec2 uv = vUv;
+      float aspect = uResolution.x / max(uResolution.y, 1.0);
+      float portrait = 1.0 - smoothstep(0.72, 1.04, aspect);
+      vec2 spatial = (uv - 0.5) * vec2(aspect, 1.0);
+      float time = uTime;
+
+      float fieldEnergy = clamp(
+        uImpulse * 0.9 + uScrollVelocity * 0.72 + uInteraction * 0.24,
+        0.0,
+        1.0
+      );
+      float breath = 0.5 + 0.5 * sin(time * 0.31 + uJourney * 0.16);
+      float flowA = fbm(
+        uv * vec2(1.32, 1.08) + vec2(time * 0.043, -time * 0.029) + vec2(uJourney * 0.018, 0.0)
+      );
+      float flowB = fbm(
+        uv * vec2(1.04, 1.42) + vec2(-time * 0.034, time * 0.039) + vec2(0.0, uJourney * 0.014) + 9.6
+      );
+      vec2 current = vec2(flowA - 0.5, flowB - 0.5);
+      float scrollRibbon = sin(
+        (uv.y + flowA * 0.18) * 7.0 - time * 0.34 - uJourney * 0.43
+      );
+      vec2 pointerLean = uPointer * vec2(0.007, 0.005) * (0.62 + uInteraction * 1.7);
+      float warpAmount = 0.018 + uPresence * 0.01 + uScroll * 0.004 + fieldEnergy * 0.012;
+      vec2 fieldUv = uv + current * warpAmount + pointerLean;
+      fieldUv.x += scrollRibbon * uScrollVelocity * uScrollDirection * 0.014;
+      fieldUv.y += sin(uv.x * 4.2 + time * 0.26 + flowB * 1.5) * fieldEnergy * 0.004;
+
+      vec2 currentScale = mix(vec2(0.68, 0.72), vec2(0.45, 0.49), portrait);
+      vec2 memoryScale = mix(vec2(0.63, 0.76), vec2(0.42, 0.51), portrait);
+      currentScale *= 1.0 + sin(uJourney * 0.38 + time * 0.12) * 0.018;
+      memoryScale *= 1.0 + cos(uJourney * 0.31 - time * 0.1) * 0.024;
+      vec2 currentOffset = mix(vec2(0.1, -0.035), vec2(0.14, 0.08), portrait)
+        + vec2(sin(uJourney * 0.44), cos(uJourney * 0.37)) * 0.012;
+      vec2 memoryOffset = mix(vec2(-0.095, 0.065), vec2(-0.12, 0.12), portrait)
+        + vec2(cos(uJourney * 0.29), sin(uJourney * 0.34)) * 0.014;
+      vec2 currentDrift = vec2(sin(time * 0.13), cos(time * 0.105)) * (0.011 + fieldEnergy * 0.004);
+      vec2 memoryDrift = vec2(cos(time * 0.092 + 1.4), sin(time * 0.087 + 0.8)) * 0.014;
+
+      vec2 currentField = (rotateUv(fieldUv, 0.055) - 0.5) * currentScale + 0.5 + currentOffset + currentDrift;
+      vec2 memoryField = (rotateUv(fieldUv, -0.09) - 0.5) * memoryScale + 0.5 + memoryOffset + memoryDrift;
+      float transitionNoise = fbm(
+        uv * vec2(1.55, 1.2) + current * 1.2 + vec2(time * 0.012, -time * 0.009) + 33.0
+      );
+      float transitionCoordinate = clamp(
+        uv.x * 0.58 + (1.0 - uv.y) * 0.16 + transitionNoise * 0.3,
+        0.0,
+        1.0
+      );
+      float transitionThreshold = mix(-0.3, 1.3, uTransition);
+      float transitionReveal = 1.0 - smoothstep(
+        transitionThreshold - 0.24,
+        transitionThreshold + 0.24,
+        transitionCoordinate
+      );
+      float transitionPressure = sin(clamp(uTransition, 0.0, 1.0) * 3.14159265);
+      vec2 transitionShear = (
+        current * vec2(0.018, 0.014)
+          + vec2(transitionNoise - 0.5, 0.5 - transitionNoise) * 0.007
+      ) * transitionPressure;
+      vec2 currentTransitionField = currentField
+        + transitionShear * (0.62 + (1.0 - transitionReveal) * 0.38);
+      vec2 incomingTransitionField = currentField
+        - transitionShear * (0.62 + transitionReveal * 0.38);
+
+      vec2 currentUv = clamp(coverUv(currentTransitionField, uCurrentTextureSize, uResolution), 0.002, 0.998);
+      vec2 memoryUv = clamp(coverUv(memoryField, uMemoryTextureSize, uResolution), 0.002, 0.998);
+      vec2 incomingUv = clamp(coverUv(incomingTransitionField, uIncomingTextureSize, uResolution), 0.002, 0.998);
+
+      vec2 colorSplit = (current + vec2(scrollRibbon * 0.22, -scrollRibbon * 0.12))
+        * (0.00045 + fieldEnergy * 0.0007);
+      vec3 currentPigment = vec3(
+        texture2D(uCurrentTexture, clamp(currentUv + colorSplit, 0.002, 0.998)).r,
+        texture2D(uCurrentTexture, currentUv).g,
+        texture2D(uCurrentTexture, clamp(currentUv - colorSplit, 0.002, 0.998)).b
+      );
+      vec3 memoryPigment = texture2D(uMemoryTexture, memoryUv).rgb;
+      vec3 incomingPigment = vec3(
+        texture2D(uIncomingTexture, clamp(incomingUv + colorSplit, 0.002, 0.998)).r,
+        texture2D(uIncomingTexture, incomingUv).g,
+        texture2D(uIncomingTexture, clamp(incomingUv - colorSplit, 0.002, 0.998)).b
+      );
+
+      vec3 activePigment = mix(currentPigment, incomingPigment, transitionReveal);
+      float transitionEdge = (
+        1.0 - smoothstep(0.035, 0.22, abs(transitionCoordinate - transitionThreshold))
+      ) * transitionPressure;
+      activePigment += mix(currentPigment, incomingPigment, 0.5) * transitionEdge * 0.055;
+
+      float materialClock = time * 0.27 + uJourney * 0.62;
+      float diagonalBreath = 0.5 + 0.5 * sin(
+        dot(spatial, vec2(0.92, -0.38)) * 2.15 - materialClock + (flowA - 0.5) * 2.2
+      );
+      float strata = fbm(
+        uv * vec2(1.78, 1.44) - current * 1.35 + vec2(-time * 0.027, time * 0.031) + 18.0
+      );
+      float memoryFieldMask = smoothstep(
+        0.35,
+        0.69,
+        strata
+          + (diagonalBreath - 0.5) * 0.3
+          + sin(uv.x * 2.1 + uv.y * 1.4 + materialClock) * 0.08
+      );
+      float memoryWeight = memoryFieldMask
+        * (0.22 + uPresence * 0.18 + uScroll * 0.07 + breath * 0.06 + fieldEnergy * 0.06);
+      vec3 pigment = mix(activePigment, memoryPigment, clamp(memoryWeight, 0.0, 0.56));
+
+      vec2 detailField = (rotateUv(fieldUv, 0.14) - 0.5) * mix(vec2(0.5, 0.58), vec2(0.35, 0.4), portrait)
+        + 0.5
+        + mix(vec2(-0.14, -0.08), vec2(0.1, -0.12), portrait);
+      vec2 detailCurrentUv = clamp(
+        coverUv(detailField + transitionShear * 0.42, uCurrentTextureSize, uResolution),
+        0.002,
+        0.998
+      );
+      vec2 detailIncomingUv = clamp(
+        coverUv(detailField - transitionShear * 0.42, uIncomingTextureSize, uResolution),
+        0.002,
+        0.998
+      );
+      vec3 detailCurrent = texture2D(uCurrentTexture, detailCurrentUv).rgb;
+      vec3 detailIncoming = texture2D(uIncomingTexture, detailIncomingUv).rgb;
+      vec3 detailPigment = mix(detailCurrent, detailIncoming, transitionReveal);
+      float detailMask = smoothstep(
+        0.42,
+        0.72,
+        fbm(uv * vec2(2.1, 1.72) + current * 1.8 + vec2(time * 0.02, -time * 0.016) + 4.7)
+      );
+      pigment = mix(
+        pigment,
+        detailPigment,
+        detailMask * (0.1 + uPresence * 0.08 + fieldEnergy * 0.05)
+      );
+
+      vec2 texel = vec2(1.5) / max(uResolution, vec2(1.0));
+      float centerLight = luminance(activePigment);
+      float lightX = luminance(texture2D(uCurrentTexture, clamp(currentUv + vec2(texel.x, 0.0), 0.002, 0.998)).rgb);
+      float lightY = luminance(texture2D(uCurrentTexture, clamp(currentUv + vec2(0.0, texel.y), 0.002, 0.998)).rgb);
+      float pigmentEdge = smoothstep(0.035, 0.18, length(vec2(lightX - centerLight, lightY - centerLight)) * 2.8);
+
+      float pigmentLight = luminance(pigment);
+      pigment = mix(vec3(pigmentLight), pigment, 1.17);
+      pigment = clamp((pigment - vec3(0.37)) * 1.1 + vec3(0.43), 0.0, 1.0);
+      pigment = pow(max(pigment, vec3(0.0)), vec3(0.91));
+
+      float revealField = fbm(
+        uv * vec2(1.2, 1.08) + current * 1.7 + vec2(time * 0.031, time * 0.022) + 26.0
+      );
+      float apertureWave = 0.5 + 0.5 * sin(
+        dot(spatial, vec2(1.08, -0.5)) * 2.75 - time * 0.36 + uJourney * 0.52 + flowA * 2.1
+      );
+      float aperture = smoothstep(0.24, 0.78, revealField + (apertureWave - 0.5) * 0.34);
+      float materialPresence = 0.73
+        + uPresence * 0.13
+        + diagonalBreath * 0.08
+        + uScroll * 0.035
+        + fieldEnergy * 0.06;
+      materialPresence *= mix(0.9, 1.13, aperture);
+      vec3 base = mix(vec3(0.006, 0.012, 0.009), vec3(0.012, 0.015, 0.012), uScroll);
+      vec3 color = mix(base, pigment, clamp(materialPresence, 0.0, 0.93));
+
+      float contourField = fbm(uv * vec2(3.35, 2.82) + current * 2.25 + vec2(-time * 0.008, time * 0.006) + 41.0);
+      float contourDistance = abs(fract(contourField * 3.1 + pigmentLight * 0.58) - 0.5);
+      float charcoalTrace = 1.0 - smoothstep(0.025, 0.088, contourDistance);
+      charcoalTrace *= smoothstep(0.2, 0.82, revealField);
+      color = mix(color, color * 0.6, charcoalTrace * (0.07 + uPresence * 0.065));
+      color = mix(color, color * 0.74, pigmentEdge * 0.11);
+
+      float ridge = pow(1.0 - abs(diagonalBreath * 2.0 - 1.0), 6.0);
+      float migrationFront = pow(
+        1.0 - abs(sin(dot(spatial, vec2(0.64, 0.88)) * 2.2 - time * 0.41 + uJourney * 0.66)),
+        8.0
+      );
+      vec3 ridgeColor = mix(pigment * 0.22, vec3(0.18, 0.11, 0.045), memoryWeight * 0.7);
+      color += ridgeColor * ridge * (0.055 + uPresence * 0.05 + fieldEnergy * 0.075);
+      color += mix(pigment, vec3(0.16, 0.2, 0.1), 0.58)
+        * migrationFront
+        * (0.045 + breath * 0.035 + fieldEnergy * 0.08);
+
+      float edgeDistance = length((uv - 0.5) * vec2(0.82, 1.04));
+      float vignette = 1.0 - smoothstep(0.42, 0.78, edgeDistance);
+      color *= mix(0.81, 1.055, vignette);
+      color *= 1.01 + breath * 0.045 + uScroll * 0.025;
+      color = pow(max(color, vec3(0.0)), vec3(0.88));
+
+      float grain = hash21(gl_FragCoord.xy * 0.73) - 0.5;
+      color += grain * 0.006;
+      color = mix(base, color, smoothstep(0.0, 1.0, uTextureMix));
+
+      gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
+    }
+  `;
+
+  const mountedFields = new WeakMap();
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const damp = (current, target, delta, speed) =>
+    current + (target - current) * (1 - Math.exp(-delta * speed));
+
+  function createPlaceholderTexture() {
+    const data = new Uint8Array([3, 7, 5, 255]);
+    const texture = new THREE.DataTexture(data, 1, 1, THREE.RGBAFormat);
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  function loadTexture(loader, source) {
+    return loader.loadAsync(source).then((texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.generateMipmaps = true;
+      texture.needsUpdate = true;
+      return texture;
+    });
+  }
+
+  function mountHomePrologueField(host) {
+    if (mountedFields.has(host)) return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const textureEntries = (() => {
+      try {
+        return JSON.parse(host.dataset.homePrologueTextures || "[]");
+      } catch {
+        return [];
+      }
+    })();
+    const sourcesBySlug = new Map(
+      textureEntries
+        .filter((entry) => entry?.slug && entry?.src)
+        .map((entry) => [entry.slug, entry.src]),
+    );
+    const initialSlug = host.dataset.homePrologueInitial || textureEntries[0]?.slug || "";
+    const initialMemorySlug =
+      host.dataset.homePrologueMemory ||
+      textureEntries.find((entry) => entry?.slug !== initialSlug)?.slug ||
+      initialSlug;
+    const placeholder = createPlaceholderTexture();
+    const textureLoader = new THREE.TextureLoader();
+    const loadedTextures = new Set();
+
+    let renderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        alpha: false,
+        antialias: false,
+        depth: false,
+        stencil: false,
+        powerPreference: "high-performance",
+        preserveDrawingBuffer: true,
+      });
+    } catch (error) {
+      host.dataset.homePrologueFailed = "true";
+      console.warn("Home prologue field could not initialize.", error);
+      return;
+    }
+
+    renderer.setClearColor(0x020504, 1);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.NoToneMapping;
+    renderer.domElement.dataset.homePrologueCanvas = "true";
+    renderer.domElement.setAttribute("aria-hidden", "true");
+    host.prepend(renderer.domElement);
+
+    const uniforms = {
+      uTime: { value: 0 },
+      uResolution: { value: new THREE.Vector2(1, 1) },
+      uCurrentTexture: { value: placeholder },
+      uMemoryTexture: { value: placeholder },
+      uIncomingTexture: { value: placeholder },
+      uCurrentTextureSize: { value: new THREE.Vector2(3, 4) },
+      uMemoryTextureSize: { value: new THREE.Vector2(3, 4) },
+      uIncomingTextureSize: { value: new THREE.Vector2(3, 4) },
+      uTransition: { value: 0 },
+      uTextureMix: { value: 0 },
+      uPointer: { value: new THREE.Vector2(0, 0) },
+      uInteraction: { value: 0 },
+      uPresence: { value: 0.5 },
+      uScroll: { value: 0 },
+      uJourney: { value: 0 },
+      uScrollVelocity: { value: 0 },
+      uScrollDirection: { value: 1 },
+      uImpulse: { value: 0 },
+    };
+
+    const material = new THREE.RawShaderMaterial({
+      vertexShader: VERTEX_SHADER,
+      fragmentShader: FRAGMENT_SHADER,
+      uniforms,
+      depthTest: false,
+      depthWrite: false,
+    });
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.frustumCulled = false;
+    const scene = new THREE.Scene();
+    const camera = new THREE.Camera();
+    scene.add(mesh);
+
+    const phaseTargets = {
+      awake: 0.5,
+      settling: 0.61,
+      contemplating: 0.72,
+      dreaming: 0.88,
+      waking: 0.66,
+    };
+    let currentSlug = initialSlug;
+    let memorySlug = initialMemorySlug;
+    let pendingSlug = "";
+    let queuedSlug = "";
+    let pendingTexture = null;
+    let transitionStartedAt = 0;
+    let transitionPausedAt = 0;
+    let transitionProgress = 0;
+    let transitionActive = false;
+    let transitionLoading = false;
+    let targetTextureMix = 0;
+    let currentTextureMix = 0;
+    let targetPresence = phaseTargets[document.documentElement.dataset.presencePhase] ?? phaseTargets.awake;
+    let currentPresence = targetPresence;
+    let targetScroll = 0;
+    let currentScroll = 0;
+    let targetJourney = 0;
+    let currentJourney = 0;
+    let targetScrollVelocity = 0;
+    let currentScrollVelocity = 0;
+    let targetScrollDirection = 1;
+    let currentScrollDirection = 1;
+    let lastScrollY = window.scrollY;
+    let lastScrollAt = performance.now();
+    let targetPointerX = 0;
+    let targetPointerY = 0;
+    let pointerX = 0;
+    let pointerY = 0;
+    let targetInteraction = 0;
+    let currentInteraction = 0;
+    let impulse = 0;
+    let elapsed = 0;
+    let raf = 0;
+    let lastFrame = 0;
+    let lastReducedFrame = 0;
+    let destroyed = false;
+
+    const setTextureSize = (uniform, texture) => {
+      uniform.value.set(
+        texture.image?.naturalWidth || texture.image?.width || 3,
+        texture.image?.naturalHeight || texture.image?.height || 4,
+      );
+    };
+
+    const resize = () => {
+      const rect = host.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const compact = window.innerWidth < 760;
+      const maxDpr = compact ? 1 : 1.25;
+      renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio || 1, 1), maxDpr));
+      renderer.setSize(rect.width, rect.height, false);
+      uniforms.uResolution.value.set(renderer.domElement.width, renderer.domElement.height);
+    };
+
+    const updateScroll = () => {
+      const now = performance.now();
+      const nextScrollY = window.scrollY;
+      const deltaY = nextScrollY - lastScrollY;
+      const deltaTime = Math.max(now - lastScrollAt, 16);
+
+      targetScroll = clamp(nextScrollY / Math.max(window.innerHeight * 4.4, 1), 0, 1);
+      targetJourney = nextScrollY / Math.max(window.innerHeight, 1);
+
+      if (Math.abs(deltaY) > 0.5) {
+        const normalizedVelocity = clamp(
+          (Math.abs(deltaY) / Math.max(window.innerHeight, 1)) * (950 / deltaTime),
+          0,
+          1,
+        );
+        targetScrollVelocity = Math.max(targetScrollVelocity, normalizedVelocity);
+        targetScrollDirection = deltaY >= 0 ? 1 : -1;
+        impulse = Math.max(impulse, 0.08 + normalizedVelocity * 0.24);
+      }
+
+      lastScrollY = nextScrollY;
+      lastScrollAt = now;
+    };
+
+    const releaseTexture = (texture) => {
+      if (!texture || texture === placeholder) return;
+      if (
+        texture === uniforms.uCurrentTexture.value ||
+        texture === uniforms.uMemoryTexture.value ||
+        texture === uniforms.uIncomingTexture.value ||
+        texture === pendingTexture
+      ) {
+        return;
+      }
+      loadedTextures.delete(texture);
+      texture.dispose();
+    };
+
+    const finishTransition = () => {
+      if (!transitionActive || !pendingTexture) return;
+      const previousCurrent = uniforms.uCurrentTexture.value;
+      const previousMemory = uniforms.uMemoryTexture.value;
+      const previousCurrentSize = uniforms.uCurrentTextureSize.value.clone();
+      const nextTexture = pendingTexture;
+
+      uniforms.uCurrentTexture.value = nextTexture;
+      setTextureSize(uniforms.uCurrentTextureSize, nextTexture);
+      uniforms.uMemoryTexture.value = previousCurrent;
+      uniforms.uMemoryTextureSize.value.copy(previousCurrentSize);
+      uniforms.uIncomingTexture.value = nextTexture;
+      setTextureSize(uniforms.uIncomingTextureSize, nextTexture);
+      uniforms.uTransition.value = 0;
+
+      memorySlug = currentSlug;
+      currentSlug = pendingSlug;
+      pendingSlug = "";
+      pendingTexture = null;
+      transitionProgress = 0;
+      transitionStartedAt = 0;
+      transitionPausedAt = 0;
+      transitionActive = false;
+      host.dataset.homePrologueCurrent = currentSlug;
+      host.dataset.homePrologueMemory = memorySlug;
+      host.dataset.homePrologueState = "resting";
+      delete host.dataset.homePrologueIncoming;
+      releaseTexture(previousMemory);
+
+      const nextQueuedSlug = queuedSlug;
+      queuedSlug = "";
+      if (nextQueuedSlug && nextQueuedSlug !== currentSlug) {
+        window.setTimeout(() => requestTarget(nextQueuedSlug), 80);
+      }
+    };
+
+    const beginTransition = (slug, texture) => {
+      pendingSlug = slug;
+      pendingTexture = texture;
+      uniforms.uIncomingTexture.value = texture;
+      setTextureSize(uniforms.uIncomingTextureSize, texture);
+      uniforms.uTransition.value = 0;
+      transitionProgress = 0;
+      transitionStartedAt = performance.now();
+      transitionPausedAt = 0;
+      transitionActive = true;
+      impulse = Math.max(impulse, 0.38);
+      host.dataset.homePrologueIncoming = slug;
+      host.dataset.homePrologueState = "transitioning";
+    };
+
+    const requestTarget = async (slug) => {
+      if (destroyed || !slug || !sourcesBySlug.has(slug) || slug === currentSlug) return;
+      if (host.dataset.homePrologueReady !== "true") {
+        queuedSlug = slug;
+        return;
+      }
+      if (transitionActive || transitionLoading) {
+        queuedSlug = slug;
+        return;
+      }
+
+      if (slug === memorySlug) {
+        beginTransition(slug, uniforms.uMemoryTexture.value);
+        return;
+      }
+
+      transitionLoading = true;
+      host.dataset.homePrologueState = "loading";
+      try {
+        const texture = await loadTexture(textureLoader, sourcesBySlug.get(slug));
+        if (destroyed) {
+          texture.dispose();
+          return;
+        }
+        loadedTextures.add(texture);
+        beginTransition(slug, texture);
+      } catch (error) {
+        host.dataset.homePrologueState = "resting";
+        console.warn("Home prologue texture could not load.", error);
+      } finally {
+        transitionLoading = false;
+      }
+    };
+
+    const handleTarget = (event) => {
+      requestTarget(event.detail?.slug || "");
+    };
+
+    const handlePointerMove = (event) => {
+      if (reducedMotion.matches) return;
+      const nextX = clamp((event.clientX / Math.max(window.innerWidth, 1)) * 2 - 1, -1, 1);
+      const nextY = clamp(1 - (event.clientY / Math.max(window.innerHeight, 1)) * 2, -1, 1);
+      const velocity = Math.hypot(nextX - targetPointerX, nextY - targetPointerY);
+      targetPointerX = nextX;
+      targetPointerY = nextY;
+      targetInteraction = Math.max(targetInteraction, clamp(velocity * 0.9, 0.025, 0.14));
+    };
+
+    const handlePointerLeave = () => {
+      targetPointerX = 0;
+      targetPointerY = 0;
+      targetInteraction = 0;
+    };
+
+    const handlePresence = (event) => {
+      const phase = event.detail?.phase || document.documentElement.dataset.presencePhase || "awake";
+      targetPresence = phaseTargets[phase] ?? phaseTargets.awake;
+      host.dataset.homeProloguePhase = phase;
+      if (phase === "waking") impulse = Math.max(impulse, 0.28);
+    };
+
+    const handleDreamCycle = (event) => {
+      const cycle = event.detail?.cycle || document.documentElement.dataset.presenceDreamCycle || "gathering";
+      impulse = Math.max(impulse, cycle === "dispersing" ? 0.22 : 0.1);
+      host.dataset.homePrologueDreamCycle = cycle;
+    };
+
+    const handleVisibility = () => {
+      if (!transitionActive) return;
+      if (document.hidden) {
+        transitionPausedAt = performance.now();
+      } else if (transitionPausedAt > 0) {
+        transitionStartedAt += performance.now() - transitionPausedAt;
+        transitionPausedAt = 0;
+      }
+    };
+
+    const handleMotionChange = () => {
+      if (reducedMotion.matches) {
+        targetPointerX = 0;
+        targetPointerY = 0;
+        targetInteraction = 0;
+      }
+      resize();
+    };
+
+    const destroy = () => {
+      if (destroyed) return;
+      destroyed = true;
+      window.cancelAnimationFrame(raf);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("scroll", updateScroll);
+      window.removeEventListener("pointermove", handlePointerMove);
+      document.documentElement.removeEventListener("pointerleave", handlePointerLeave);
+      window.removeEventListener("artist-stage:home-prologue-target", handleTarget);
+      window.removeEventListener("artist-stage:presence-phase", handlePresence);
+      window.removeEventListener("artist-stage:presence-dream-cycle", handleDreamCycle);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      reducedMotion.removeEventListener?.("change", handleMotionChange);
+      loadedTextures.forEach((texture) => texture.dispose());
+      placeholder.dispose();
+      geometry.dispose();
+      material.dispose();
+      renderer.dispose();
+      renderer.domElement.remove();
+      delete host.__artistStageHomePrologueSample;
+      delete host.__artistStageHomePrologueState;
+      mountedFields.delete(host);
+    };
+
+    const renderFrame = (now) => {
+      if (destroyed) return;
+      if (!host.isConnected) {
+        destroy();
+        return;
+      }
+      raf = window.requestAnimationFrame(renderFrame);
+
+      if (document.hidden) {
+        lastFrame = now;
+        return;
+      }
+      if (reducedMotion.matches && now - lastReducedFrame < 140) return;
+
+      const seconds = now * 0.001;
+      const rawDelta = lastFrame ? Math.max(seconds - lastFrame * 0.001, 0.001) : 0.016;
+      const delta = clamp(rawDelta, 0.001, 0.08);
+      lastFrame = now;
+      lastReducedFrame = now;
+      elapsed += delta * (reducedMotion.matches ? 0.05 : 0.82);
+
+      if (transitionActive) {
+        transitionProgress = clamp((now - transitionStartedAt) / 5200, 0, 1);
+        uniforms.uTransition.value = transitionProgress
+          * transitionProgress
+          * transitionProgress
+          * (transitionProgress * (transitionProgress * 6 - 15) + 10);
+        if (transitionProgress >= 1) finishTransition();
+      }
+
+      currentTextureMix = damp(currentTextureMix, targetTextureMix, delta, 1.05);
+      currentPresence = damp(currentPresence, targetPresence, delta, 0.58);
+      currentScroll = damp(currentScroll, targetScroll, delta, 0.72);
+      currentJourney = damp(currentJourney, targetJourney, delta, 0.86);
+      currentScrollVelocity = damp(currentScrollVelocity, targetScrollVelocity, delta, 5.2);
+      currentScrollDirection = damp(currentScrollDirection, targetScrollDirection, delta, 3.8);
+      targetScrollVelocity *= Math.exp(-delta * 3.4);
+      pointerX = damp(pointerX, targetPointerX, delta, 0.62);
+      pointerY = damp(pointerY, targetPointerY, delta, 0.62);
+      currentInteraction = damp(currentInteraction, targetInteraction, delta, 0.82);
+      targetInteraction *= Math.exp(-delta * 0.76);
+      impulse *= Math.exp(-delta * 0.62);
+
+      uniforms.uTime.value = elapsed;
+      uniforms.uTextureMix.value = currentTextureMix;
+      uniforms.uPresence.value = currentPresence;
+      uniforms.uScroll.value = currentScroll;
+      uniforms.uJourney.value = currentJourney;
+      uniforms.uScrollVelocity.value = currentScrollVelocity;
+      uniforms.uScrollDirection.value = currentScrollDirection;
+      uniforms.uPointer.value.set(pointerX, pointerY);
+      uniforms.uInteraction.value = currentInteraction;
+      uniforms.uImpulse.value = impulse;
+      renderer.render(scene, camera);
+    };
+
+    const initialSource = sourcesBySlug.get(initialSlug);
+    const memorySource = sourcesBySlug.get(initialMemorySlug) || initialSource;
+    let initialCurrentTexture = null;
+    let initialMemoryTexture = null;
+    let initialCurrentFailed = false;
+    let initialMemoryFailed = false;
+
+    const establishInitialField = () => {
+      if (destroyed || host.dataset.homePrologueReady === "true") return;
+
+      const currentTexture = initialCurrentTexture || (initialCurrentFailed ? initialMemoryTexture : null);
+      if (!currentTexture) {
+        if (initialCurrentFailed && initialMemoryFailed) {
+          host.dataset.homePrologueFailed = "true";
+        }
+        return;
+      }
+
+      const memoryTexture = initialMemoryTexture || currentTexture;
+      uniforms.uCurrentTexture.value = currentTexture;
+      uniforms.uMemoryTexture.value = memoryTexture;
+      uniforms.uIncomingTexture.value = currentTexture;
+      setTextureSize(uniforms.uCurrentTextureSize, currentTexture);
+      setTextureSize(uniforms.uMemoryTextureSize, memoryTexture);
+      setTextureSize(uniforms.uIncomingTextureSize, currentTexture);
+      targetTextureMix = 1;
+      host.dataset.homePrologueCurrent = currentSlug;
+      host.dataset.homePrologueMemory = memorySlug;
+      host.dataset.homePrologueState = "resting";
+      host.dataset.homePrologueReady = "true";
+
+      const requestedSlug = queuedSlug;
+      queuedSlug = "";
+      if (requestedSlug && requestedSlug !== currentSlug) {
+        window.setTimeout(() => requestTarget(requestedSlug), 40);
+      }
+    };
+
+    loadTexture(textureLoader, initialSource)
+      .then((texture) => {
+        if (destroyed) {
+          texture.dispose();
+          return;
+        }
+        initialCurrentTexture = texture;
+        loadedTextures.add(texture);
+        establishInitialField();
+      })
+      .catch((error) => {
+        initialCurrentFailed = true;
+        console.warn("Home prologue current texture could not load.", error);
+        establishInitialField();
+      });
+
+    loadTexture(textureLoader, memorySource)
+      .then((texture) => {
+        if (destroyed) {
+          texture.dispose();
+          return;
+        }
+        initialMemoryTexture = texture;
+        loadedTextures.add(texture);
+
+        if (host.dataset.homePrologueReady === "true" && !transitionActive) {
+          const previousMemory = uniforms.uMemoryTexture.value;
+          uniforms.uMemoryTexture.value = texture;
+          setTextureSize(uniforms.uMemoryTextureSize, texture);
+          releaseTexture(previousMemory);
+        } else {
+          establishInitialField();
+        }
+      })
+      .catch((error) => {
+        initialMemoryFailed = true;
+        console.warn("Home prologue memory texture could not load.", error);
+        establishInitialField();
+      });
+
+    const resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(resize) : null;
+    resizeObserver?.observe(host);
+    window.addEventListener("resize", resize, { passive: true });
+    window.addEventListener("scroll", updateScroll, { passive: true });
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    document.documentElement.addEventListener("pointerleave", handlePointerLeave, { passive: true });
+    window.addEventListener("artist-stage:home-prologue-target", handleTarget);
+    window.addEventListener("artist-stage:presence-phase", handlePresence);
+    window.addEventListener("artist-stage:presence-dream-cycle", handleDreamCycle);
+    document.addEventListener("visibilitychange", handleVisibility);
+    reducedMotion.addEventListener?.("change", handleMotionChange);
+
+    resize();
+    updateScroll();
+    renderer.render(scene, camera);
+    raf = window.requestAnimationFrame(renderFrame);
+
+    host.__artistStageHomePrologueSample = () => {
+      const width = renderer.domElement.width;
+      const height = renderer.domElement.height;
+      const points = [
+        [0.15, 0.24],
+        [0.34, 0.66],
+        [0.52, 0.44],
+        [0.71, 0.61],
+        [0.86, 0.3],
+      ];
+      const sampleCanvas = document.createElement("canvas");
+      sampleCanvas.width = points.length;
+      sampleCanvas.height = 1;
+      const context = sampleCanvas.getContext("2d", { willReadFrequently: true });
+      if (!context) return { width, height, checksum: 0, samples: [], time: uniforms.uTime.value };
+
+      points.forEach(([x, y], index) => {
+        context.drawImage(
+          renderer.domElement,
+          Math.min(width - 1, Math.max(0, Math.round(width * x))),
+          Math.min(height - 1, Math.max(0, Math.round(height * y))),
+          1,
+          1,
+          index,
+          0,
+          1,
+          1,
+        );
+      });
+
+      const data = context.getImageData(0, 0, points.length, 1).data;
+      let checksum = 0;
+      const samples = points.map((_, index) => {
+        const offset = index * 4;
+        const value = Array.from(data.slice(offset, offset + 4));
+        checksum += value[0] * 3 + value[1] * 5 + value[2] * 7 + value[3];
+        return value;
+      });
+      return { width, height, checksum, samples, time: uniforms.uTime.value };
+    };
+    host.__artistStageHomePrologueState = () => ({
+      currentSlug,
+      memorySlug,
+      incomingSlug: pendingSlug,
+      loadedTextureCount: loadedTextures.size,
+      progress: transitionProgress,
+      journey: currentJourney,
+      scrollVelocity: currentScrollVelocity,
+      state: host.dataset.homePrologueState || "initializing",
+    });
+
+    mountedFields.set(host, { destroy });
+    window.addEventListener("pagehide", destroy, { once: true });
+  }
+
+  function mountAllHomePrologueFields() {
+    document.querySelectorAll("[data-home-prologue-field]").forEach((host) => mountHomePrologueField(host));
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mountAllHomePrologueFields, { once: true });
+  } else {
+    mountAllHomePrologueFields();
+  }
+
+  document.addEventListener("astro:page-load", mountAllHomePrologueFields);
+</script>
+
+<style>
+  .home-prologue-field {
+    position: fixed;
+    inset: var(--site-header-height) 0 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    background: #020504;
+  }
+
+  .home-prologue-field canvas,
+  .home-prologue-field__fallback {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .home-prologue-field canvas {
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 1500ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .home-prologue-field__fallback {
+    z-index: 1;
+    object-fit: cover;
+    opacity: 0.58;
+    filter: saturate(0.98) brightness(0.66) contrast(1.05);
+    transform: scale(1.08);
+    transition: opacity 1200ms ease;
+    animation: homePrologueFallbackDrift 24s ease-in-out infinite alternate;
+  }
+
+  .home-prologue-field[data-home-prologue-ready="true"] canvas {
+    opacity: 1;
+  }
+
+  .home-prologue-field[data-home-prologue-ready="true"] .home-prologue-field__fallback {
+    opacity: 0;
+  }
+
+  :global(html[data-cinematic-transition="leaving"]) .home-prologue-field canvas {
+    opacity: 0.26;
+    transition-duration: 220ms;
+  }
+
+  @keyframes homePrologueFallbackDrift {
+    from {
+      transform: scale(1.08) translate3d(-0.4%, -0.25%, 0);
+    }
+
+    to {
+      transform: scale(1.125) translate3d(0.55%, 0.35%, 0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .home-prologue-field canvas,
+    .home-prologue-field__fallback {
+      transition: none;
+      animation: none;
+    }
+  }
+</style>

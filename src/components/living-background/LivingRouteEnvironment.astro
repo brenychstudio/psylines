@@ -1,0 +1,1584 @@
+---
+type LivingRouteProfile = "process" | "artist" | "contact";
+
+type LivingRouteTexture = {
+  slug: string;
+  src: string;
+};
+
+interface Props {
+  textures?: LivingRouteTexture[];
+  initialSlug?: string;
+  memorySlug?: string;
+  profile: LivingRouteProfile;
+  mode?: string;
+}
+
+const {
+  textures = [],
+  initialSlug = "",
+  memorySlug = "",
+  profile,
+  mode = "default",
+} = Astro.props;
+const validTextures = textures.filter((texture) => texture.slug && texture.src);
+const initialTexture = validTextures.find((texture) => texture.slug === initialSlug) ?? validTextures[0];
+const memoryTexture =
+  validTextures.find((texture) => texture.slug === memorySlug) ??
+  validTextures.find((texture) => texture.slug !== initialTexture?.slug) ??
+  initialTexture;
+---
+
+<div
+  class="living-route-environment"
+  data-living-route-environment
+  data-living-route-profile={profile}
+  data-living-route-mode={mode}
+  data-living-route-textures={JSON.stringify(validTextures)}
+  data-living-route-initial={initialTexture?.slug ?? ""}
+  data-living-route-memory={memoryTexture?.slug ?? ""}
+  aria-hidden="true"
+>
+  {initialTexture ? (
+    <img
+      class="living-route-environment__fallback"
+      src={initialTexture.src}
+      alt=""
+      loading="eager"
+      decoding="async"
+    />
+  ) : null}
+</div>
+
+<script>
+  import * as THREE from "three";
+
+  const VERTEX_SHADER = `
+    precision highp float;
+
+    attribute vec3 position;
+    attribute vec2 uv;
+    varying vec2 vUv;
+
+    void main() {
+      vUv = uv;
+      gl_Position = vec4(position.xy, 0.0, 1.0);
+    }
+  `;
+
+  const FRAGMENT_SHADER = `
+    precision highp float;
+
+    uniform float uTime;
+    uniform vec2 uResolution;
+    uniform sampler2D uCurrentTexture;
+    uniform sampler2D uMemoryTexture;
+    uniform sampler2D uIncomingTexture;
+    uniform vec2 uCurrentTextureSize;
+    uniform vec2 uMemoryTextureSize;
+    uniform vec2 uIncomingTextureSize;
+    uniform float uTransition;
+    uniform float uTextureMix;
+    uniform vec2 uPointer;
+    uniform float uInteraction;
+    uniform float uPresence;
+    uniform float uScroll;
+    uniform float uJourney;
+    uniform float uScrollVelocity;
+    uniform float uScrollDirection;
+    uniform float uImpulse;
+    uniform float uProfile;
+
+    varying vec2 vUv;
+
+    float hash21(vec2 point) {
+      point = fract(point * vec2(123.34, 456.21));
+      point += dot(point, point + 45.32);
+      return fract(point.x * point.y);
+    }
+
+    float noise(vec2 point) {
+      vec2 cell = floor(point);
+      vec2 local = fract(point);
+      vec2 curve = local * local * (3.0 - 2.0 * local);
+      float a = hash21(cell);
+      float b = hash21(cell + vec2(1.0, 0.0));
+      float c = hash21(cell + vec2(0.0, 1.0));
+      float d = hash21(cell + vec2(1.0, 1.0));
+      return mix(mix(a, b, curve.x), mix(c, d, curve.x), curve.y);
+    }
+
+    float fbm(vec2 point) {
+      float value = 0.0;
+      float amplitude = 0.52;
+      mat2 turn = mat2(0.82, -0.57, 0.57, 0.82);
+
+      for (int index = 0; index < 4; index++) {
+        value += noise(point) * amplitude;
+        point = turn * point * 2.03 + vec2(7.1, 3.7);
+        amplitude *= 0.5;
+      }
+
+      return value;
+    }
+
+    vec2 coverUv(vec2 uv, vec2 imageSize, vec2 screenSize) {
+      float imageAspect = imageSize.x / max(imageSize.y, 1.0);
+      float screenAspect = screenSize.x / max(screenSize.y, 1.0);
+      vec2 sampleScale = screenAspect > imageAspect
+        ? vec2(1.0, imageAspect / screenAspect)
+        : vec2(screenAspect / imageAspect, 1.0);
+      return (uv - 0.5) * sampleScale + 0.5;
+    }
+
+    vec2 rotateUv(vec2 uv, float angle) {
+      float sine = sin(angle);
+      float cosine = cos(angle);
+      mat2 rotation = mat2(cosine, -sine, sine, cosine);
+      return rotation * (uv - 0.5) + 0.5;
+    }
+
+    float luminance(vec3 color) {
+      return dot(color, vec3(0.2126, 0.7152, 0.0722));
+    }
+
+    void main() {
+      vec2 uv = vUv;
+      float aspect = uResolution.x / max(uResolution.y, 1.0);
+      float portrait = 1.0 - smoothstep(0.74, 1.04, aspect);
+      vec2 spatial = (uv - 0.5) * vec2(aspect, 1.0);
+      float time = uTime;
+      float isProcess = 1.0 - smoothstep(0.18, 0.48, abs(uProfile - 0.0));
+      float isArtist = 1.0 - smoothstep(0.18, 0.48, abs(uProfile - 1.0));
+      float isContact = 1.0 - smoothstep(0.18, 0.48, abs(uProfile - 2.0));
+      float isWorks = 1.0 - smoothstep(0.18, 0.48, abs(uProfile - 3.0));
+
+      float profileMotion = isProcess * 0.74 + isArtist * 0.56 + isContact * 0.34 + isWorks * 0.44;
+      float fieldEnergy = clamp(
+        uImpulse * 0.86 + uScrollVelocity * 0.7 + uInteraction * 0.22,
+        0.0,
+        1.0
+      );
+      float breath = 0.5 + 0.5 * sin(time * (0.2 + profileMotion * 0.13) + uJourney * 0.14);
+      float flowA = fbm(
+        uv * vec2(1.22 + isProcess * 0.26, 1.08)
+          + vec2(time * 0.032, -time * 0.021) * profileMotion
+          + vec2(uJourney * 0.014, 0.0)
+      );
+      float flowB = fbm(
+        uv * vec2(1.03, 1.34 + isArtist * 0.12)
+          + vec2(-time * 0.024, time * 0.029) * profileMotion
+          + vec2(0.0, uJourney * 0.011)
+          + 9.6
+      );
+      vec2 current = vec2(flowA - 0.5, flowB - 0.5);
+      float routeBand = sin(
+        uv.y * (6.0 + isProcess * 4.5)
+          + uv.x * (isProcess * 2.2 + isArtist * 0.8)
+          - time * (0.22 + profileMotion * 0.16)
+          - uJourney * 0.38
+      );
+      vec2 pointerLean = uPointer * vec2(0.0065, 0.0045) * (0.48 + uInteraction * 1.35);
+      float warpAmount = (0.008 + profileMotion * 0.012)
+        + uPresence * (0.004 + isArtist * 0.004)
+        + fieldEnergy * 0.008;
+      vec2 fieldUv = uv + current * warpAmount + pointerLean;
+      fieldUv.x += routeBand * uScrollVelocity * uScrollDirection * (0.006 + isProcess * 0.006);
+      fieldUv.y += sin(uv.x * 4.0 + time * 0.2 + flowB * 1.4) * fieldEnergy * 0.003;
+
+      vec2 currentScale = mix(vec2(0.66, 0.72), vec2(0.44, 0.49), portrait);
+      vec2 memoryScale = mix(vec2(0.59, 0.76), vec2(0.4, 0.52), portrait);
+      currentScale *= 1.0 + sin(uJourney * 0.31 + time * 0.1) * (0.012 + isArtist * 0.008);
+      memoryScale *= 1.0 + cos(uJourney * 0.27 - time * 0.08) * (0.018 + isArtist * 0.01);
+      vec2 currentOffset = mix(vec2(0.08, -0.03), vec2(0.12, 0.07), portrait)
+        + vec2(sin(uJourney * 0.34), cos(uJourney * 0.29)) * 0.01;
+      vec2 memoryOffset = mix(vec2(-0.1, 0.06), vec2(-0.12, 0.11), portrait)
+        + vec2(cos(uJourney * 0.24), sin(uJourney * 0.3)) * 0.012;
+      vec2 currentDrift = vec2(sin(time * 0.105), cos(time * 0.087)) * (0.006 + profileMotion * 0.006);
+      vec2 memoryDrift = vec2(cos(time * 0.072 + 1.4), sin(time * 0.068 + 0.8)) * (0.008 + isArtist * 0.005);
+
+      vec2 currentField = (rotateUv(fieldUv, 0.045 + isProcess * 0.025) - 0.5) * currentScale
+        + 0.5 + currentOffset + currentDrift;
+      vec2 memoryField = (rotateUv(fieldUv, -0.075 - isArtist * 0.025) - 0.5) * memoryScale
+        + 0.5 + memoryOffset + memoryDrift;
+
+      float transitionNoise = fbm(
+        uv * vec2(1.5, 1.18) + current * 1.15 + vec2(time * 0.01, -time * 0.008) + 33.0
+      );
+      float transitionCoordinate = clamp(
+        uv.x * (0.52 + isArtist * 0.1)
+          + (1.0 - uv.y) * (0.13 + isProcess * 0.16)
+          + transitionNoise * (0.3 + isProcess * 0.05),
+        0.0,
+        1.0
+      );
+      float transitionThreshold = mix(-0.3, 1.3, uTransition);
+      float transitionReveal = 1.0 - smoothstep(
+        transitionThreshold - 0.25,
+        transitionThreshold + 0.25,
+        transitionCoordinate
+      );
+      float transitionPressure = sin(clamp(uTransition, 0.0, 1.0) * 3.14159265);
+      vec2 transitionShear = (
+        current * vec2(0.016, 0.012)
+          + vec2(transitionNoise - 0.5, 0.5 - transitionNoise) * 0.007
+      ) * transitionPressure * (0.72 + profileMotion * 0.42);
+      vec2 currentTransitionField = currentField + transitionShear * (0.62 + (1.0 - transitionReveal) * 0.38);
+      vec2 incomingTransitionField = currentField - transitionShear * (0.62 + transitionReveal * 0.38);
+
+      vec2 currentUv = clamp(coverUv(currentTransitionField, uCurrentTextureSize, uResolution), 0.002, 0.998);
+      vec2 memoryUv = clamp(coverUv(memoryField, uMemoryTextureSize, uResolution), 0.002, 0.998);
+      vec2 incomingUv = clamp(coverUv(incomingTransitionField, uIncomingTextureSize, uResolution), 0.002, 0.998);
+
+      vec2 colorSplit = (current + vec2(routeBand * 0.18, -routeBand * 0.1))
+        * (0.00018 + fieldEnergy * 0.00045 + transitionPressure * 0.00038)
+        * (1.0 - isContact * 0.48 - isWorks * 0.28);
+      vec3 currentPigment = vec3(
+        texture2D(uCurrentTexture, clamp(currentUv + colorSplit, 0.002, 0.998)).r,
+        texture2D(uCurrentTexture, currentUv).g,
+        texture2D(uCurrentTexture, clamp(currentUv - colorSplit, 0.002, 0.998)).b
+      );
+      vec3 memoryPigment = texture2D(uMemoryTexture, memoryUv).rgb;
+      vec3 incomingPigment = vec3(
+        texture2D(uIncomingTexture, clamp(incomingUv + colorSplit, 0.002, 0.998)).r,
+        texture2D(uIncomingTexture, incomingUv).g,
+        texture2D(uIncomingTexture, clamp(incomingUv - colorSplit, 0.002, 0.998)).b
+      );
+
+      vec3 activePigment = mix(currentPigment, incomingPigment, transitionReveal);
+      float transitionEdge = (
+        1.0 - smoothstep(0.035, 0.22, abs(transitionCoordinate - transitionThreshold))
+      ) * transitionPressure;
+      activePigment += mix(currentPigment, incomingPigment, 0.5)
+        * transitionEdge
+        * (0.035 + isArtist * 0.025 + isProcess * 0.012);
+
+      float materialClock = time * (0.17 + profileMotion * 0.12) + uJourney * 0.5;
+      float diagonalBreath = 0.5 + 0.5 * sin(
+        dot(spatial, vec2(0.92, -0.38)) * (1.8 + isProcess * 0.8)
+          - materialClock
+          + (flowA - 0.5) * 2.1
+      );
+      float strata = fbm(
+        uv * vec2(1.72 + isProcess * 0.45, 1.38 + isProcess * 0.18)
+          - current * 1.28
+          + vec2(-time * 0.02, time * 0.023) * profileMotion
+          + 18.0
+      );
+      float memoryFieldMask = smoothstep(
+        0.36,
+        0.7,
+        strata + (diagonalBreath - 0.5) * (0.25 + isArtist * 0.12) + routeBand * isProcess * 0.055
+      );
+      float memoryWeight = memoryFieldMask * (
+        0.15
+          + isProcess * 0.07
+          + isArtist * 0.18
+          + isContact * 0.03
+          + isWorks * 0.04
+          + uPresence * (0.11 + isArtist * 0.08)
+          + fieldEnergy * 0.035
+      );
+      vec3 pigment = mix(activePigment, memoryPigment, clamp(memoryWeight, 0.0, 0.58));
+
+      vec2 textureTexel = vec2(1.35) / max(uCurrentTextureSize, vec2(1.0));
+      float centerLight = luminance(currentPigment);
+      float lightX = luminance(texture2D(
+        uCurrentTexture,
+        clamp(currentUv + vec2(textureTexel.x, 0.0), 0.002, 0.998)
+      ).rgb);
+      float lightY = luminance(texture2D(
+        uCurrentTexture,
+        clamp(currentUv + vec2(0.0, textureTexel.y), 0.002, 0.998)
+      ).rgb);
+      float pigmentEdge = smoothstep(
+        0.018,
+        0.13,
+        length(vec2(lightX - centerLight, lightY - centerLight)) * 2.9
+      );
+      float pigmentLight = luminance(pigment);
+      vec3 color;
+
+      if (uProfile < 0.5) {
+        vec3 paperPigment = mix(vec3(pigmentLight), pigment, 0.76);
+        paperPigment = clamp((paperPigment - vec3(0.35)) * 1.08 + vec3(0.42), 0.0, 1.0);
+        vec3 paperBase = mix(vec3(0.008, 0.012, 0.009), vec3(0.045, 0.052, 0.035), strata * 0.72);
+        color = mix(paperBase, paperPigment, 0.62 + diagonalBreath * 0.1 + uPresence * 0.08);
+        color = mix(color, color * vec3(0.5, 0.56, 0.46), pigmentEdge * 0.27);
+        float charcoal = 1.0 - smoothstep(0.035, 0.12, abs(fract((strata + pigmentLight * 0.55) * 4.2) - 0.5));
+        color *= 1.0 - charcoal * (0.045 + uPresence * 0.035);
+      } else if (uProfile < 1.5) {
+        vec3 memoryColor = mix(pigment, memoryPigment, memoryFieldMask * 0.24);
+        memoryColor = mix(vec3(luminance(memoryColor)), memoryColor, 1.08);
+        memoryColor = clamp((memoryColor - vec3(0.34)) * 1.08 + vec3(0.4), 0.0, 1.0);
+        float warmMemory = smoothstep(0.25, 0.76, diagonalBreath + strata * 0.24);
+        memoryColor *= mix(vec3(0.84, 0.94, 0.96), vec3(1.08, 0.94, 0.76), warmMemory * 0.38);
+        color = mix(vec3(0.007, 0.01, 0.009), memoryColor, 0.65 + breath * 0.08 + uPresence * 0.08);
+        color += memoryColor * pow(diagonalBreath, 5.0) * 0.065;
+      } else if (uProfile < 2.5) {
+        vec3 quietPigment = mix(vec3(pigmentLight), pigment, 0.66);
+        quietPigment = clamp((quietPigment - vec3(0.38)) * 1.0 + vec3(0.39), 0.0, 1.0);
+        float signal = pow(1.0 - abs(sin(uv.y * 5.2 - time * 0.18 + strata * 1.6)), 10.0);
+        float contactKey = smoothstep(0.9, 0.08, length((uv - vec2(0.72, 0.48)) * vec2(0.8, 1.16)));
+        color = mix(vec3(0.004, 0.007, 0.006), quietPigment, 0.33 + contactKey * 0.22 + uPresence * 0.035);
+        color += mix(vec3(0.09, 0.12, 0.09), quietPigment, 0.45) * signal * (0.028 + uPresence * 0.02);
+        color *= 1.0 - pigmentEdge * 0.12;
+      } else {
+        vec3 archivePigment = mix(vec3(pigmentLight), pigment, 0.82);
+        archivePigment = clamp((archivePigment - vec3(0.38)) * 1.02 + vec3(0.39), 0.0, 1.0);
+        float registerLight = smoothstep(0.12, 0.92, strata + diagonalBreath * 0.18);
+        color = mix(vec3(0.004, 0.007, 0.006), archivePigment, 0.34 + registerLight * 0.16 + uPresence * 0.035);
+        color += archivePigment * pow(diagonalBreath, 7.0) * (0.022 + fieldEnergy * 0.026);
+        color *= 1.0 - pigmentEdge * 0.09;
+      }
+
+      float migrationFront = pow(
+        1.0 - abs(sin(dot(spatial, vec2(0.64, 0.88)) * 2.1 - time * 0.3 + uJourney * 0.58)),
+        8.0
+      );
+      color += mix(pigment, vec3(0.14, 0.17, 0.1), 0.58)
+        * migrationFront
+        * (0.018 + fieldEnergy * 0.035)
+        * (1.0 - isContact * 0.45 - isWorks * 0.28);
+
+      float edgeDistance = length((uv - 0.5) * vec2(0.82, 1.04));
+      float vignette = 1.0 - smoothstep(0.4, 0.8, edgeDistance);
+      float edgeFloor = isContact * 0.54 + isWorks * 0.64 + isProcess * 0.72 + isArtist * 0.7;
+      color *= mix(edgeFloor, 1.035, vignette);
+      color *= 0.98 + breath * (0.025 + isArtist * 0.025 + isProcess * 0.018);
+      color = pow(max(color, vec3(0.0)), vec3(0.91 - isArtist * 0.035));
+
+      float grain = hash21(gl_FragCoord.xy * 0.73) - 0.5;
+      color += grain * (0.0035 + isProcess * 0.0025);
+      vec3 base = vec3(0.003, 0.006, 0.005);
+      color = mix(base, color, smoothstep(0.0, 1.0, uTextureMix));
+
+      gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
+    }
+  `;
+
+  const DIRECTED_FRAGMENT_SHADER = `
+    precision highp float;
+
+    uniform float uTime;
+    uniform vec2 uResolution;
+    uniform sampler2D uCurrentTexture;
+    uniform sampler2D uMemoryTexture;
+    uniform sampler2D uIncomingTexture;
+    uniform vec2 uCurrentTextureSize;
+    uniform vec2 uMemoryTextureSize;
+    uniform vec2 uIncomingTextureSize;
+    uniform float uTransition;
+    uniform float uTextureMix;
+    uniform vec2 uPointer;
+    uniform float uInteraction;
+    uniform float uPresence;
+    uniform float uScroll;
+    uniform float uJourney;
+    uniform float uScrollVelocity;
+    uniform float uScrollDirection;
+    uniform float uImpulse;
+    uniform float uProfile;
+
+    varying vec2 vUv;
+
+    float hash21(vec2 point) {
+      point = fract(point * vec2(123.34, 456.21));
+      point += dot(point, point + 45.32);
+      return fract(point.x * point.y);
+    }
+
+    float noise(vec2 point) {
+      vec2 cell = floor(point);
+      vec2 local = fract(point);
+      vec2 curve = local * local * (3.0 - 2.0 * local);
+      float a = hash21(cell);
+      float b = hash21(cell + vec2(1.0, 0.0));
+      float c = hash21(cell + vec2(0.0, 1.0));
+      float d = hash21(cell + vec2(1.0, 1.0));
+      return mix(mix(a, b, curve.x), mix(c, d, curve.x), curve.y);
+    }
+
+    float fbm(vec2 point) {
+      float value = 0.0;
+      float amplitude = 0.52;
+      mat2 turn = mat2(0.82, -0.57, 0.57, 0.82);
+
+      for (int index = 0; index < 4; index++) {
+        value += noise(point) * amplitude;
+        point = turn * point * 2.03 + vec2(7.1, 3.7);
+        amplitude *= 0.5;
+      }
+
+      return value;
+    }
+
+    vec2 coverUv(vec2 uv, vec2 imageSize, vec2 screenSize) {
+      float imageAspect = imageSize.x / max(imageSize.y, 1.0);
+      float screenAspect = screenSize.x / max(screenSize.y, 1.0);
+      vec2 sampleScale = screenAspect > imageAspect
+        ? vec2(1.0, imageAspect / screenAspect)
+        : vec2(screenAspect / imageAspect, 1.0);
+      return (uv - 0.5) * sampleScale + 0.5;
+    }
+
+    vec2 containUv(vec2 uv, vec2 imageSize, vec2 screenSize, float scale, vec2 offset) {
+      float imageAspect = imageSize.x / max(imageSize.y, 1.0);
+      float screenAspect = screenSize.x / max(screenSize.y, 1.0);
+      vec2 planeScale = screenAspect > imageAspect
+        ? vec2(imageAspect / screenAspect, 1.0)
+        : vec2(1.0, screenAspect / imageAspect);
+      planeScale *= scale;
+      return (uv - 0.5 - offset) / max(planeScale, vec2(0.001)) + 0.5;
+    }
+
+    float containMask(vec2 sampleUv, float feather) {
+      vec2 lower = smoothstep(vec2(-feather), vec2(feather), sampleUv);
+      vec2 upper = 1.0 - smoothstep(vec2(1.0 - feather), vec2(1.0 + feather), sampleUv);
+      return lower.x * lower.y * upper.x * upper.y;
+    }
+
+    vec2 rotateUv(vec2 uv, float angle) {
+      float sine = sin(angle);
+      float cosine = cos(angle);
+      mat2 rotation = mat2(cosine, -sine, sine, cosine);
+      return rotation * (uv - 0.5) + 0.5;
+    }
+
+    float luminance(vec3 color) {
+      return dot(color, vec3(0.2126, 0.7152, 0.0722));
+    }
+
+    void main() {
+      vec2 uv = vUv;
+      float aspect = uResolution.x / max(uResolution.y, 1.0);
+      float portrait = 1.0 - smoothstep(0.74, 1.04, aspect);
+      vec2 spatial = (uv - 0.5) * vec2(aspect, 1.0);
+      float time = uTime;
+      float isProcess = 1.0 - smoothstep(0.18, 0.48, abs(uProfile - 0.0));
+      float isArtist = 1.0 - smoothstep(0.18, 0.48, abs(uProfile - 1.0));
+      float isContact = 1.0 - smoothstep(0.18, 0.48, abs(uProfile - 2.0));
+
+      float fieldEnergy = clamp(
+        uImpulse * 0.72 + uScrollVelocity * 0.58 + uInteraction * 0.16,
+        0.0,
+        1.0
+      );
+      float breath = 0.5 + 0.5 * sin(time * 0.18 + uJourney * 0.13);
+      float flowA = fbm(
+        uv * vec2(1.18, 1.04)
+          + vec2(time * 0.018, -time * 0.012)
+          + vec2(uJourney * 0.012, 0.0)
+      );
+      float flowB = fbm(
+        uv * vec2(1.02, 1.26)
+          + vec2(-time * 0.013, time * 0.017)
+          + vec2(0.0, uJourney * 0.009)
+          + 9.6
+      );
+      vec2 flow = vec2(flowA - 0.5, flowB - 0.5);
+      vec2 pointerLean = uPointer * vec2(0.0032, 0.0024) * (0.45 + uInteraction * 0.9);
+      float warpAmount = isProcess * (0.0045 + fieldEnergy * 0.0035)
+        + isArtist * (0.0065 + uPresence * 0.0025 + fieldEnergy * 0.003)
+        + isContact * (0.0024 + fieldEnergy * 0.0018);
+      vec2 fieldUv = uv + flow * warpAmount + pointerLean;
+      fieldUv.x += sin(uv.y * 4.2 - time * 0.11 - uJourney * 0.24)
+        * uScrollVelocity
+        * uScrollDirection
+        * (0.0035 + isProcess * 0.0035);
+
+      vec2 processScale = mix(vec2(0.94, 0.98), vec2(0.76, 0.82), portrait);
+      vec2 contactScale = mix(vec2(0.98, 1.0), vec2(0.8, 0.86), portrait);
+      vec2 coverScale = processScale * isProcess + contactScale * isContact + vec2(0.96) * isArtist;
+      vec2 coverOffset = isProcess * vec2(0.045 + sin(uJourney * 0.21) * 0.012, -0.015)
+        + isContact * vec2(0.02, sin(uJourney * 0.16) * 0.008);
+      float coverAngle = isProcess * 0.018 + isContact * -0.012;
+      vec2 currentCoverField = (rotateUv(fieldUv, coverAngle) - 0.5) * coverScale
+        + 0.5 + coverOffset;
+      vec2 memoryCoverField = (rotateUv(fieldUv, -coverAngle * 1.4 - 0.015) - 0.5)
+        * (coverScale * vec2(0.98, 1.02))
+        + 0.5 - coverOffset * 0.7;
+
+      float artistCurrentScale = mix(1.34, 1.04, portrait);
+      float artistMemoryScale = mix(0.96, 0.82, portrait);
+      vec2 artistCurrentOffset = mix(vec2(0.22, 0.0), vec2(0.0, 0.12), portrait)
+        + vec2(sin(time * 0.052 + uJourney * 0.18), cos(time * 0.046)) * vec2(0.018, 0.014);
+      vec2 artistMemoryOffset = mix(vec2(-0.055, 0.055), vec2(0.1, -0.1), portrait)
+        + vec2(cos(time * 0.041), sin(time * 0.038 + uJourney * 0.15)) * vec2(0.014, 0.018);
+      vec2 artistCurrentRaw = containUv(
+        rotateUv(fieldUv, 0.018),
+        uCurrentTextureSize,
+        uResolution,
+        artistCurrentScale,
+        artistCurrentOffset
+      );
+      vec2 artistMemoryRaw = containUv(
+        rotateUv(fieldUv, -0.024),
+        uMemoryTextureSize,
+        uResolution,
+        artistMemoryScale,
+        artistMemoryOffset
+      );
+
+      float transitionNoise = fbm(
+        uv * vec2(1.34, 1.12) + flow * 0.8 + vec2(time * 0.006, -time * 0.005) + 33.0
+      );
+      float processTransition = clamp(uv.y * 0.68 + uv.x * 0.14 + transitionNoise * 0.2, 0.0, 1.0);
+      float artistTransition = clamp(uv.x * 0.28 + (1.0 - uv.y) * 0.16 + transitionNoise * 0.58, 0.0, 1.0);
+      float contactTransition = clamp(uv.x * 0.76 + (1.0 - uv.y) * 0.06 + transitionNoise * 0.18, 0.0, 1.0);
+      float transitionCoordinate = processTransition * isProcess
+        + artistTransition * isArtist
+        + contactTransition * isContact;
+      float transitionThreshold = mix(-0.26, 1.26, uTransition);
+      float transitionReveal = 1.0 - smoothstep(
+        transitionThreshold - (0.16 + isArtist * 0.12),
+        transitionThreshold + (0.16 + isArtist * 0.12),
+        transitionCoordinate
+      );
+      float transitionPressure = sin(clamp(uTransition, 0.0, 1.0) * 3.14159265);
+      vec2 transitionShear = flow
+        * (isProcess * vec2(0.006, 0.004)
+          + isArtist * vec2(0.012, 0.009)
+          + isContact * vec2(0.003, 0.002))
+        * transitionPressure;
+
+      vec2 currentCoverUv = clamp(
+        coverUv(currentCoverField + transitionShear, uCurrentTextureSize, uResolution),
+        0.002,
+        0.998
+      );
+      vec2 memoryCoverUv = clamp(
+        coverUv(memoryCoverField, uMemoryTextureSize, uResolution),
+        0.002,
+        0.998
+      );
+      vec2 incomingCoverUv = clamp(
+        coverUv(currentCoverField - transitionShear, uIncomingTextureSize, uResolution),
+        0.002,
+        0.998
+      );
+      vec2 artistIncomingRaw = containUv(
+        rotateUv(fieldUv - transitionShear, 0.018),
+        uIncomingTextureSize,
+        uResolution,
+        artistCurrentScale,
+        artistCurrentOffset
+      );
+      vec2 currentUv = mix(currentCoverUv, clamp(artistCurrentRaw, 0.002, 0.998), isArtist);
+      vec2 memoryUv = mix(memoryCoverUv, clamp(artistMemoryRaw, 0.002, 0.998), isArtist);
+      vec2 incomingUv = mix(incomingCoverUv, clamp(artistIncomingRaw, 0.002, 0.998), isArtist);
+
+      vec2 currentTexel = vec2(1.25) / max(uCurrentTextureSize, vec2(1.0));
+      vec2 memoryTexel = vec2(1.25) / max(uMemoryTextureSize, vec2(1.0));
+      vec2 incomingTexel = vec2(1.25) / max(uIncomingTextureSize, vec2(1.0));
+      vec3 currentCenter = texture2D(uCurrentTexture, currentUv).rgb;
+      vec3 currentX = texture2D(uCurrentTexture, clamp(currentUv + vec2(currentTexel.x, 0.0), 0.002, 0.998)).rgb;
+      vec3 currentY = texture2D(uCurrentTexture, clamp(currentUv + vec2(0.0, currentTexel.y), 0.002, 0.998)).rgb;
+      vec3 currentSoft = currentCenter * 0.5
+        + currentX * 0.125
+        + currentY * 0.125
+        + texture2D(uCurrentTexture, clamp(currentUv - vec2(currentTexel.x, 0.0), 0.002, 0.998)).rgb * 0.125
+        + texture2D(uCurrentTexture, clamp(currentUv - vec2(0.0, currentTexel.y), 0.002, 0.998)).rgb * 0.125;
+      vec3 memoryCenter = texture2D(uMemoryTexture, memoryUv).rgb;
+      vec3 memorySoft = memoryCenter * 0.6
+        + texture2D(uMemoryTexture, clamp(memoryUv + vec2(memoryTexel.x, 0.0), 0.002, 0.998)).rgb * 0.1
+        + texture2D(uMemoryTexture, clamp(memoryUv - vec2(memoryTexel.x, 0.0), 0.002, 0.998)).rgb * 0.1
+        + texture2D(uMemoryTexture, clamp(memoryUv + vec2(0.0, memoryTexel.y), 0.002, 0.998)).rgb * 0.1
+        + texture2D(uMemoryTexture, clamp(memoryUv - vec2(0.0, memoryTexel.y), 0.002, 0.998)).rgb * 0.1;
+      vec3 incomingCenter = texture2D(uIncomingTexture, incomingUv).rgb;
+      vec3 incomingSoft = incomingCenter * 0.6
+        + texture2D(uIncomingTexture, clamp(incomingUv + vec2(incomingTexel.x, 0.0), 0.002, 0.998)).rgb * 0.1
+        + texture2D(uIncomingTexture, clamp(incomingUv - vec2(incomingTexel.x, 0.0), 0.002, 0.998)).rgb * 0.1
+        + texture2D(uIncomingTexture, clamp(incomingUv + vec2(0.0, incomingTexel.y), 0.002, 0.998)).rgb * 0.1
+        + texture2D(uIncomingTexture, clamp(incomingUv - vec2(0.0, incomingTexel.y), 0.002, 0.998)).rgb * 0.1;
+
+      float softWeight = isProcess * 0.62 + isArtist * 0.24 + isContact * 0.56;
+      vec3 currentPigment = mix(currentCenter, currentSoft, softWeight);
+      vec3 memoryPigment = mix(memoryCenter, memorySoft, softWeight);
+      vec3 incomingPigment = mix(incomingCenter, incomingSoft, softWeight);
+      vec3 activePigment = mix(currentPigment, incomingPigment, transitionReveal);
+      float transitionEdge = (
+        1.0 - smoothstep(0.025, 0.18, abs(transitionCoordinate - transitionThreshold))
+      ) * transitionPressure;
+
+      float currentLight = luminance(currentCenter);
+      float pigmentEdge = smoothstep(
+        0.015,
+        0.12,
+        length(vec2(luminance(currentX) - currentLight, luminance(currentY) - currentLight)) * 2.8
+      );
+      float activeLight = luminance(activePigment);
+      float memoryLight = luminance(memoryPigment);
+      float strata = fbm(
+        uv * vec2(1.42, 1.2) - flow * 0.7 + vec2(-time * 0.009, time * 0.011) + 18.0
+      );
+
+      float processRakeAxis = dot(spatial, vec2(0.78, -0.22));
+      float processRakeCenter = -0.08 + sin(time * 0.075 + uJourney * 0.34) * 0.2;
+      float processRake = 1.0 - smoothstep(0.14, 0.66, abs(processRakeAxis - processRakeCenter));
+      float processShadow = 1.0 - smoothstep(
+        0.08,
+        0.38,
+        abs(dot(spatial, vec2(0.22, 0.94)) + 0.2 - sin(time * 0.052) * 0.08)
+      );
+      vec3 processPigment = mix(vec3(activeLight), activePigment, 0.42);
+      processPigment = clamp((processPigment - vec3(0.38)) * 0.92 + vec3(0.42), 0.0, 1.0);
+      vec3 processMemory = mix(vec3(memoryLight), memoryPigment, 0.28);
+      vec3 processBase = mix(vec3(0.004, 0.007, 0.006), vec3(0.019, 0.022, 0.015), strata * 0.7);
+      vec3 processColor = mix(
+        processBase,
+        mix(processPigment, processMemory, 0.12 + uPresence * 0.08),
+        0.17 + processRake * 0.43 + uPresence * 0.055
+      );
+      processColor *= 1.0 - processShadow * 0.12;
+      processColor = mix(processColor, processColor * vec3(0.48, 0.52, 0.45), pigmentEdge * 0.24);
+      processColor += vec3(0.055, 0.062, 0.044) * processRake * (0.06 + fieldEnergy * 0.035);
+      processColor += mix(processPigment, vec3(0.15, 0.16, 0.1), 0.62) * transitionEdge * 0.045;
+      processColor *= mix(0.56, 1.0, smoothstep(0.04, 0.52, uv.x));
+      processColor *= 1.14;
+
+      float artistCurrentMask = containMask(artistCurrentRaw, 0.055);
+      float artistMemoryMask = containMask(artistMemoryRaw, 0.07);
+      float artistDissolve = smoothstep(
+        0.28,
+        0.72,
+        fbm(uv * vec2(1.16, 1.04) + vec2(time * 0.008, -time * 0.006) + 51.0)
+          + sin(dot(spatial, vec2(0.48, -0.72)) * 1.6 - time * 0.065) * 0.12
+      );
+      float artistMemoryDissolve = smoothstep(
+        0.3,
+        0.72,
+        fbm(uv * vec2(1.08, 1.18) + vec2(-time * 0.006, time * 0.007) + 67.0)
+      );
+      float artistExposureA = 1.0 - smoothstep(
+        0.13,
+        0.56,
+        abs(dot(spatial, vec2(0.54, -0.34)) - 0.18 - sin(time * 0.043) * 0.12)
+      );
+      float artistExposureB = 1.0 - smoothstep(
+        0.1,
+        0.42,
+        abs(dot(spatial, vec2(0.3, 0.82)) + 0.24 - cos(time * 0.036) * 0.09)
+      );
+      artistCurrentMask *= clamp(0.05 + artistDissolve * 0.67 + artistExposureA * 0.38, 0.0, 1.0);
+      artistMemoryMask *= clamp(0.035 + artistMemoryDissolve * 0.56 + artistExposureB * 0.34, 0.0, 0.9);
+      float artistStageAxis = dot(spatial, vec2(0.62, -0.46));
+      float artistStageLight = 1.0 - smoothstep(
+        0.16,
+        0.78,
+        abs(artistStageAxis - 0.14 - sin(time * 0.052 + uJourney * 0.2) * 0.16)
+      );
+      vec3 artistActive = mix(vec3(activeLight), activePigment, 1.02);
+      vec3 artistMemory = mix(vec3(memoryLight), memoryPigment, 0.84);
+      artistActive = clamp((artistActive - vec3(0.36)) * 1.04 + vec3(0.41), 0.0, 1.0);
+      artistMemory = clamp((artistMemory - vec3(0.38)) * 0.98 + vec3(0.4), 0.0, 1.0);
+      vec3 artistBase = mix(vec3(0.004, 0.007, 0.006), vec3(0.014, 0.012, 0.008), strata * 0.55);
+      vec3 artistAmbient = mix(artistActive, artistMemory, 0.42);
+      vec3 artistColor = mix(artistBase, artistAmbient, 0.035 + artistStageLight * 0.035);
+      float artistLayerWeight = clamp(artistCurrentMask * 0.72 + artistMemoryMask * 0.52, 0.0, 1.0);
+      vec3 artistLayer = mix(
+        artistMemory,
+        artistActive,
+        clamp(artistCurrentMask / max(artistCurrentMask + artistMemoryMask, 0.001), 0.0, 1.0)
+      );
+      artistLayer *= mix(vec3(0.9, 0.94, 0.9), vec3(1.05, 0.93, 0.75), artistStageLight * 0.42);
+      artistColor = mix(
+        artistColor,
+        artistLayer,
+        artistLayerWeight * (0.28 + artistStageLight * 0.26 + uPresence * 0.05)
+      );
+      artistColor += artistLayer * transitionEdge * artistCurrentMask * 0.055;
+      artistColor *= mix(0.58, 1.0, smoothstep(0.08, 0.56, uv.x));
+
+      float contactAxis = dot(spatial, vec2(0.92, 0.12));
+      float contactBeamA = 1.0 - smoothstep(
+        0.12,
+        0.44,
+        abs(contactAxis - 0.18 - sin(time * 0.055 + uJourney * 0.11) * 0.12)
+      );
+      float contactBeamB = 1.0 - smoothstep(
+        0.08,
+        0.3,
+        abs(dot(spatial, vec2(0.74, -0.32)) + 0.34 - cos(time * 0.041) * 0.08)
+      );
+      float contactSignal = clamp(contactBeamA * 0.76 + contactBeamB * 0.28, 0.0, 1.0);
+      float contactPulse = 0.78 + 0.22 * sin(time * 0.13 + uPresence * 1.7);
+      vec3 contactPigment = mix(vec3(activeLight), activePigment, 0.5);
+      contactPigment = clamp((contactPigment - vec3(0.4)) * 0.88 + vec3(0.39), 0.0, 1.0);
+      contactPigment *= vec3(1.02, 0.76, 0.68);
+      vec3 contactBase = mix(vec3(0.003, 0.005, 0.005), vec3(0.012, 0.007, 0.006), strata * 0.42);
+      vec3 contactColor = mix(
+        contactBase,
+        contactPigment,
+        0.04 + contactSignal * (0.24 + contactPulse * 0.1 + uPresence * 0.035)
+      );
+      contactColor += mix(vec3(0.06, 0.016, 0.012), contactPigment, 0.18)
+        * contactBeamA
+        * (0.05 + fieldEnergy * 0.024);
+      contactColor += contactPigment * transitionEdge * contactSignal * 0.025;
+      contactColor *= mix(0.6, 1.0, smoothstep(0.14, 0.62, uv.x));
+      contactColor *= mix(0.7, 1.0, 1.0 - smoothstep(0.86, 1.0, uv.x));
+      contactColor *= 1.18;
+
+      vec3 color = processColor * isProcess + artistColor * isArtist + contactColor * isContact;
+      vec3 base = vec3(0.003, 0.005, 0.004);
+      float edgeDistance = length((uv - 0.5) * vec2(0.8, 1.02));
+      float vignette = 1.0 - smoothstep(0.43, 0.82, edgeDistance);
+      float vignetteFloor = isProcess * 0.74 + isArtist * 0.68 + isContact * 0.58;
+      color *= mix(vignetteFloor, 1.025, vignette);
+      color *= 0.985 + breath * (isProcess * 0.018 + isArtist * 0.025 + isContact * 0.01);
+      color = pow(max(color, vec3(0.0)), vec3(0.94 - isArtist * 0.025));
+      color = mix(base, color, smoothstep(0.0, 1.0, uTextureMix));
+
+      gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
+    }
+  `;
+
+  const PROFILE_CONFIG = {
+    process: {
+      index: 0,
+      duration: 5800,
+      dwell: 360,
+      timeScale: 0.68,
+      dpr: 1.45,
+      autoCycle: 46000,
+      scrollTargets: true,
+    },
+    artist: {
+      index: 1,
+      duration: 6400,
+      dwell: 420,
+      timeScale: 0.56,
+      dpr: 1.45,
+      autoCycle: 62000,
+      scrollTargets: true,
+    },
+    contact: {
+      index: 2,
+      duration: 7200,
+      dwell: 620,
+      timeScale: 0.38,
+      dpr: 1.35,
+      autoCycle: 84000,
+      scrollTargets: true,
+    },
+  };
+
+  const mountedEnvironments = new WeakMap();
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const damp = (current, target, delta, speed) =>
+    current + (target - current) * (1 - Math.exp(-delta * speed));
+
+  function smootherstep(value) {
+    const progress = clamp(value, 0, 1);
+    return progress * progress * progress * (progress * (progress * 6 - 15) + 10);
+  }
+
+  function createPlaceholderTexture() {
+    const data = new Uint8Array([3, 7, 5, 255]);
+    const texture = new THREE.DataTexture(data, 1, 1, THREE.RGBAFormat);
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  function loadTexture(loader, source) {
+    return loader.loadAsync(source).then((texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.generateMipmaps = true;
+      texture.needsUpdate = true;
+      return texture;
+    });
+  }
+
+  function mountLivingRouteEnvironment(host) {
+    if (mountedEnvironments.has(host)) return;
+
+    const profile = host.dataset.livingRouteProfile || "artist";
+    const config = PROFILE_CONFIG[profile] || PROFILE_CONFIG.artist;
+    const mode = host.dataset.livingRouteMode || "default";
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const textureEntries = (() => {
+      try {
+        return JSON.parse(host.dataset.livingRouteTextures || "[]");
+      } catch {
+        return [];
+      }
+    })();
+    const sourcesBySlug = new Map(
+      textureEntries
+        .filter((entry) => entry?.slug && entry?.src)
+        .map((entry) => [entry.slug, entry.src]),
+    );
+    const textureSlugs = Array.from(sourcesBySlug.keys());
+    const initialSlug = host.dataset.livingRouteInitial || textureSlugs[0] || "";
+    const initialMemorySlug =
+      host.dataset.livingRouteMemory || textureSlugs.find((slug) => slug !== initialSlug) || initialSlug;
+    const placeholder = createPlaceholderTexture();
+    const textureLoader = new THREE.TextureLoader();
+    const loadedTextures = new Set();
+
+    if (!sourcesBySlug.size || !initialSlug) {
+      host.dataset.livingRouteFailed = "true";
+      placeholder.dispose();
+      return;
+    }
+
+    let renderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        alpha: false,
+        antialias: false,
+        depth: false,
+        stencil: false,
+        powerPreference: "high-performance",
+        preserveDrawingBuffer: true,
+      });
+    } catch (error) {
+      host.dataset.livingRouteFailed = "true";
+      placeholder.dispose();
+      console.warn("Living route environment could not initialize.", error);
+      return;
+    }
+
+    renderer.setClearColor(0x020504, 1);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.NoToneMapping;
+    renderer.domElement.dataset.livingRouteCanvas = "true";
+    renderer.domElement.setAttribute("aria-hidden", "true");
+    host.prepend(renderer.domElement);
+    document.documentElement.dataset.livingRouteProfile = profile;
+    document.documentElement.dataset.livingRouteMode = mode;
+
+    const uniforms = {
+      uTime: { value: 0 },
+      uResolution: { value: new THREE.Vector2(1, 1) },
+      uCurrentTexture: { value: placeholder },
+      uMemoryTexture: { value: placeholder },
+      uIncomingTexture: { value: placeholder },
+      uCurrentTextureSize: { value: new THREE.Vector2(3, 4) },
+      uMemoryTextureSize: { value: new THREE.Vector2(3, 4) },
+      uIncomingTextureSize: { value: new THREE.Vector2(3, 4) },
+      uTransition: { value: 0 },
+      uTextureMix: { value: 0 },
+      uPointer: { value: new THREE.Vector2(0, 0) },
+      uInteraction: { value: 0 },
+      uPresence: { value: 0.5 },
+      uScroll: { value: 0 },
+      uJourney: { value: 0 },
+      uScrollVelocity: { value: 0 },
+      uScrollDirection: { value: 1 },
+      uImpulse: { value: 0 },
+      uProfile: { value: config.index },
+    };
+
+    const material = new THREE.RawShaderMaterial({
+      vertexShader: VERTEX_SHADER,
+      fragmentShader: DIRECTED_FRAGMENT_SHADER,
+      uniforms,
+      depthTest: false,
+      depthWrite: false,
+    });
+    const geometry = new THREE.PlaneGeometry(2, 2);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.frustumCulled = false;
+    const scene = new THREE.Scene();
+    const camera = new THREE.Camera();
+    scene.add(mesh);
+
+    const phaseTargets = {
+      awake: 0.48,
+      settling: 0.59,
+      contemplating: 0.7,
+      dreaming: 0.86,
+      waking: 0.64,
+    };
+    let currentSlug = initialSlug;
+    let memorySlug = initialMemorySlug;
+    let pendingSlug = "";
+    let queuedSlug = "";
+    let pendingTexture = null;
+    let transitionStartedAt = 0;
+    let transitionPausedAt = 0;
+    let transitionProgress = 0;
+    let transitionActive = false;
+    let transitionLoading = false;
+    let targetTextureMix = 0;
+    let currentTextureMix = 0;
+    let targetPresence = phaseTargets[document.documentElement.dataset.presencePhase] ?? phaseTargets.awake;
+    let currentPresence = targetPresence;
+    let targetScroll = 0;
+    let currentScroll = 0;
+    let targetJourney = 0;
+    let currentJourney = 0;
+    let targetScrollVelocity = 0;
+    let currentScrollVelocity = 0;
+    let targetScrollDirection = 1;
+    let currentScrollDirection = 1;
+    let lastScrollY = window.scrollY;
+    let lastScrollAt = performance.now();
+    let targetPointerX = 0;
+    let targetPointerY = 0;
+    let pointerX = 0;
+    let pointerY = 0;
+    let targetInteraction = 0;
+    let currentInteraction = 0;
+    let impulse = 0;
+    let elapsed = 0;
+    let raf = 0;
+    let targetRaf = 0;
+    let targetTimer = 0;
+    let autoCycleTimer = 0;
+    let lastFrame = 0;
+    let lastReducedFrame = 0;
+    let destroyed = false;
+    let dominantSlug = currentSlug;
+
+    const setTextureSize = (uniform, texture) => {
+      uniform.value.set(
+        texture.image?.naturalWidth || texture.image?.width || 3,
+        texture.image?.naturalHeight || texture.image?.height || 4,
+      );
+    };
+
+    const resize = () => {
+      const rect = host.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const compact = window.innerWidth < 760;
+      const maxDpr = compact ? 1 : config.dpr;
+      renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio || 1, 1), maxDpr));
+      renderer.setSize(rect.width, rect.height, false);
+      uniforms.uResolution.value.set(renderer.domElement.width, renderer.domElement.height);
+    };
+
+    const releaseTexture = (texture) => {
+      if (!texture || texture === placeholder) return;
+      if (
+        texture === uniforms.uCurrentTexture.value ||
+        texture === uniforms.uMemoryTexture.value ||
+        texture === uniforms.uIncomingTexture.value ||
+        texture === pendingTexture
+      ) {
+        return;
+      }
+      loadedTextures.delete(texture);
+      texture.dispose();
+    };
+
+    const finishTransition = () => {
+      if (!transitionActive || !pendingTexture) return;
+      const previousCurrent = uniforms.uCurrentTexture.value;
+      const previousMemory = uniforms.uMemoryTexture.value;
+      const previousCurrentSize = uniforms.uCurrentTextureSize.value.clone();
+      const nextTexture = pendingTexture;
+
+      uniforms.uCurrentTexture.value = nextTexture;
+      setTextureSize(uniforms.uCurrentTextureSize, nextTexture);
+      uniforms.uMemoryTexture.value = previousCurrent;
+      uniforms.uMemoryTextureSize.value.copy(previousCurrentSize);
+      uniforms.uIncomingTexture.value = nextTexture;
+      setTextureSize(uniforms.uIncomingTextureSize, nextTexture);
+      uniforms.uTransition.value = 0;
+
+      memorySlug = currentSlug;
+      currentSlug = pendingSlug;
+      dominantSlug = currentSlug;
+      pendingSlug = "";
+      pendingTexture = null;
+      transitionProgress = 0;
+      transitionStartedAt = 0;
+      transitionPausedAt = 0;
+      transitionActive = false;
+      host.dataset.livingRouteCurrent = currentSlug;
+      host.dataset.livingRouteMemory = memorySlug;
+      host.dataset.livingRouteState = "resting";
+      delete host.dataset.livingRouteIncoming;
+      releaseTexture(previousMemory);
+
+      const nextQueuedSlug = queuedSlug;
+      queuedSlug = "";
+      if (nextQueuedSlug && nextQueuedSlug !== currentSlug) {
+        window.setTimeout(() => requestTarget(nextQueuedSlug), 100);
+      }
+    };
+
+    const beginTransition = (slug, texture) => {
+      pendingSlug = slug;
+      pendingTexture = texture;
+      uniforms.uIncomingTexture.value = texture;
+      setTextureSize(uniforms.uIncomingTextureSize, texture);
+      uniforms.uTransition.value = 0;
+      transitionProgress = 0;
+      transitionStartedAt = performance.now();
+      transitionPausedAt = 0;
+      transitionActive = true;
+      impulse = Math.max(impulse, profile === "contact" ? 0.2 : 0.34);
+      host.dataset.livingRouteIncoming = slug;
+      host.dataset.livingRouteState = "transitioning";
+    };
+
+    const requestTarget = async (slug) => {
+      if (destroyed || !slug || !sourcesBySlug.has(slug) || slug === currentSlug) return;
+      if (host.dataset.livingRouteReady !== "true") {
+        queuedSlug = slug;
+        return;
+      }
+      if (transitionActive || transitionLoading) {
+        queuedSlug = slug;
+        return;
+      }
+
+      if (slug === memorySlug) {
+        beginTransition(slug, uniforms.uMemoryTexture.value);
+        return;
+      }
+
+      transitionLoading = true;
+      host.dataset.livingRouteState = "loading";
+      try {
+        const texture = await loadTexture(textureLoader, sourcesBySlug.get(slug));
+        if (destroyed) {
+          texture.dispose();
+          return;
+        }
+        loadedTextures.add(texture);
+        beginTransition(slug, texture);
+      } catch (error) {
+        host.dataset.livingRouteState = "resting";
+        console.warn("Living route texture could not load.", error);
+      } finally {
+        transitionLoading = false;
+      }
+    };
+
+    const scheduleTarget = (slug, delay = config.dwell) => {
+      if (!slug || !sourcesBySlug.has(slug) || slug === dominantSlug) return;
+      window.clearTimeout(targetTimer);
+      targetTimer = window.setTimeout(() => {
+        dominantSlug = slug;
+        requestTarget(slug);
+      }, reducedMotion.matches ? Math.max(delay, 720) : delay);
+    };
+
+    const getTargetFromEvent = (event) => {
+      const element = event.target instanceof Element ? event.target.closest("[data-lbe-target]") : null;
+      return element?.getAttribute("data-lbe-target") || "";
+    };
+
+    const handlePointerOver = (event) => {
+      const slug = getTargetFromEvent(event);
+      if (slug) scheduleTarget(slug);
+    };
+
+    const handleFocusIn = (event) => {
+      const slug = getTargetFromEvent(event);
+      if (slug) scheduleTarget(slug, Math.min(config.dwell, 180));
+    };
+
+    const updateDominantTarget = () => {
+      targetRaf = 0;
+      if (!config.scrollTargets) return;
+      const viewportCenter = window.innerHeight * 0.52;
+      let closestSlug = "";
+      let closestDistance = Number.POSITIVE_INFINITY;
+
+      document.querySelectorAll("[data-lbe-target]").forEach((element) => {
+        const slug = element.getAttribute("data-lbe-target") || "";
+        if (!sourcesBySlug.has(slug)) return;
+        const rect = element.getBoundingClientRect();
+        if (rect.bottom < 0 || rect.top > window.innerHeight) return;
+        const center = (Math.max(rect.top, 0) + Math.min(rect.bottom, window.innerHeight)) * 0.5;
+        const distance = Math.abs(center - viewportCenter);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestSlug = slug;
+        }
+      });
+
+      if (closestSlug) scheduleTarget(closestSlug);
+    };
+
+    const requestDominantTargetUpdate = () => {
+      if (!config.scrollTargets || targetRaf) return;
+      targetRaf = window.requestAnimationFrame(updateDominantTarget);
+    };
+
+    const updateScroll = () => {
+      const now = performance.now();
+      const nextScrollY = window.scrollY;
+      const deltaY = nextScrollY - lastScrollY;
+      const deltaTime = Math.max(now - lastScrollAt, 16);
+      const pageRange = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+
+      targetScroll = clamp(nextScrollY / pageRange, 0, 1);
+      targetJourney = nextScrollY / Math.max(window.innerHeight, 1);
+      if (Math.abs(deltaY) > 0.5) {
+        const normalizedVelocity = clamp(
+          (Math.abs(deltaY) / Math.max(window.innerHeight, 1)) * (950 / deltaTime),
+          0,
+          1,
+        );
+        targetScrollVelocity = Math.max(targetScrollVelocity, normalizedVelocity);
+        targetScrollDirection = deltaY >= 0 ? 1 : -1;
+        impulse = Math.max(impulse, 0.06 + normalizedVelocity * 0.2);
+      }
+      lastScrollY = nextScrollY;
+      lastScrollAt = now;
+      requestDominantTargetUpdate();
+    };
+
+    const handleTarget = (event) => requestTarget(event.detail?.slug || "");
+
+    const handlePointerMove = (event) => {
+      if (reducedMotion.matches) return;
+      const nextX = clamp((event.clientX / Math.max(window.innerWidth, 1)) * 2 - 1, -1, 1);
+      const nextY = clamp(1 - (event.clientY / Math.max(window.innerHeight, 1)) * 2, -1, 1);
+      const velocity = Math.hypot(nextX - targetPointerX, nextY - targetPointerY);
+      targetPointerX = nextX;
+      targetPointerY = nextY;
+      targetInteraction = Math.max(targetInteraction, clamp(velocity * 0.76, 0.018, 0.11));
+    };
+
+    const handlePointerLeave = () => {
+      targetPointerX = 0;
+      targetPointerY = 0;
+      targetInteraction = 0;
+    };
+
+    const handlePresence = (event) => {
+      const phase = event.detail?.phase || document.documentElement.dataset.presencePhase || "awake";
+      targetPresence = phaseTargets[phase] ?? phaseTargets.awake;
+      host.dataset.livingRoutePhase = phase;
+      if (phase === "waking") impulse = Math.max(impulse, profile === "contact" ? 0.14 : 0.25);
+    };
+
+    const handleDreamCycle = (event) => {
+      const cycle = event.detail?.cycle || document.documentElement.dataset.presenceDreamCycle || "gathering";
+      impulse = Math.max(impulse, cycle === "dispersing" ? 0.18 : 0.08);
+      host.dataset.livingRouteDreamCycle = cycle;
+    };
+
+    const handleVisibility = () => {
+      if (!transitionActive) return;
+      if (document.hidden) {
+        transitionPausedAt = performance.now();
+      } else if (transitionPausedAt > 0) {
+        transitionStartedAt += performance.now() - transitionPausedAt;
+        transitionPausedAt = 0;
+      }
+    };
+
+    const handleMotionChange = () => {
+      if (reducedMotion.matches) {
+        targetPointerX = 0;
+        targetPointerY = 0;
+        targetInteraction = 0;
+      }
+      resize();
+    };
+
+    const cycleTexture = () => {
+      if (document.hidden || transitionActive || transitionLoading || textureSlugs.length < 3) return;
+      const currentIndex = Math.max(textureSlugs.indexOf(currentSlug), 0);
+      const nextSlug = textureSlugs[(currentIndex + 1) % textureSlugs.length];
+      if (nextSlug) requestTarget(nextSlug);
+    };
+
+    const destroy = () => {
+      if (destroyed) return;
+      destroyed = true;
+      window.cancelAnimationFrame(raf);
+      window.cancelAnimationFrame(targetRaf);
+      window.clearTimeout(targetTimer);
+      window.clearInterval(autoCycleTimer);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("scroll", updateScroll);
+      window.removeEventListener("pointermove", handlePointerMove);
+      document.removeEventListener("pointerover", handlePointerOver);
+      document.removeEventListener("focusin", handleFocusIn);
+      document.documentElement.removeEventListener("pointerleave", handlePointerLeave);
+      window.removeEventListener("artist-stage:living-route-target", handleTarget);
+      window.removeEventListener("artist-stage:presence-phase", handlePresence);
+      window.removeEventListener("artist-stage:presence-dream-cycle", handleDreamCycle);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      reducedMotion.removeEventListener?.("change", handleMotionChange);
+      loadedTextures.forEach((texture) => texture.dispose());
+      placeholder.dispose();
+      geometry.dispose();
+      material.dispose();
+      renderer.dispose();
+      renderer.domElement.remove();
+      delete host.__artistStageLivingRouteSample;
+      delete host.__artistStageLivingRouteState;
+      if (document.documentElement.dataset.livingRouteProfile === profile) {
+        delete document.documentElement.dataset.livingRouteProfile;
+        delete document.documentElement.dataset.livingRouteMode;
+      }
+      mountedEnvironments.delete(host);
+    };
+
+    const renderFrame = (now) => {
+      if (destroyed) return;
+      if (!host.isConnected) {
+        destroy();
+        return;
+      }
+      raf = window.requestAnimationFrame(renderFrame);
+      if (document.hidden) {
+        lastFrame = now;
+        return;
+      }
+      if (reducedMotion.matches && now - lastReducedFrame < 160) return;
+
+      const seconds = now * 0.001;
+      const rawDelta = lastFrame ? Math.max(seconds - lastFrame * 0.001, 0.001) : 0.016;
+      const delta = clamp(rawDelta, 0.001, 0.08);
+      lastFrame = now;
+      lastReducedFrame = now;
+      elapsed += delta * (reducedMotion.matches ? 0.04 : config.timeScale);
+
+      if (transitionActive && !transitionPausedAt) {
+        transitionProgress = clamp((now - transitionStartedAt) / config.duration, 0, 1);
+        uniforms.uTransition.value = smootherstep(transitionProgress);
+        if (transitionProgress >= 1) finishTransition();
+      }
+
+      currentTextureMix = damp(currentTextureMix, targetTextureMix, delta, 1.05);
+      currentPresence = damp(currentPresence, targetPresence, delta, 0.54);
+      currentScroll = damp(currentScroll, targetScroll, delta, 0.68);
+      currentJourney = damp(currentJourney, targetJourney, delta, 0.82);
+      currentScrollVelocity = damp(currentScrollVelocity, targetScrollVelocity, delta, 5.0);
+      currentScrollDirection = damp(currentScrollDirection, targetScrollDirection, delta, 3.6);
+      targetScrollVelocity *= Math.exp(-delta * 3.2);
+      pointerX = damp(pointerX, targetPointerX, delta, 0.58);
+      pointerY = damp(pointerY, targetPointerY, delta, 0.58);
+      currentInteraction = damp(currentInteraction, targetInteraction, delta, 0.76);
+      targetInteraction *= Math.exp(-delta * 0.72);
+      impulse *= Math.exp(-delta * 0.58);
+
+      uniforms.uTime.value = elapsed;
+      uniforms.uTextureMix.value = currentTextureMix;
+      uniforms.uPresence.value = currentPresence;
+      uniforms.uScroll.value = currentScroll;
+      uniforms.uJourney.value = currentJourney;
+      uniforms.uScrollVelocity.value = currentScrollVelocity;
+      uniforms.uScrollDirection.value = currentScrollDirection;
+      uniforms.uPointer.value.set(pointerX, pointerY);
+      uniforms.uInteraction.value = currentInteraction;
+      uniforms.uImpulse.value = impulse;
+      renderer.render(scene, camera);
+    };
+
+    const establishInitialField = (currentTexture, memoryTexture) => {
+      if (destroyed) return;
+      uniforms.uCurrentTexture.value = currentTexture;
+      uniforms.uMemoryTexture.value = memoryTexture;
+      uniforms.uIncomingTexture.value = currentTexture;
+      setTextureSize(uniforms.uCurrentTextureSize, currentTexture);
+      setTextureSize(uniforms.uMemoryTextureSize, memoryTexture);
+      setTextureSize(uniforms.uIncomingTextureSize, currentTexture);
+      targetTextureMix = 1;
+      host.dataset.livingRouteCurrent = currentSlug;
+      host.dataset.livingRouteMemory = memorySlug;
+      host.dataset.livingRouteState = "resting";
+      host.dataset.livingRouteReady = "true";
+
+      const requestedSlug = queuedSlug;
+      queuedSlug = "";
+      if (requestedSlug && requestedSlug !== currentSlug) {
+        window.setTimeout(() => requestTarget(requestedSlug), 60);
+      }
+    };
+
+    const initialSource = sourcesBySlug.get(initialSlug);
+    const memorySource = sourcesBySlug.get(initialMemorySlug) || initialSource;
+    const currentPromise = loadTexture(textureLoader, initialSource);
+    const memoryPromise = initialMemorySlug === initialSlug
+      ? currentPromise
+      : loadTexture(textureLoader, memorySource);
+
+    Promise.all([currentPromise, memoryPromise])
+      .then(([currentTexture, memoryTexture]) => {
+        if (destroyed) {
+          currentTexture.dispose();
+          if (memoryTexture !== currentTexture) memoryTexture.dispose();
+          return;
+        }
+        loadedTextures.add(currentTexture);
+        loadedTextures.add(memoryTexture);
+        establishInitialField(currentTexture, memoryTexture);
+      })
+      .catch((error) => {
+        host.dataset.livingRouteFailed = "true";
+        console.warn("Living route initial textures could not load.", error);
+      });
+
+    const resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(resize) : null;
+    resizeObserver?.observe(host);
+    window.addEventListener("resize", resize, { passive: true });
+    window.addEventListener("scroll", updateScroll, { passive: true });
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    document.addEventListener("pointerover", handlePointerOver, { passive: true });
+    document.addEventListener("focusin", handleFocusIn);
+    document.documentElement.addEventListener("pointerleave", handlePointerLeave, { passive: true });
+    window.addEventListener("artist-stage:living-route-target", handleTarget);
+    window.addEventListener("artist-stage:presence-phase", handlePresence);
+    window.addEventListener("artist-stage:presence-dream-cycle", handleDreamCycle);
+    document.addEventListener("visibilitychange", handleVisibility);
+    reducedMotion.addEventListener?.("change", handleMotionChange);
+    if (config.autoCycle > 0) autoCycleTimer = window.setInterval(cycleTexture, config.autoCycle);
+
+    resize();
+    updateScroll();
+    renderer.render(scene, camera);
+    raf = window.requestAnimationFrame(renderFrame);
+
+    host.__artistStageLivingRouteSample = () => {
+      const width = renderer.domElement.width;
+      const height = renderer.domElement.height;
+      const points = [[0.14, 0.24], [0.34, 0.66], [0.52, 0.44], [0.72, 0.61], [0.87, 0.3]];
+      const sampleCanvas = document.createElement("canvas");
+      sampleCanvas.width = points.length;
+      sampleCanvas.height = 1;
+      const context = sampleCanvas.getContext("2d", { willReadFrequently: true });
+      if (!context) return { width, height, checksum: 0, samples: [], time: uniforms.uTime.value };
+
+      points.forEach(([x, y], index) => {
+        context.drawImage(
+          renderer.domElement,
+          Math.min(width - 1, Math.max(0, Math.round(width * x))),
+          Math.min(height - 1, Math.max(0, Math.round(height * y))),
+          1,
+          1,
+          index,
+          0,
+          1,
+          1,
+        );
+      });
+
+      const data = context.getImageData(0, 0, points.length, 1).data;
+      let checksum = 0;
+      const samples = points.map((_, index) => {
+        const offset = index * 4;
+        const value = Array.from(data.slice(offset, offset + 4));
+        checksum += value[0] * 3 + value[1] * 5 + value[2] * 7 + value[3];
+        return value;
+      });
+      return { width, height, checksum, samples, time: uniforms.uTime.value };
+    };
+    host.__artistStageLivingRouteState = () => ({
+      profile,
+      mode,
+      currentSlug,
+      memorySlug,
+      incomingSlug: pendingSlug,
+      loadedTextureCount: loadedTextures.size,
+      progress: transitionProgress,
+      journey: currentJourney,
+      scrollVelocity: currentScrollVelocity,
+      state: host.dataset.livingRouteState || "initializing",
+    });
+
+    mountedEnvironments.set(host, { destroy });
+    window.addEventListener("pagehide", destroy, { once: true });
+  }
+
+  function mountAllLivingRouteEnvironments() {
+    document
+      .querySelectorAll("[data-living-route-environment]")
+      .forEach((host) => mountLivingRouteEnvironment(host));
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mountAllLivingRouteEnvironments, { once: true });
+  } else {
+    mountAllLivingRouteEnvironments();
+  }
+
+  document.addEventListener("astro:page-load", mountAllLivingRouteEnvironments);
+</script>
+
+<style>
+  .living-route-environment {
+    position: fixed;
+    inset: var(--site-header-height) 0 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    background: #020504;
+    opacity: var(--living-route-opacity, 0.94);
+  }
+
+  .living-route-environment[data-living-route-profile="artist"] {
+    --living-route-opacity: 0.96;
+  }
+
+  .living-route-environment[data-living-route-profile="contact"] {
+    --living-route-opacity: 0.92;
+  }
+
+  .living-route-environment canvas,
+  .living-route-environment__fallback {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .living-route-environment canvas {
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 1500ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .living-route-environment::before,
+  .living-route-environment::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .living-route-environment[data-living-route-profile="process"]::before {
+    background: linear-gradient(
+      96deg,
+      rgba(2, 5, 4, 0.52) 0%,
+      rgba(2, 5, 4, 0.22) 31%,
+      transparent 58%,
+      rgba(2, 5, 4, 0.08) 100%
+    );
+  }
+
+  .living-route-environment[data-living-route-profile="process"]::after {
+    inset: -18% -26%;
+    background: linear-gradient(
+      112deg,
+      transparent 33%,
+      rgba(202, 211, 184, 0.045) 46%,
+      rgba(149, 159, 132, 0.075) 51%,
+      transparent 63%
+    );
+    animation: livingRouteProcessRake 24s ease-in-out infinite alternate;
+  }
+
+  .living-route-environment[data-living-route-profile="artist"]::before {
+    background: linear-gradient(
+      90deg,
+      rgba(2, 5, 4, 0.6) 0%,
+      rgba(2, 5, 4, 0.28) 29%,
+      transparent 55%,
+      rgba(2, 5, 4, 0.13) 100%
+    );
+  }
+
+  .living-route-environment[data-living-route-profile="artist"]::after {
+    inset: -14% -22%;
+    background: linear-gradient(
+      128deg,
+      transparent 30%,
+      rgba(184, 139, 74, 0.055) 46%,
+      rgba(91, 135, 116, 0.045) 55%,
+      transparent 69%
+    );
+    animation: livingRouteArtistMemory 32s ease-in-out infinite alternate;
+  }
+
+  .living-route-environment[data-living-route-profile="contact"]::before {
+    background: linear-gradient(
+      90deg,
+      rgba(1, 3, 3, 0.72) 0%,
+      rgba(1, 3, 3, 0.38) 35%,
+      transparent 62%,
+      rgba(1, 3, 3, 0.34) 100%
+    );
+  }
+
+  .living-route-environment[data-living-route-profile="contact"]::after {
+    inset: -10% -18%;
+    background: linear-gradient(
+      104deg,
+      transparent 37%,
+      rgba(137, 53, 42, 0.07) 49%,
+      rgba(175, 92, 68, 0.11) 55%,
+      transparent 70%
+    );
+    animation: livingRouteContactSignal 38s ease-in-out infinite alternate;
+  }
+
+  .living-route-environment__fallback {
+    z-index: 1;
+    object-fit: cover;
+    opacity: 0.46;
+    filter: saturate(0.7) brightness(0.42) contrast(1.04);
+    transform: scale(1.02);
+    transition: opacity 1200ms ease;
+    animation: livingRouteFallbackDrift 30s ease-in-out infinite alternate;
+  }
+
+  .living-route-environment[data-living-route-profile="artist"] .living-route-environment__fallback {
+    object-fit: contain;
+    object-position: 72% 50%;
+    opacity: 0.4;
+    filter: saturate(0.78) brightness(0.44) contrast(1.02);
+    transform: scale(0.88);
+  }
+
+  .living-route-environment[data-living-route-profile="contact"] .living-route-environment__fallback {
+    opacity: 0.36;
+    filter: saturate(0.7) brightness(0.42) contrast(1.08);
+  }
+
+  .living-route-environment[data-living-route-ready="true"] canvas {
+    opacity: 1;
+  }
+
+  .living-route-environment[data-living-route-ready="true"] .living-route-environment__fallback {
+    opacity: 0;
+  }
+
+  :global(html[data-cinematic-transition="leaving"]) .living-route-environment canvas {
+    opacity: 0.22;
+    transition-duration: 220ms;
+  }
+
+  @keyframes livingRouteFallbackDrift {
+    from {
+      transform: scale(1.02) translate3d(-0.25%, -0.15%, 0);
+    }
+
+    to {
+      transform: scale(1.045) translate3d(0.34%, 0.24%, 0);
+    }
+  }
+
+  @keyframes livingRouteProcessRake {
+    from { transform: translate3d(-4%, 0, 0); opacity: 0.62; }
+    to { transform: translate3d(5%, 0, 0); opacity: 1; }
+  }
+
+  @keyframes livingRouteArtistMemory {
+    from { transform: translate3d(-3%, 1%, 0); opacity: 0.6; }
+    to { transform: translate3d(4%, -1%, 0); opacity: 0.96; }
+  }
+
+  @keyframes livingRouteContactSignal {
+    from { transform: translate3d(-2.5%, 0, 0); opacity: 0.45; }
+    to { transform: translate3d(3.5%, 0, 0); opacity: 0.82; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .living-route-environment canvas,
+    .living-route-environment__fallback,
+    .living-route-environment::after {
+      transition: none;
+      animation: none;
+    }
+  }
+</style>

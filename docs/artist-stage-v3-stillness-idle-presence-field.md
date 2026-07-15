@@ -1,5 +1,7 @@
 # ARTIST STAGE v3 - Stillness / Idle Presence Field
 
+Status: foundation layer, extended site-wide by `docs/artist-stage-v3-presence-director-metamorphosis.md` on 2026-07-13.
+
 ## Goal
 Add a lightweight presence layer where stillness and dwell deepen the field without blocking access.
 
@@ -46,6 +48,10 @@ Frontend only. CSS-first. No camera. No analytics. No backend. No WebGL. No soun
 - Artwork, section and route memory remain separate from presence state.
 - Debug mode shows presence id, stillness, depth and calm values.
 - Object Chamber inspect sets presence to `settling` on open and `active` on close.
+- The Presence Director is now the phase source of truth and maps its phases onto these atmosphere states.
+- The earlier internal atmosphere stillness timer remains only as a fallback when the Presence Director is absent.
+- Deep presence is no longer terminal: the Director repeats `gathering -> dispersing -> reforming`, while the atmosphere remains mapped to `deep` throughout.
+- Artwork opacity does not pulse during these acts; continuing life is carried by pigment currents, text traces, route-specific emphasis, and Series WebGL.
 
 ## Remaining issues
 - Debug overlay can cover content on narrow mobile screenshots; this is debug-only UI.

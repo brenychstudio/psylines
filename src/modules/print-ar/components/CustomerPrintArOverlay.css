@@ -4,10 +4,11 @@
   z-index: 2147483500;
   overflow: hidden;
   background:
-    linear-gradient(90deg, rgba(2, 5, 4, 0.98), rgba(5, 8, 7, 0.88) 42%, rgba(2, 3, 4, 0.98)),
-    linear-gradient(180deg, rgba(15, 20, 14, 0.94), rgba(3, 5, 5, 0.98));
+    radial-gradient(ellipse at 34% 45%, rgba(88, 118, 62, 0.22), transparent 54%),
+    linear-gradient(90deg, rgba(8, 12, 9, 0.96), rgba(12, 17, 12, 0.82) 42%, rgba(8, 9, 8, 0.95)),
+    linear-gradient(180deg, rgba(25, 30, 20, 0.9), rgba(9, 12, 10, 0.94));
   color: rgba(247, 241, 231, 0.92);
-  backdrop-filter: blur(18px) saturate(0.88);
+  backdrop-filter: blur(16px) saturate(0.96);
 }
 
 .customer-print-ar-backdrop::before,
@@ -20,17 +21,18 @@
 
 .customer-print-ar-backdrop::before {
   background:
-    radial-gradient(ellipse at 38% 42%, rgba(95, 137, 70, 0.24), transparent 48%),
-    radial-gradient(ellipse at 74% 58%, rgba(111, 82, 46, 0.18), transparent 42%);
-  opacity: 0.76;
+    radial-gradient(ellipse at 34% 40%, rgba(126, 159, 92, 0.34), transparent 50%),
+    radial-gradient(ellipse at 72% 58%, rgba(137, 107, 68, 0.18), transparent 44%),
+    radial-gradient(ellipse at 52% 82%, rgba(238, 232, 210, 0.065), transparent 58%);
+  opacity: 0.86;
 }
 
 .customer-print-ar-backdrop::after {
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035), transparent 18%, transparent 82%, rgba(255, 255, 255, 0.026)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 16%, transparent 82%, rgba(0, 0, 0, 0.48));
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045), transparent 18%, transparent 82%, rgba(255, 255, 255, 0.03)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.052), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.28));
   mix-blend-mode: screen;
-  opacity: 0.36;
+  opacity: 0.42;
 }
 
 html.is-print-ar-open .site-header {
@@ -119,11 +121,12 @@ html.is-print-ar-open .site-scroll-top {
 .customer-print-ar-canvas::before {
   content: "";
   position: absolute;
-  inset: 5% 8% 0;
+  inset: 2% 5% -2%;
   z-index: -1;
   background:
-    radial-gradient(ellipse at 50% 58%, rgba(98, 139, 74, 0.16), transparent 62%),
-    radial-gradient(ellipse at 50% 88%, rgba(0, 0, 0, 0.56), transparent 64%);
+    radial-gradient(ellipse at 48% 54%, rgba(124, 160, 88, 0.24), transparent 62%),
+    radial-gradient(ellipse at 50% 88%, rgba(224, 220, 194, 0.06), transparent 58%),
+    radial-gradient(ellipse at 50% 94%, rgba(0, 0, 0, 0.38), transparent 68%);
   pointer-events: none;
 }
 
@@ -152,6 +155,52 @@ html.is-print-ar-open .site-scroll-top {
 .customer-print-ar-frame-picker {
   display: grid;
   gap: 0.72rem;
+}
+
+.customer-print-ar-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.42rem;
+  padding: 0.22rem;
+  border: 1px solid rgba(247, 241, 231, 0.12);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.018)),
+    rgba(255, 255, 255, 0.018);
+}
+
+.customer-print-ar-mode-button {
+  appearance: none;
+  min-height: 2rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(247, 241, 231, 0.5);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  line-height: 1;
+  text-transform: uppercase;
+  transition:
+    background 240ms ease,
+    color 240ms ease,
+    box-shadow 240ms ease;
+}
+
+.customer-print-ar-mode-button:hover,
+.customer-print-ar-mode-button:focus-visible {
+  color: rgba(250, 246, 238, 0.92);
+  outline: none;
+}
+
+.customer-print-ar-mode-button.is-active {
+  background: rgba(247, 241, 231, 0.9);
+  color: rgba(12, 15, 12, 0.94);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.18),
+    0 0 24px rgba(154, 190, 116, 0.16);
 }
 
 .customer-print-ar-frame-picker__label,
@@ -384,29 +433,30 @@ html.is-print-ar-open .site-scroll-top {
 
 .customer-print-ar-canvas .atmospheric-backdrop {
   background:
-    radial-gradient(ellipse at 50% 52%, rgba(93, 130, 70, 0.2), transparent 55%),
-    radial-gradient(ellipse at 50% 86%, rgba(0, 0, 0, 0.74), transparent 72%),
-    linear-gradient(180deg, rgba(10, 14, 12, 0.72), rgba(2, 4, 4, 0.94));
+    radial-gradient(ellipse at 50% 50%, rgba(124, 160, 88, 0.28), transparent 58%),
+    radial-gradient(ellipse at 50% 86%, rgba(240, 232, 202, 0.08), transparent 62%),
+    radial-gradient(ellipse at 50% 94%, rgba(0, 0, 0, 0.52), transparent 76%),
+    linear-gradient(180deg, rgba(19, 24, 18, 0.66), rgba(8, 11, 9, 0.84));
 }
 
 .customer-print-ar-canvas .atmospheric-backdrop__field {
-  opacity: 0.54;
+  opacity: 0.72;
   background:
-    radial-gradient(ellipse at 50% 42%, rgba(144, 178, 110, 0.18), transparent 64%),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.18));
+    radial-gradient(ellipse at 48% 42%, rgba(165, 190, 126, 0.2), transparent 64%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.08));
 }
 
 .customer-print-ar-canvas .atmospheric-backdrop__drift {
-  opacity: 0.2;
+  opacity: 0.26;
   background:
-    radial-gradient(ellipse at 34% 34%, rgba(82, 116, 62, 0.36), transparent 52%),
-    radial-gradient(ellipse at 68% 62%, rgba(111, 78, 45, 0.26), transparent 48%);
+    radial-gradient(ellipse at 34% 34%, rgba(115, 148, 82, 0.34), transparent 52%),
+    radial-gradient(ellipse at 68% 62%, rgba(135, 106, 66, 0.22), transparent 48%);
 }
 
 .customer-print-ar-canvas .atmospheric-backdrop__vignette {
   background:
-    radial-gradient(ellipse at 50% 48%, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.38) 72%, rgba(0, 0, 0, 0.92) 100%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 18%);
+    radial-gradient(ellipse at 50% 48%, rgba(0, 0, 0, 0) 32%, rgba(0, 0, 0, 0.22) 72%, rgba(0, 0, 0, 0.74) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.032), transparent 18%);
 }
 
 .print-ar-host-note {
@@ -501,6 +551,11 @@ html.is-print-ar-open .site-scroll-top {
   .customer-print-ar-frame-picker__controls {
     grid-template-columns: 1fr;
     gap: 0.3rem;
+  }
+
+  .customer-print-ar-mode-switch {
+    grid-template-columns: 1fr;
+    border-radius: 12px;
   }
 
   .customer-print-ar-summary-row {

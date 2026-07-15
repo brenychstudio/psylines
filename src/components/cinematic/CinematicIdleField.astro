@@ -12,13 +12,250 @@
       anchor: 0,
       presence: 1,
       image: 1,
+      field: 1,
       voice: 3,
       line: 4,
       detail: 5,
       trace: 6,
+      contact: 1,
+      action: 2,
     };
 
     const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+    const phaseToPresence = {
+      awake: "active",
+      settling: "settling",
+      idle: "still",
+      dreaming: "deep",
+      waking: "active",
+    };
+    const dreamCycles = ["gathering", "dispersing", "reforming"];
+    const dreamCycleDurations = [11800, 15200, 12600];
+
+    const toPublicPhase = (state) => state === "idle" ? "contemplating" : state;
+
+    const getRouteKind = () => document.documentElement.dataset.presenceRoute || "generic";
+
+    const isVisibleCandidate = (element) => {
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+
+      return (
+        rect.width > 2 &&
+        rect.height > 2 &&
+        rect.bottom > 0 &&
+        rect.top < window.innerHeight &&
+        rect.right > 0 &&
+        rect.left < window.innerWidth &&
+        style.display !== "none" &&
+        style.visibility !== "hidden"
+      );
+    };
+
+    const prepareAutomaticTargets = (root) => {
+      if (root.querySelector(targetSelector)) return;
+
+      root.querySelectorAll("h1, h2").forEach((element) => {
+        element.dataset.cinematicIdle = "anchor";
+      });
+
+      root.querySelectorAll("p").forEach((element) => {
+        if (element.closest("nav, footer, button, [role='dialog']")) return;
+        if ((element.textContent || "").trim().length < 28) return;
+        element.dataset.cinematicIdle = "voice";
+      });
+
+      root.querySelectorAll("figure, picture").forEach((element, index) => {
+        element.dataset.cinematicIdle = index === 0 ? "image" : "trace";
+      });
+    };
+
+    const pickClosestToViewport = (elements, focusX = window.innerWidth * 0.52, focusY = window.innerHeight * 0.48) => {
+      return elements
+        .filter(isVisibleCandidate)
+        .map((element) => {
+          const rect = element.getBoundingClientRect();
+          const centerX = rect.left + rect.width * 0.5;
+          const centerY = rect.top + rect.height * 0.5;
+          const distance = Math.hypot(
+            (centerX - focusX) / Math.max(window.innerWidth, 1),
+            (centerY - focusY) / Math.max(window.innerHeight, 1),
+          );
+          const areaBoost = Math.min((rect.width * rect.height) / Math.max(window.innerWidth * window.innerHeight, 1), 0.28);
+
+          return { element, score: distance - areaBoost * 0.42 };
+        })
+        .sort((a, b) => a.score - b.score)[0]?.element || null;
+    };
+
+    const prepareMetamorphosis = (root) => {
+      root.querySelectorAll("[data-presence-focus], [data-presence-anchor], [data-presence-echo], [data-presence-subject]")
+        .forEach((element) => {
+          delete element.dataset.presenceFocus;
+          delete element.dataset.presenceAnchor;
+          delete element.dataset.presenceEcho;
+          delete element.dataset.presenceSubject;
+          element.style.removeProperty("--presence-echo-order");
+        });
+
+      const route = getRouteKind();
+      const explicitFocusSelectors = {
+        home: "[data-home-active-image]",
+        series: "[data-series-node].is-active [data-cinematic-idle='image']",
+        "series-detail": "[data-series-inspector-image], [data-cinematic-idle='image']",
+        "work-detail": "[data-object-artwork-stage] [data-cinematic-idle='image'], [data-object-physical-plane]",
+        contact: "[data-cinematic-idle='contact']",
+      };
+      const mediaCandidates = Array.from(root.querySelectorAll(
+        "[data-cinematic-idle='image'], [data-cinematic-idle='presence'], [data-cinematic-idle='trace'], [data-artwork-slug] img",
+      ));
+      const explicitFocus = explicitFocusSelectors[route]
+        ? root.querySelector(explicitFocusSelectors[route])
+        : null;
+      const focus = explicitFocus && isVisibleCandidate(explicitFocus)
+        ? explicitFocus
+        : pickClosestToViewport(mediaCandidates);
+      const anchor = pickClosestToViewport(Array.from(root.querySelectorAll("[data-cinematic-idle='anchor']")));
+
+      if (focus) {
+        focus.dataset.presenceFocus = "true";
+        const subject =
+          focus.closest("[data-artwork-slug]") ||
+          focus.closest("figure, section") ||
+          focus;
+        subject.dataset.presenceSubject = "true";
+
+        const rect = focus.getBoundingClientRect();
+        const focusX = clamp((rect.left + rect.width * 0.5) / Math.max(window.innerWidth, 1), 0.04, 0.96);
+        const focusY = clamp((rect.top + rect.height * 0.5) / Math.max(window.innerHeight, 1), 0.06, 0.94);
+        root.style.setProperty("--presence-focus-x", `${(focusX * 100).toFixed(2)}%`);
+        root.style.setProperty("--presence-focus-y", `${(focusY * 100).toFixed(2)}%`);
+
+        mediaCandidates
+          .filter((element) => element !== focus && isVisibleCandidate(element))
+          .slice(0, 3)
+          .forEach((element, index) => {
+            element.dataset.presenceEcho = "true";
+            element.style.setProperty("--presence-echo-order", String(index));
+          });
+      } else {
+        root.style.setProperty("--presence-focus-x", "54%");
+        root.style.setProperty("--presence-focus-y", "46%");
+      }
+
+      if (anchor) {
+        anchor.dataset.presenceAnchor = "true";
+        const phrase = root.querySelector(":scope > .cinematic-presence-phrase");
+        if (phrase) phrase.textContent = (anchor.textContent || "").trim();
+      }
+    };
+
+    const prepareTextDispersal = (root) => {
+      const field = root.querySelector(":scope > .cinematic-presence-dispersal-field");
+      if (!field) return;
+
+      field.replaceChildren();
+      root.querySelectorAll("[data-presence-dispersal-source]").forEach((element) => {
+        delete element.dataset.presenceDispersalSource;
+      });
+
+      const candidates = Array.from(root.querySelectorAll(
+        "[data-cinematic-idle='voice'], [data-cinematic-idle='line'], [data-cinematic-idle='detail']",
+      ))
+        .filter((element) => {
+          if (!isVisibleCandidate(element)) return false;
+          if (element.matches("[data-presence-anchor='true']")) return false;
+          if (element.closest("nav, footer, button, [role='dialog'], [aria-hidden='true']")) return false;
+          const text = (element.innerText || element.textContent || "").replace(/\s+/g, " ").trim();
+          return text.length >= 24 && text.length <= 280;
+        })
+        .sort((a, b) => {
+          const aRect = a.getBoundingClientRect();
+          const bRect = b.getBoundingClientRect();
+          const viewportCenter = window.innerHeight * 0.48;
+          const aDistance = Math.abs(aRect.top + aRect.height * 0.5 - viewportCenter);
+          const bDistance = Math.abs(bRect.top + bRect.height * 0.5 - viewportCenter);
+          return aDistance - bDistance;
+        });
+
+      const selected = [];
+      for (const candidate of candidates) {
+        if (selected.some((element) => element.contains(candidate) || candidate.contains(element))) continue;
+        selected.push(candidate);
+        if (selected.length === (window.innerWidth < 700 ? 1 : 2)) break;
+      }
+
+      selected.forEach((element, traceIndex) => {
+        const rect = element.getBoundingClientRect();
+        const computed = window.getComputedStyle(element);
+        const text = (element.innerText || element.textContent || "").replace(/\s+/g, " ").trim();
+        const words = text.split(" ").slice(0, 42);
+        const trace = document.createElement("span");
+
+        element.dataset.presenceDispersalSource = "true";
+        trace.className = "cinematic-presence-text-trace";
+        trace.style.left = `${clamp(rect.left, 0, window.innerWidth)}px`;
+        trace.style.top = `${clamp(rect.top, 0, window.innerHeight)}px`;
+        trace.style.width = `${Math.min(rect.width, window.innerWidth - clamp(rect.left, 0, window.innerWidth))}px`;
+        trace.style.minHeight = `${Math.min(rect.height, window.innerHeight)}px`;
+        trace.style.fontFamily = computed.fontFamily;
+        trace.style.fontSize = computed.fontSize;
+        trace.style.fontWeight = computed.fontWeight;
+        trace.style.fontStyle = computed.fontStyle;
+        trace.style.lineHeight = computed.lineHeight;
+        trace.style.textAlign = computed.textAlign;
+        trace.style.textTransform = computed.textTransform;
+        trace.style.setProperty("--presence-trace-order", String(traceIndex));
+
+        words.forEach((wordText, wordIndex) => {
+          const word = document.createElement("span");
+          const hash = hashElement(element, wordIndex + traceIndex * 47);
+          const direction = hash % 2 === 0 ? 1 : -1;
+          const spreadX = direction * (10 + (hash % 58));
+          const spreadY = ((hash >> 3) % 49) - 24;
+
+          word.className = "cinematic-presence-word";
+          word.textContent = wordText;
+          word.style.setProperty("--presence-word-x", `${spreadX}px`);
+          word.style.setProperty("--presence-word-y", `${spreadY}px`);
+          word.style.setProperty("--presence-word-delay", `${(hash % 1100) + wordIndex * 34}ms`);
+          trace.append(word);
+        });
+
+        field.append(trace);
+      });
+    };
+
+    const announcePhase = (root, state, source, origin) => {
+      const phase = toPublicPhase(state);
+      const html = document.documentElement;
+      const point = origin || { x: window.innerWidth * 0.5, y: window.innerHeight * 0.48 };
+      const normalizedX = clamp(point.x / Math.max(window.innerWidth, 1), 0, 1);
+      const normalizedY = clamp(point.y / Math.max(window.innerHeight, 1), 0, 1);
+
+      html.dataset.presenceDirector = "active";
+      html.dataset.presencePhase = phase;
+      html.style.setProperty("--presence-wake-x", `${(normalizedX * 100).toFixed(2)}%`);
+      html.style.setProperty("--presence-wake-y", `${(normalizedY * 100).toFixed(2)}%`);
+
+      const detail = {
+        phase,
+        legacyState: state,
+        presenceId: phaseToPresence[state] || "active",
+        source: source || "presence-director",
+        route: getRouteKind(),
+        x: normalizedX,
+        y: normalizedY,
+      };
+
+      window.__artistStagePresencePhase = detail;
+      window.dispatchEvent(new CustomEvent("artist-stage:presence-phase", { detail }));
+    };
+
+    const setRootState = (root, state, source, origin) => {
+      root.dataset.cinematicIdleState = state;
+      announcePhase(root, state, source, origin);
+    };
 
     const hashElement = (element, index) => {
       const source = `${element.textContent || element.getAttribute("aria-label") || ""}:${index}`;
@@ -32,18 +269,21 @@
       return Math.abs(hash);
     };
 
-    const prepareWave = (root) => {
+    const prepareWave = (root, origin) => {
       const targets = Array.from(root.querySelectorAll(targetSelector)).filter((element) => {
         return !element.closest("[hidden], [aria-hidden='true']");
       });
+      const viewportWidth = Math.max(window.innerWidth || 1, 1);
       const viewportHeight = Math.max(window.innerHeight || 1, 1);
-      const focusY = viewportHeight * 0.46;
+      const focusX = origin?.x ?? viewportWidth * 0.52;
+      const focusY = origin?.y ?? viewportHeight * 0.46;
       const total = Math.max(targets.length - 1, 1);
 
       targets.forEach((element, index) => {
         const rect = element.getBoundingClientRect();
+        const centerX = rect.left + rect.width * 0.5;
         const centerY = rect.top + rect.height * 0.5;
-        const distance = clamp(Math.abs(centerY - focusY) / viewportHeight, 0, 1.4);
+        const distance = clamp(Math.hypot((centerX - focusX) / viewportWidth, (centerY - focusY) / viewportHeight), 0, 1.4);
         const role = element.getAttribute("data-cinematic-idle") || "voice";
         const weight = roleWeight[role] ?? roleWeight.voice;
         const manualOrder = Number(element.getAttribute("data-cinematic-idle-order"));
@@ -51,9 +291,9 @@
         const hash = hashElement(element, index);
         const jitter = hash % 120;
         const driftY = clamp((centerY - focusY) / viewportHeight, -0.8, 0.8) * 0.72;
-        const driftX = ((hash % 28) - 14) / 100;
-        const enterDelay = Math.round(distance * 540 + weight * 72 + order * 420 + jitter);
-        const wakeDelay = Math.round((1.15 - clamp(distance, 0, 1.15)) * 170 + (1 - order) * 180 + (hash % 70));
+        const driftX = clamp((centerX - focusX) / viewportWidth, -0.8, 0.8) * 0.54 + ((hash % 18) - 9) / 100;
+        const enterDelay = Math.round(distance * 820 + weight * 96 + order * 620 + jitter);
+        const wakeDelay = Math.round((1.15 - clamp(distance, 0, 1.15)) * 320 + (1 - order) * 360 + (hash % 140));
 
         element.style.setProperty("--cinematic-idle-enter-delay", `${enterDelay}ms`);
         element.style.setProperty("--cinematic-idle-wake-delay", `${wakeDelay}ms`);
@@ -63,49 +303,144 @@
     };
 
     const ensureVeil = (root) => {
-      if (root.querySelector(":scope > .cinematic-idle-veil")) return;
+      if (!root.querySelector(":scope > .cinematic-idle-veil")) {
+        const veil = document.createElement("span");
+        veil.className = "cinematic-idle-veil";
+        veil.setAttribute("aria-hidden", "true");
+        root.prepend(veil);
+      }
 
-      const veil = document.createElement("span");
-      veil.className = "cinematic-idle-veil";
-      veil.setAttribute("aria-hidden", "true");
-      root.prepend(veil);
+      if (!root.querySelector(":scope > .cinematic-presence-layer")) {
+        const layer = document.createElement("span");
+        layer.className = "cinematic-presence-layer";
+        layer.setAttribute("aria-hidden", "true");
+        root.prepend(layer);
+      }
+
+      if (!root.querySelector(":scope > .cinematic-presence-phrase")) {
+        const phrase = document.createElement("span");
+        phrase.className = "cinematic-presence-phrase";
+        phrase.setAttribute("aria-hidden", "true");
+        root.prepend(phrase);
+      }
+
+      if (!root.querySelector(":scope > .cinematic-presence-dispersal-field")) {
+        const dispersalField = document.createElement("span");
+        dispersalField.className = "cinematic-presence-dispersal-field";
+        dispersalField.setAttribute("aria-hidden", "true");
+        root.prepend(dispersalField);
+      }
     };
 
     const createController = (root) => {
       if (root.__artistStageCinematicIdleController) return root.__artistStageCinematicIdleController;
+      if (root.closest?.("astro-island[ssr]")) return null;
 
+      prepareAutomaticTargets(root);
       ensureVeil(root);
-      root.dataset.cinematicIdleState = "awake";
+      setRootState(root, "awake", "init");
 
       let timer = 0;
+      let settleTimer = 0;
+      let dreamTimer = 0;
+      let dreamCycleTimer = 0;
+      let wakeTimer = 0;
+      let dreamCycleIndex = 0;
       const idleDelay = Number(root.dataset.cinematicIdleDelay) || 5600;
       const reducedDelay = Number(root.dataset.cinematicIdleReducedDelay) || Math.max(idleDelay, 9000);
+      const wakeDuration = Number(root.dataset.cinematicIdleWakeDuration) || 3200;
+      const settleDuration = Number(root.dataset.cinematicIdleSettleDuration) || 2600;
+      const dreamDuration = Number(root.dataset.cinematicIdleDreamDuration) || 6400;
+
+      const clearStageTimers = () => {
+        window.clearTimeout(settleTimer);
+        window.clearTimeout(dreamTimer);
+        window.clearTimeout(dreamCycleTimer);
+      };
+
+      const clearDreamCycle = () => {
+        window.clearTimeout(dreamCycleTimer);
+        dreamCycleIndex = 0;
+        delete root.dataset.cinematicDreamCycle;
+        delete document.documentElement.dataset.presenceDreamCycle;
+      };
+
+      const runDreamCycle = () => {
+        if (root.dataset.cinematicIdleState !== "dreaming") return;
+
+        const cycle = dreamCycles[dreamCycleIndex];
+        const detail = {
+          cycle,
+          index: dreamCycleIndex,
+          route: getRouteKind(),
+          source: "presence-director",
+        };
+
+        root.dataset.cinematicDreamCycle = cycle;
+        document.documentElement.dataset.presenceDreamCycle = cycle;
+        window.__artistStagePresenceDreamCycle = detail;
+        window.dispatchEvent(new CustomEvent("artist-stage:presence-dream-cycle", { detail }));
+
+        if (reducedMotion.matches) return;
+        const duration = dreamCycleDurations[dreamCycleIndex];
+        dreamCycleTimer = window.setTimeout(() => {
+          dreamCycleIndex = (dreamCycleIndex + 1) % dreamCycles.length;
+          runDreamCycle();
+        }, duration);
+      };
 
       const enter = () => {
-        if (document.hidden || root.matches(":focus-within")) return;
+        if (document.hidden) return;
+        if (root.matches(":focus-within")) {
+          timer = window.setTimeout(enter, 1200);
+          return;
+        }
+        prepareMetamorphosis(root);
+        prepareTextDispersal(root);
         prepareWave(root);
-        root.dataset.cinematicIdleState = "idle";
+        clearDreamCycle();
+        setRootState(root, "settling", "stillness");
+        clearStageTimers();
+        settleTimer = window.setTimeout(() => {
+          if (root.dataset.cinematicIdleState === "settling") {
+            setRootState(root, "idle", "stillness");
+          }
+        }, reducedMotion.matches ? 1 : settleDuration);
+        dreamTimer = window.setTimeout(() => {
+          if (root.dataset.cinematicIdleState === "idle") {
+            setRootState(root, "dreaming", "deep-stillness");
+            runDreamCycle();
+          }
+        }, reducedMotion.matches ? 1 : dreamDuration);
       };
 
       const schedule = () => {
         window.clearTimeout(timer);
+        clearStageTimers();
+        clearDreamCycle();
         timer = window.setTimeout(enter, reducedMotion.matches ? reducedDelay : idleDelay);
       };
 
-      const wake = () => {
+      const wake = (origin) => {
         const wasContemplating =
-          root.dataset.cinematicIdleState === "idle" || root.dataset.cinematicIdleState === "waking";
+          root.dataset.cinematicIdleState === "settling" ||
+          root.dataset.cinematicIdleState === "idle" ||
+          root.dataset.cinematicIdleState === "dreaming" ||
+          root.dataset.cinematicIdleState === "waking";
 
         if (wasContemplating) {
-          prepareWave(root);
-          root.dataset.cinematicIdleState = "waking";
-          window.setTimeout(() => {
+          prepareWave(root, origin);
+          clearStageTimers();
+          clearDreamCycle();
+          setRootState(root, "waking", "activity", origin);
+          window.clearTimeout(wakeTimer);
+          wakeTimer = window.setTimeout(() => {
             if (root.dataset.cinematicIdleState === "waking") {
-              root.dataset.cinematicIdleState = "awake";
+              setRootState(root, "awake", "wake-complete", origin);
             }
-          }, reducedMotion.matches ? 160 : 1450);
+          }, reducedMotion.matches ? 160 : wakeDuration);
         } else {
-          root.dataset.cinematicIdleState = "awake";
+          setRootState(root, "awake", "activity", origin);
         }
 
         schedule();
@@ -119,36 +454,83 @@
       return controller;
     };
 
-    const initRoots = () => {
-      document.querySelectorAll(rootSelector).forEach(createController);
+    const initRoots = (scope = document) => {
+      if (scope instanceof Element && scope.matches(rootSelector)) {
+        createController(scope);
+      }
+
+      scope.querySelectorAll?.(rootSelector).forEach(createController);
     };
 
     let wakeQueued = false;
+    let pendingWakeOrigin = null;
+    let pointerX = window.innerWidth * 0.5;
+    let pointerY = window.innerHeight * 0.48;
+    let pointerTravel = 0;
+    let lastPointerWakeAt = 0;
 
-    const wakeAll = () => {
-      controllers.forEach((controller) => controller.wake());
+    const wakeAll = (origin) => {
+      controllers.forEach((controller) => {
+        if (!controller.root.isConnected) {
+          controllers.delete(controller);
+          return;
+        }
+
+        controller.wake(origin);
+      });
     };
 
-    const requestWakeAll = () => {
+    const requestWakeAll = (origin) => {
+      if (origin) pendingWakeOrigin = origin;
       if (wakeQueued) return;
       wakeQueued = true;
 
       window.requestAnimationFrame(() => {
         wakeQueued = false;
-        wakeAll();
+        const nextOrigin = pendingWakeOrigin;
+        pendingWakeOrigin = null;
+        wakeAll(nextOrigin);
       });
     };
 
-    const events = ["pointermove", "pointerdown", "wheel", "scroll", "keydown", "touchstart"];
+    const handlePointerMove = (event) => {
+      const distance = Math.hypot(event.clientX - pointerX, event.clientY - pointerY);
+      pointerX = event.clientX;
+      pointerY = event.clientY;
 
-    events.forEach((eventName) => {
-      window.addEventListener(eventName, requestWakeAll, { passive: true });
+      if (distance < 0.6) return;
+      pointerTravel += distance;
+
+      const phase = document.documentElement.dataset.presencePhase || "awake";
+      const threshold = phase === "awake" ? 4 : 14;
+      if (pointerTravel < threshold) return;
+
+      const now = performance.now();
+      if (phase === "awake" && now - lastPointerWakeAt < 120) return;
+
+      pointerTravel = 0;
+      lastPointerWakeAt = now;
+      requestWakeAll({ x: pointerX, y: pointerY });
+    };
+
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    window.addEventListener("pointerdown", (event) => {
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      pointerTravel = 0;
+      requestWakeAll({ x: pointerX, y: pointerY });
+    }, { passive: true });
+
+    ["wheel", "scroll", "keydown", "touchstart"].forEach((eventName) => {
+      window.addEventListener(eventName, () => {
+        requestWakeAll({ x: pointerX, y: pointerY });
+      }, { passive: true });
     });
 
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
         controllers.forEach((controller) => {
-          controller.root.dataset.cinematicIdleState = "awake";
+          setRootState(controller.root, "awake", "document-hidden");
         });
         return;
       }
@@ -156,18 +538,72 @@
       controllers.forEach((controller) => controller.schedule());
     });
 
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", initRoots, { once: true });
-    } else {
+    const initDocumentRoots = () => {
       initRoots();
+
+      if (!document.querySelector(rootSelector)) {
+        const fallbackRoot = document.querySelector("main");
+        if (fallbackRoot && !fallbackRoot.querySelector("astro-island[ssr]")) {
+          fallbackRoot.setAttribute("data-cinematic-idle-root", "");
+          fallbackRoot.dataset.cinematicIdleAutoRoot = "true";
+          fallbackRoot.dataset.cinematicIdleDelay = "6800";
+          fallbackRoot.dataset.cinematicIdleSettleDuration = "3200";
+          fallbackRoot.dataset.cinematicIdleDreamDuration = "9400";
+          fallbackRoot.dataset.cinematicIdleWakeDuration = "3600";
+          createController(fallbackRoot);
+        }
+      }
+    };
+
+    document.documentElement.dataset.presenceDirector = "active";
+    document.documentElement.dataset.presencePhase = "awake";
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initDocumentRoots, { once: true });
+    } else {
+      initDocumentRoots();
     }
+
+    const rootObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (
+          mutation.type === "attributes" &&
+          mutation.target instanceof Element &&
+          mutation.target.matches("astro-island:not([ssr])")
+        ) {
+          window.requestAnimationFrame(() => {
+            initRoots(mutation.target);
+            initDocumentRoots();
+          });
+          return;
+        }
+
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            initRoots(node);
+          }
+        });
+      });
+    });
+
+    rootObserver.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["ssr"],
+    });
   })();
 </script>
 
 <style is:global>
   [data-cinematic-idle-root] {
-    --cinematic-idle-ease: cubic-bezier(0.16, 1, 0.3, 1);
-    --cinematic-idle-veil-opacity: 0.82;
+    --cinematic-idle-ease: cubic-bezier(0.22, 0.72, 0.18, 1);
+    --cinematic-idle-wake-ease: cubic-bezier(0.18, 0.72, 0.18, 1);
+    --cinematic-idle-veil-opacity: 0.76;
+    --cinematic-idle-duration: 3200ms;
+    --cinematic-idle-wake-duration: 3800ms;
+    --presence-phrase-gather-opacity: 0.052;
+    --presence-phrase-disperse-opacity: 0.03;
     position: relative;
     isolation: isolate;
   }
@@ -183,74 +619,954 @@
       linear-gradient(180deg, rgba(3, 5, 5, 0.08), rgba(3, 5, 5, 0.52));
     opacity: 0;
     transition:
-      opacity 1500ms var(--cinematic-idle-ease),
-      filter 1700ms var(--cinematic-idle-ease);
+      opacity 2600ms var(--cinematic-idle-ease),
+      filter 3200ms var(--cinematic-idle-ease);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="settling"] > .cinematic-idle-veil {
+    opacity: 0.32;
+    filter: blur(0.08px) saturate(0.96);
   }
 
   [data-cinematic-idle-root][data-cinematic-idle-state="idle"] > .cinematic-idle-veil {
+    opacity: 0.58;
+    filter: blur(0.16px) saturate(0.9);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] > .cinematic-idle-veil {
     opacity: var(--cinematic-idle-veil-opacity);
+    filter: blur(0.28px) saturate(0.86);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="waking"] > .cinematic-idle-veil {
+    opacity: 0;
+    transition-duration: 3600ms;
+    transition-timing-function: var(--cinematic-idle-wake-ease);
   }
 
   [data-cinematic-idle] {
     transition:
-      opacity var(--cinematic-idle-duration, 1350ms) var(--cinematic-idle-ease),
-      filter var(--cinematic-idle-duration, 1350ms) var(--cinematic-idle-ease),
-      transform var(--cinematic-idle-duration, 1350ms) var(--cinematic-idle-ease),
-      text-shadow var(--cinematic-idle-duration, 1350ms) var(--cinematic-idle-ease);
+      opacity var(--cinematic-idle-duration, 2600ms) var(--cinematic-idle-ease),
+      filter var(--cinematic-idle-duration, 2600ms) var(--cinematic-idle-ease),
+      transform var(--cinematic-idle-duration, 2600ms) var(--cinematic-idle-ease),
+      text-shadow var(--cinematic-idle-duration, 2600ms) var(--cinematic-idle-ease),
+      letter-spacing var(--cinematic-idle-duration, 2600ms) var(--cinematic-idle-ease);
     transition-delay: var(--cinematic-idle-wake-delay, 0ms);
     will-change: opacity, filter, transform;
   }
 
-  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle] {
+  [data-cinematic-idle="image"],
+  [data-cinematic-idle="presence"],
+  [data-cinematic-idle="trace"] {
+    --cinematic-idle-duration: 5600ms;
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="settling"] [data-cinematic-idle],
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle],
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle] {
     transition-delay: var(--cinematic-idle-enter-delay, 0ms);
   }
 
-  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="anchor"] {
-    opacity: 0.78;
-    filter: blur(0.18px);
-    text-shadow: 0 0 34px rgba(245, 248, 242, 0.08);
+  [data-cinematic-idle-root][data-cinematic-idle-state="settling"] [data-cinematic-idle="anchor"] {
+    opacity: 0.82;
+    filter: blur(0.35px) saturate(0.96);
+    text-shadow: 0 0 12px rgba(245, 248, 242, 0.06);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 0.08), calc(var(--cinematic-idle-y, 0rem) * 0.12), 0);
   }
 
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="anchor"] {
+    opacity: 0.58;
+    filter: blur(1.1px) saturate(0.88);
+    text-shadow:
+      0 0 14px rgba(245, 248, 242, 0.1),
+      0 0 34px rgba(178, 207, 146, 0.05);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 0.18), calc(var(--cinematic-idle-y, 0rem) * 0.24), 0) scale(1.004);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle="anchor"] {
+    opacity: 0.38;
+    filter: blur(2.1px) saturate(0.78);
+    text-shadow:
+      0 0 18px rgba(245, 248, 242, 0.16),
+      0 0 54px rgba(178, 207, 146, 0.08);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 0.32), calc(var(--cinematic-idle-y, 0rem) * 0.42), 0) scale(1.008);
+    animation: cinematicIdleHallucinateAnchor 6.8s ease-in-out infinite alternate;
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="settling"] [data-cinematic-idle="presence"],
+  [data-cinematic-idle-root][data-cinematic-idle-state="settling"] [data-cinematic-idle="image"],
+  [data-cinematic-idle-root][data-cinematic-idle-state="settling"] [data-cinematic-idle="field"],
+  [data-cinematic-idle-root][data-cinematic-idle-state="settling"] [data-cinematic-idle="contact"],
   [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="presence"],
-  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="image"] {
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="image"],
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="field"],
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="contact"],
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle="presence"],
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle="image"],
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle="field"],
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle="contact"] {
+    opacity: 1;
+    filter: blur(0px) saturate(1.06) brightness(1.04);
+    transform: translate3d(0, calc(var(--cinematic-idle-y, 0rem) * 0.18), 0) scale(1.015);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="settling"] [data-cinematic-idle="field"] {
     opacity: 0.96;
-    transform: translate3d(0, calc(var(--cinematic-idle-y, 0rem) * 0.45), 0) scale(1.012);
+    filter: blur(0px) saturate(1.01) brightness(1.01);
+    transform: translate3d(0, calc(var(--cinematic-idle-y, 0rem) * 0.06), 0) scale(1.003);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="field"] {
+    opacity: 0.92;
+    filter: blur(0px) saturate(1.03) brightness(1.02);
+    transform: translate3d(0, calc(var(--cinematic-idle-y, 0rem) * 0.09), 0) scale(1.006);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle="field"] {
+    opacity: 0.9;
+    filter: blur(0px) saturate(1.05) brightness(1.03);
+    transform: translate3d(0, calc(var(--cinematic-idle-y, 0rem) * 0.12), 0) scale(1.01);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="settling"] [data-cinematic-idle="contact"] {
+    opacity: 0.94;
+    filter: blur(0px) saturate(1.02) brightness(1.02);
+    text-shadow: 0 0 18px rgba(245, 248, 242, 0.08);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="contact"] {
+    opacity: 0.86;
+    filter: blur(0px) saturate(1.05) brightness(1.04);
+    text-shadow:
+      0 0 20px rgba(245, 248, 242, 0.12),
+      0 0 52px rgba(178, 207, 146, 0.08);
+    animation: cinematicIdleContactSignal 8.8s ease-in-out infinite alternate;
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle="contact"] {
+    opacity: 0.78;
+    filter: blur(0.15px) saturate(1.08) brightness(1.06);
+    text-shadow:
+      0 0 24px rgba(245, 248, 242, 0.16),
+      0 0 68px rgba(178, 207, 146, 0.1);
+    animation: cinematicIdleContactSignal 8.8s ease-in-out infinite alternate;
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="settling"] [data-cinematic-idle="action"] {
+    opacity: 0.86;
+    filter: blur(0px);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 0.12), 0, 0);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="action"] {
+    opacity: 0.72;
+    filter: blur(0.12px);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 0.2), 0, 0);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle="action"] {
+    opacity: 0.62;
+    filter: blur(0.2px);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 0.26), 0, 0);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="settling"] [data-cinematic-idle="voice"] {
+    opacity: 0.5;
+    filter: blur(0.55px) saturate(0.94);
+    text-shadow: 0 0 10px rgba(245, 248, 242, 0.05);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 0.35), calc(var(--cinematic-idle-y, 0rem) + 0.04rem), 0);
   }
 
   [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="voice"] {
-    opacity: 0.3;
-    filter: blur(0.78px);
-    transform: translate3d(var(--cinematic-idle-x, 0rem), calc(var(--cinematic-idle-y, 0rem) + 0.08rem), 0);
+    opacity: 0.25;
+    filter: blur(1.35px) saturate(0.84);
+    text-shadow:
+      0 0 13px rgba(245, 248, 242, 0.09),
+      0 0 30px rgba(178, 207, 146, 0.04);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 0.8), calc(var(--cinematic-idle-y, 0rem) + 0.1rem), 0);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle="voice"] {
+    opacity: 0.12;
+    filter: blur(2.4px) saturate(0.72);
+    text-shadow:
+      0 0 16px rgba(245, 248, 242, 0.12),
+      0 0 42px rgba(178, 207, 146, 0.07);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 1.35), calc(var(--cinematic-idle-y, 0rem) + 0.16rem), 0);
+    animation: cinematicIdleHallucinateText 7.4s ease-in-out infinite alternate;
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="settling"] [data-cinematic-idle="line"] {
+    opacity: 0.38;
+    filter: blur(0.7px) saturate(0.92);
+    text-shadow: 0 0 10px rgba(245, 248, 242, 0.04);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) + 0.08rem), calc(var(--cinematic-idle-y, 0rem) + 0.02rem), 0);
   }
 
   [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="line"] {
-    opacity: 0.18;
-    filter: blur(1.35px);
-    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) + 0.18rem), var(--cinematic-idle-y, 0rem), 0);
+    opacity: 0.16;
+    filter: blur(1.6px) saturate(0.78);
+    text-shadow: 0 0 18px rgba(245, 248, 242, 0.06);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) + 0.2rem), calc(var(--cinematic-idle-y, 0rem) + 0.06rem), 0);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle="line"] {
+    opacity: 0.07;
+    filter: blur(3px) saturate(0.68);
+    text-shadow: 0 0 28px rgba(245, 248, 242, 0.08);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) + 0.32rem), calc(var(--cinematic-idle-y, 0rem) + 0.08rem), 0);
+    animation: cinematicIdleHallucinateLine 8.2s ease-in-out infinite alternate;
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="settling"] [data-cinematic-idle="detail"] {
+    opacity: 0.42;
+    filter: blur(0.55px) saturate(0.92);
+    text-shadow: 0 0 10px rgba(245, 248, 242, 0.04);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 0.28), calc(var(--cinematic-idle-y, 0rem) * 0.22), 0);
   }
 
   [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="detail"] {
-    opacity: 0.18;
-    filter: blur(1.2px);
+    opacity: 0.2;
+    filter: blur(1.35px) saturate(0.82);
+    text-shadow: 0 0 16px rgba(245, 248, 242, 0.05);
     transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 0.6), calc(var(--cinematic-idle-y, 0rem) * 0.4), 0);
   }
 
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle="detail"] {
+    opacity: 0.08;
+    filter: blur(2.3px) saturate(0.7);
+    text-shadow: 0 0 22px rgba(245, 248, 242, 0.08);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 0.9), calc(var(--cinematic-idle-y, 0rem) * 0.55), 0);
+    animation: cinematicIdleHallucinateText 7.8s ease-in-out infinite alternate-reverse;
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="settling"] [data-cinematic-idle="trace"] {
+    opacity: 0.72;
+    filter: blur(0px) saturate(1.02) brightness(1.02);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 0.08), calc(var(--cinematic-idle-y, 0rem) * 0.08), 0) scale(1.006);
+  }
+
   [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-cinematic-idle="trace"] {
-    opacity: 0.22;
-    filter: blur(1.1px);
+    opacity: 0.82;
+    filter: blur(0px) saturate(1.08) brightness(1.05);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 0.16), calc(var(--cinematic-idle-y, 0rem) * 0.16), 0) scale(1.012);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle="trace"] {
+    opacity: 0.9;
+    filter: blur(0px) saturate(1.12) brightness(1.06);
+    transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 0.22), calc(var(--cinematic-idle-y, 0rem) * 0.22), 0) scale(1.018);
   }
 
   [data-cinematic-idle-root][data-cinematic-idle-state="waking"] [data-cinematic-idle] {
-    transition-duration: var(--cinematic-idle-wake-duration, 1100ms);
+    animation: none;
+    transition-duration: var(--cinematic-idle-wake-duration, 3200ms);
+    transition-timing-function: var(--cinematic-idle-wake-ease);
+    transition-delay: var(--cinematic-idle-wake-delay, 0ms);
+  }
+
+  @keyframes cinematicIdleHallucinateAnchor {
+    0% {
+      filter: blur(2.1px) saturate(0.76);
+      text-shadow:
+        0 0 14px rgba(245, 248, 242, 0.12),
+        0 0 42px rgba(178, 207, 146, 0.06);
+    }
+
+    48% {
+      filter: blur(3.4px) saturate(0.62);
+      text-shadow:
+        0.08rem 0 18px rgba(245, 248, 242, 0.11),
+        -0.1rem 0 58px rgba(178, 207, 146, 0.08);
+    }
+
+    100% {
+      filter: blur(2.6px) saturate(0.7);
+      text-shadow:
+        -0.05rem 0 20px rgba(245, 248, 242, 0.1),
+        0.12rem 0 48px rgba(178, 207, 146, 0.06);
+    }
+  }
+
+  @keyframes cinematicIdleHallucinateText {
+    0% {
+      filter: blur(2.2px) saturate(0.72);
+      transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 1.05), calc(var(--cinematic-idle-y, 0rem) + 0.08rem), 0);
+    }
+
+    52% {
+      filter: blur(3.2px) saturate(0.58);
+      transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 1.55 + 0.08rem), calc(var(--cinematic-idle-y, 0rem) + 0.2rem), 0);
+    }
+
+    100% {
+      filter: blur(2.5px) saturate(0.66);
+      transform: translate3d(calc(var(--cinematic-idle-x, 0rem) * 1.3 - 0.06rem), calc(var(--cinematic-idle-y, 0rem) + 0.14rem), 0);
+    }
+  }
+
+  @keyframes cinematicIdleHallucinateLine {
+    0% {
+      filter: blur(2.8px) saturate(0.68);
+      transform: translate3d(calc(var(--cinematic-idle-x, 0rem) + 0.22rem), var(--cinematic-idle-y, 0rem), 0);
+    }
+
+    50% {
+      filter: blur(4px) saturate(0.54);
+      transform: translate3d(calc(var(--cinematic-idle-x, 0rem) + 0.46rem), calc(var(--cinematic-idle-y, 0rem) + 0.14rem), 0);
+    }
+
+    100% {
+      filter: blur(3px) saturate(0.6);
+      transform: translate3d(calc(var(--cinematic-idle-x, 0rem) + 0.32rem), calc(var(--cinematic-idle-y, 0rem) - 0.08rem), 0);
+    }
+  }
+
+  @keyframes cinematicIdleContactSignal {
+    0% {
+      text-shadow:
+        0 0 16px rgba(245, 248, 242, 0.1),
+        0 0 42px rgba(178, 207, 146, 0.06);
+    }
+
+    48% {
+      text-shadow:
+        0 0 26px rgba(245, 248, 242, 0.18),
+        0 0 78px rgba(178, 207, 146, 0.12);
+    }
+
+    100% {
+      text-shadow:
+        0 0 18px rgba(245, 248, 242, 0.12),
+        0 0 54px rgba(178, 207, 146, 0.08);
+    }
+  }
+
+  /* Presence Director V2: stillness reveals a second composition instead of only hiding UI. */
+  [data-cinematic-idle-root] > .cinematic-idle-veil {
+    z-index: -3;
+  }
+
+  [data-cinematic-idle-root] > .cinematic-presence-layer,
+  [data-cinematic-idle-root] > .cinematic-presence-phrase,
+  [data-cinematic-idle-root] > .cinematic-presence-dispersal-field {
+    position: fixed;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  [data-cinematic-idle-root] > .cinematic-presence-layer {
+    inset: var(--site-header-height, 3.25rem) 0 0;
+    z-index: -2;
+    overflow: hidden;
+    background:
+      conic-gradient(
+        from 214deg at var(--presence-focus-x, 54%) var(--presence-focus-y, 46%),
+        transparent 0 13%,
+        color-mix(in srgb, var(--artwork-wash-strong, rgba(120, 145, 94, 0.24)), transparent 76%) 23%,
+        transparent 37%,
+        color-mix(in srgb, var(--artwork-glow, rgba(174, 112, 82, 0.18)), transparent 80%) 55%,
+        transparent 69%,
+        color-mix(in srgb, var(--artwork-accent, rgba(178, 207, 146, 0.4)), transparent 84%) 86%,
+        transparent 100%
+      ),
+      linear-gradient(
+        118deg,
+        transparent 8%,
+        color-mix(in srgb, var(--artwork-wash-strong, rgba(120, 145, 94, 0.24)), transparent 82%) 34%,
+        transparent 49%,
+        color-mix(in srgb, var(--artwork-glow, rgba(174, 112, 82, 0.18)), transparent 84%) 68%,
+        transparent 91%
+      ),
+      linear-gradient(
+        24deg,
+        transparent 12%,
+        color-mix(in srgb, var(--artwork-accent, rgba(178, 207, 146, 0.4)), transparent 90%) 42%,
+        transparent 63%
+      );
+    background-size: 148% 148%, 154% 146%, 132% 168%;
+    background-position: 44% 48%, 25% 42%, 72% 58%;
+    mix-blend-mode: soft-light;
+    mask-image: linear-gradient(180deg, transparent 0, black 12%, black 84%, transparent 100%);
+    transition:
+      opacity 3200ms var(--cinematic-idle-ease),
+      filter 4200ms var(--cinematic-idle-ease);
+  }
+
+  [data-cinematic-idle-root] > .cinematic-presence-layer::before,
+  [data-cinematic-idle-root] > .cinematic-presence-layer::after {
+    content: "";
+    position: absolute;
+    inset: -8%;
+    pointer-events: none;
+  }
+
+  [data-cinematic-idle-root] > .cinematic-presence-layer::before {
+    background:
+      linear-gradient(
+        104deg,
+        transparent 7%,
+        color-mix(in srgb, var(--artwork-accent, rgba(178, 207, 146, 0.28)), transparent 90%) 31%,
+        transparent 45%,
+        color-mix(in srgb, var(--artwork-glow, rgba(174, 112, 82, 0.2)), transparent 90%) 67%,
+        transparent 88%
+      ),
+      conic-gradient(
+        from 48deg at 62% 44%,
+        transparent,
+        color-mix(in srgb, var(--artwork-wash-strong, rgba(120, 145, 94, 0.2)), transparent 88%),
+        transparent 38%,
+        color-mix(in srgb, var(--artwork-accent, rgba(178, 207, 146, 0.2)), transparent 92%) 62%,
+        transparent 84%
+      );
+    opacity: 0.54;
+    filter: blur(22px);
+    mix-blend-mode: soft-light;
+    transform: translate3d(var(--living-counter-drift-x, 0), var(--living-counter-drift-y, 0), 0);
+  }
+
+  [data-cinematic-idle-root] > .cinematic-presence-layer::after {
+    background: radial-gradient(
+      ellipse at var(--presence-wake-x, 50%) var(--presence-wake-y, 48%),
+      color-mix(in srgb, var(--artwork-glow, rgba(210, 225, 192, 0.24)), transparent 48%),
+      color-mix(in srgb, var(--artwork-accent, rgba(178, 207, 146, 0.18)), transparent 78%) 26%,
+      transparent 62%
+    );
+    opacity: 0;
+  }
+
+  [data-cinematic-idle-root] > .cinematic-presence-phrase {
+    right: max(var(--site-frame-gutter, 1.5rem), 3rem);
+    bottom: 4.5rem;
+    z-index: -1;
+    width: min(48rem, 58vw);
+    max-height: 3.7em;
+    overflow: hidden;
+    color: transparent;
+    font-size: 5.2rem;
+    font-weight: 300;
+    line-height: 0.92;
+    letter-spacing: 0;
+    text-align: right;
+    -webkit-text-stroke: 1px color-mix(in srgb, var(--artwork-accent, rgba(220, 230, 208, 0.28)), transparent 68%);
+    text-wrap: balance;
+    mask-image: linear-gradient(115deg, transparent 0, black 28%, black 88%, transparent 100%);
+    transition:
+      opacity 3600ms var(--cinematic-idle-ease),
+      transform 4600ms var(--cinematic-idle-ease),
+      filter 5200ms var(--cinematic-idle-ease);
+  }
+
+  [data-cinematic-idle-root] > .cinematic-presence-dispersal-field {
+    inset: 0;
+    z-index: 6;
+    overflow: hidden;
+    color: color-mix(in srgb, var(--artwork-accent, rgba(226, 234, 218, 0.72)), white 14%);
+    mix-blend-mode: screen;
+    mask-image: linear-gradient(180deg, transparent 0, black 9%, black 88%, transparent 100%);
+    transition: opacity 5200ms var(--cinematic-idle-ease);
+  }
+
+  .cinematic-presence-text-trace {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 0.02em 0.27em;
+    box-sizing: border-box;
+    color: inherit;
+    opacity: 0;
+    text-shadow: 0 0 24px color-mix(in srgb, currentColor, transparent 72%);
+    transform: translate3d(calc(var(--presence-trace-order, 0) * 0.55rem), 0, 0);
+    transition: opacity 6200ms var(--cinematic-idle-ease);
+  }
+
+  .cinematic-presence-word {
+    display: inline-block;
+    max-width: 100%;
+    opacity: 0;
+    filter: blur(0.4px);
+    transform: translate3d(0, 0, 0);
+    transition:
+      opacity 7600ms var(--cinematic-idle-ease),
+      filter 8400ms var(--cinematic-idle-ease),
+      transform 9600ms var(--cinematic-idle-ease);
+    transition-delay: var(--presence-word-delay, 0ms);
+    will-change: opacity, filter, transform;
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="settling"] > .cinematic-presence-layer {
+    opacity: 0.18;
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] > .cinematic-presence-layer {
+    opacity: 0.42;
+    filter: saturate(1.08) contrast(1.04);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] > .cinematic-presence-layer {
+    opacity: 0.68;
+    filter: saturate(1.18) contrast(1.08);
+    animation: presenceContourDrift 52s cubic-bezier(0.45, 0, 0.2, 1) infinite alternate;
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] > .cinematic-presence-layer::before {
+    animation: presenceCurrentFold 46s cubic-bezier(0.45, 0, 0.2, 1) infinite alternate;
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] > .cinematic-presence-phrase {
+    opacity: 0.035;
+    transform: translate3d(-0.5rem, 0, 0);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] > .cinematic-presence-phrase {
+    opacity: var(--presence-phrase-opacity, 0.075);
+    transform: translate3d(-1.35rem, -0.45rem, 0);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] > .cinematic-presence-dispersal-field {
+    opacity: 0.54;
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] .cinematic-presence-text-trace {
+    opacity: 1;
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"][data-cinematic-dream-cycle="gathering"] > .cinematic-presence-layer {
+    opacity: 0.58;
+    filter: saturate(1.08) contrast(1.035);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"][data-cinematic-dream-cycle="dispersing"] > .cinematic-presence-layer {
+    opacity: 0.78;
+    filter: saturate(1.22) contrast(1.08) brightness(1.025);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"][data-cinematic-dream-cycle="reforming"] > .cinematic-presence-layer {
+    opacity: 0.66;
+    filter: saturate(1.14) contrast(1.055);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"][data-cinematic-dream-cycle="gathering"] > .cinematic-presence-phrase {
+    opacity: var(--presence-phrase-gather-opacity, 0.052);
+    filter: blur(0.3px);
+    transform: translate3d(-0.7rem, 0.15rem, 0);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"][data-cinematic-dream-cycle="dispersing"] > .cinematic-presence-phrase {
+    opacity: var(--presence-phrase-disperse-opacity, 0.03);
+    filter: blur(2.8px);
+    transform: translate3d(-2.2rem, -0.85rem, 0);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"][data-cinematic-dream-cycle="reforming"] > .cinematic-presence-phrase {
+    opacity: var(--presence-phrase-opacity, 0.075);
+    filter: blur(0.8px);
+    transform: translate3d(-1.1rem, -0.35rem, 0);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"][data-cinematic-dream-cycle="gathering"] .cinematic-presence-word {
+    opacity: 0.22;
+    filter: blur(0.45px);
+    transform: translate3d(calc(var(--presence-word-x) * 0.04), calc(var(--presence-word-y) * 0.04), 0);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"][data-cinematic-dream-cycle="dispersing"] .cinematic-presence-word {
+    opacity: 0.34;
+    filter: blur(2.4px);
+    transform: translate3d(var(--presence-word-x), var(--presence-word-y), 0);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"][data-cinematic-dream-cycle="reforming"] .cinematic-presence-word {
+    opacity: 0.16;
+    filter: blur(0.9px);
+    transform: translate3d(calc(var(--presence-word-x) * 0.22), calc(var(--presence-word-y) * 0.18), 0);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-presence-dispersal-source="true"] {
+    animation: none;
+    transition:
+      opacity 7600ms var(--cinematic-idle-ease),
+      filter 8400ms var(--cinematic-idle-ease),
+      transform 9200ms var(--cinematic-idle-ease);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"][data-cinematic-dream-cycle="gathering"] [data-presence-dispersal-source="true"] {
+    opacity: 0.2;
+    filter: blur(1.35px) saturate(0.82);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"][data-cinematic-dream-cycle="dispersing"] [data-presence-dispersal-source="true"] {
+    opacity: 0.035;
+    filter: blur(4.2px) saturate(0.6);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"][data-cinematic-dream-cycle="reforming"] [data-presence-dispersal-source="true"] {
+    opacity: 0.11;
+    filter: blur(2.1px) saturate(0.72);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="waking"] > .cinematic-presence-layer::after {
+    animation: presenceWakeWash 2600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  html[data-presence-director="active"] .site-header,
+  html[data-presence-director="active"] .site-footer,
+  html[data-presence-director="active"] .site-scroll-top,
+  html[data-presence-director="active"] .site-artwork-atmosphere-field {
+    transition:
+      opacity 2400ms var(--cinematic-idle-ease),
+      filter 3200ms var(--cinematic-idle-ease),
+      background-color 3200ms var(--cinematic-idle-ease);
+  }
+
+  html[data-presence-phase="contemplating"] .site-nav a:not([aria-current="page"]),
+  html[data-presence-phase="dreaming"] .site-nav a:not([aria-current="page"]) {
+    opacity: 0.42;
+  }
+
+  html[data-presence-phase="dreaming"] .site-header {
+    background-color: color-mix(in srgb, var(--site-header-bg), transparent 24%);
+  }
+
+  html[data-presence-phase="dreaming"] .site-footer,
+  html[data-presence-phase="dreaming"] .site-scroll-top {
+    opacity: 0.38;
+  }
+
+  html[data-presence-phase="dreaming"] .site-artwork-atmosphere-field {
+    filter: saturate(1.2) contrast(1.06) brightness(1.035);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-presence-anchor="true"] {
+    opacity: 0.68;
+    filter: blur(0.5px) saturate(1.02);
+    text-shadow:
+      0 0 18px rgba(245, 248, 242, 0.13),
+      0 0 52px color-mix(in srgb, var(--artwork-accent, rgba(178, 207, 146, 0.3)), transparent 82%);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-presence-anchor="true"] {
+    opacity: 0.76;
+    filter: blur(0.32px) saturate(1.06);
+    text-shadow:
+      0 0 22px rgba(245, 248, 242, 0.16),
+      0 0 72px color-mix(in srgb, var(--artwork-accent, rgba(178, 207, 146, 0.34)), transparent 76%);
+    animation: presenceAnchorSignal 14s ease-in-out infinite alternate;
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-presence-focus="true"],
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-presence-focus="true"] {
+    opacity: 1;
+    filter: saturate(1.16) contrast(1.06) brightness(1.05);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-presence-focus="true"][data-cinematic-idle="image"],
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-presence-focus="true"][data-cinematic-idle="presence"],
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-presence-focus="true"][data-cinematic-idle="trace"] {
+    transform: translate3d(0, calc(var(--cinematic-idle-y, 0rem) * 0.08), 0) scale(1.024);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-presence-echo="true"],
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-presence-echo="true"] {
+    filter: saturate(1.04) contrast(1.025) brightness(0.92);
+    animation: none;
+    transition:
+      opacity 6400ms var(--cinematic-idle-ease),
+      filter 7200ms var(--cinematic-idle-ease),
+      transform 7600ms var(--cinematic-idle-ease);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="idle"] [data-presence-echo="true"] {
+    opacity: calc(0.7 - (var(--presence-echo-order, 0) * 0.055));
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-presence-echo="true"] {
+    opacity: calc(0.5 - (var(--presence-echo-order, 0) * 0.045));
+    filter: saturate(1.08) contrast(1.03) brightness(0.94);
+  }
+
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle="action"]:focus-within,
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle="action"]:hover,
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle="contact"]:focus,
+  [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] [data-cinematic-idle="contact"]:hover {
+    opacity: 1;
+    filter: none;
+  }
+
+  /* Home: the selected work becomes the source of the field; the orbit turns into memory. */
+  html[data-presence-route="home"][data-presence-phase="dreaming"] .home-selected-plane--active img {
+    filter: saturate(1.14) contrast(1.05) brightness(1.04);
+    animation: presenceHomeMaterial 16s ease-in-out infinite alternate;
+  }
+
+  html[data-presence-route="home"][data-presence-phase="dreaming"] .home-selected-orbit::before {
+    opacity: 0.5;
+  }
+
+  html[data-presence-route="home"] [data-cinematic-idle-root] {
+    --presence-phrase-opacity: 0.052;
+    --presence-phrase-gather-opacity: 0.04;
+    --presence-phrase-disperse-opacity: 0.022;
+  }
+
+  /* Works: one visible manifestation leads while the archive remains as a peripheral register. */
+  html[data-presence-route="works"][data-presence-phase="dreaming"] [data-artwork-slug]:not([data-presence-subject="true"]) {
+    opacity: 0.52;
+    filter: saturate(0.72) brightness(0.72);
+  }
+
+  html[data-presence-route="works"][data-presence-phase="settling"] [data-artwork-slug],
+  html[data-presence-route="works"][data-presence-phase="contemplating"] [data-artwork-slug],
+  html[data-presence-route="works"][data-presence-phase="dreaming"] [data-artwork-slug],
+  html[data-presence-route="works"][data-presence-phase="waking"] [data-artwork-slug] {
+    transition:
+      opacity 6200ms var(--cinematic-idle-ease),
+      filter 6800ms var(--cinematic-idle-ease),
+      transform 1600ms var(--cinematic-idle-ease) !important;
+  }
+
+  html[data-presence-route="works"][data-presence-phase="dreaming"] [data-presence-subject="true"] {
+    opacity: 1;
+    filter: saturate(1.14) contrast(1.05) brightness(1.04);
+  }
+
+  /* Series: neural routes slow down while pigment and the active chapter gain agency. */
+  html[data-presence-route="series"][data-presence-phase="dreaming"] .series-neural-link__body {
+    animation-duration: 32s;
+    stroke: color-mix(in srgb, var(--series-accent), rgba(235, 240, 232, 0.2) 54%);
+  }
+
+  html[data-presence-route="series"][data-presence-phase="dreaming"] .series-neural-link__signal {
+    animation-duration: 11.5s;
+    opacity: 0.66;
+  }
+
+  html[data-presence-route="series"][data-presence-phase="dreaming"] .series-constellation-node:not(.is-active) {
+    opacity: 0.44;
+    filter: saturate(0.7) contrast(0.92) brightness(0.54);
+  }
+
+  html[data-presence-route="series"][data-presence-phase="settling"] .series-constellation-node,
+  html[data-presence-route="series"][data-presence-phase="contemplating"] .series-constellation-node,
+  html[data-presence-route="series"][data-presence-phase="dreaming"] .series-constellation-node,
+  html[data-presence-route="series"][data-presence-phase="waking"] .series-constellation-node {
+    transition:
+      opacity 6200ms var(--cinematic-idle-ease),
+      filter 6800ms var(--cinematic-idle-ease),
+      transform 1500ms var(--cinematic-idle-ease) !important;
+  }
+
+  html[data-presence-route="series"][data-presence-phase="dreaming"] .series-constellation-node.is-active {
+    filter: saturate(1.2) contrast(1.08) brightness(1.08);
+  }
+
+  html[data-presence-route="series"][data-presence-phase="dreaming"] .series-constellation-node.is-active img,
+  html[data-presence-route="series"][data-presence-phase="dreaming"] .series-constellation-node.is-active figure::before,
+  html[data-presence-route="series"][data-presence-phase="dreaming"] .series-constellation-node.is-active::after {
+    animation-duration: 34s;
+    animation-timing-function: cubic-bezier(0.45, 0, 0.2, 1);
+  }
+
+  /* Artist and Process retain one sentence while visual traces reorganize around it. */
+  html[data-presence-route="artist"][data-presence-phase="dreaming"] .artist-practice-trace-field .artist-trace,
+  html[data-presence-route="process"][data-presence-phase="dreaming"] .process-visual {
+    filter: saturate(1.14) contrast(1.04) brightness(1.035);
+    animation: none;
+  }
+
+  html[data-presence-route="process"][data-presence-phase="dreaming"] .process-step-row,
+  html[data-presence-route="process"][data-presence-phase="dreaming"] .process-material-row {
+    opacity: 0.09;
+    filter: blur(2.6px) saturate(0.68);
+    transform: translate3d(-0.12rem, 0, 0);
+    animation: none;
+    transition:
+      opacity 6800ms var(--cinematic-idle-ease),
+      filter 7600ms var(--cinematic-idle-ease),
+      transform 8400ms var(--cinematic-idle-ease),
+      border-color 7200ms var(--cinematic-idle-ease);
+  }
+
+  html[data-presence-route="process"][data-presence-phase="dreaming"][data-presence-dream-cycle="gathering"] .process-step-row:nth-child(3n + 1),
+  html[data-presence-route="process"][data-presence-phase="dreaming"][data-presence-dream-cycle="gathering"] .process-material-row:nth-child(3n + 1),
+  html[data-presence-route="process"][data-presence-phase="dreaming"][data-presence-dream-cycle="dispersing"] .process-step-row:nth-child(3n + 2),
+  html[data-presence-route="process"][data-presence-phase="dreaming"][data-presence-dream-cycle="dispersing"] .process-material-row:nth-child(3n + 2),
+  html[data-presence-route="process"][data-presence-phase="dreaming"][data-presence-dream-cycle="reforming"] .process-step-row:nth-child(3n),
+  html[data-presence-route="process"][data-presence-phase="dreaming"][data-presence-dream-cycle="reforming"] .process-material-row:nth-child(3n) {
+    opacity: 0.42;
+    filter: blur(0.65px) saturate(0.94);
+    transform: translate3d(0.32rem, 0, 0);
+    border-color: color-mix(in srgb, var(--artwork-accent, rgba(178, 207, 146, 0.3)), transparent 76%);
+  }
+
+  /* The contact route becomes a beacon, never an unavailable interface. */
+  html[data-presence-route="contact"][data-presence-phase="dreaming"] .contact-email {
+    opacity: 1;
+    filter: none;
+    text-shadow:
+      0 0 28px rgba(245, 248, 242, 0.22),
+      0 0 92px color-mix(in srgb, var(--artwork-accent, rgba(178, 207, 146, 0.42)), transparent 68%);
+  }
+
+  html[data-presence-route="contact"][data-presence-phase="dreaming"] .contact-direct {
+    border-color: color-mix(in srgb, var(--artwork-accent, rgba(178, 207, 146, 0.3)), transparent 76%);
+  }
+
+  html[data-presence-route="immersive"] [data-cinematic-idle-root] {
+    --presence-phrase-opacity: 0.11;
+    --presence-phrase-gather-opacity: 0.078;
+    --presence-phrase-disperse-opacity: 0.042;
+  }
+
+  html[data-presence-route="immersive"][data-presence-phase="dreaming"] .immersive-primary {
+    opacity: 0.9;
+    box-shadow: 0 0 74px color-mix(in srgb, var(--artwork-accent, rgba(140, 170, 210, 0.24)), transparent 72%);
+  }
+
+  /* Object pages become a viewing chamber; acquisition controls stay recoverable and legible. */
+  html[data-presence-route="work-detail"][data-presence-phase="dreaming"] .object-chamber-surface {
+    filter: saturate(1.12) contrast(1.04) brightness(1.035);
+  }
+
+  html[data-presence-route="work-detail"][data-presence-phase="dreaming"] [data-collector-rail] {
+    opacity: 0.68;
+  }
+
+  html[data-presence-route="work-detail"][data-presence-phase="dreaming"] [data-collector-actions],
+  html[data-presence-route="work-detail"][data-presence-phase="dreaming"] [data-collector-route]:focus-within {
+    opacity: 0.9;
+    filter: none;
+  }
+
+  @keyframes presenceContourDrift {
+    0% {
+      background-position: 44% 48%, 25% 42%, 72% 58%;
+      background-size: 148% 148%, 154% 146%, 132% 168%;
+    }
+
+    52% {
+      background-position: 58% 43%, 62% 54%, 44% 38%;
+      background-size: 162% 154%, 142% 158%, 148% 152%;
+    }
+
+    100% {
+      background-position: 39% 57%, 78% 45%, 57% 69%;
+      background-size: 154% 166%, 168% 142%, 138% 176%;
+    }
+  }
+
+  @keyframes presenceCurrentFold {
+    0% {
+      opacity: 0.42;
+      filter: blur(24px) saturate(0.94);
+      transform: translate3d(-4%, 2%, 0) scale(1.04) rotate(-0.35deg);
+    }
+
+    48% {
+      opacity: 0.62;
+      filter: blur(18px) saturate(1.12);
+      transform: translate3d(3%, -3%, 0) scale(1.1) rotate(0.22deg);
+    }
+
+    100% {
+      opacity: 0.48;
+      filter: blur(26px) saturate(1.02);
+      transform: translate3d(-1%, 4%, 0) scale(1.06) rotate(-0.12deg);
+    }
+  }
+
+  @keyframes presenceWakeWash {
+    0% {
+      opacity: 0;
+      filter: saturate(0.9) brightness(0.92);
+    }
+
+    32% {
+      opacity: 0.52;
+      filter: saturate(1.12) brightness(1.08);
+    }
+
+    100% {
+      opacity: 0;
+      filter: saturate(1) brightness(1);
+    }
+  }
+
+  @keyframes presenceAnchorSignal {
+    from {
+      color: rgba(245, 248, 242, 0.74);
+    }
+
+    to {
+      color: rgba(249, 251, 246, 0.94);
+    }
+  }
+
+  @keyframes presenceHomeMaterial {
+    from {
+      filter: saturate(1.08) contrast(1.03) brightness(1.01);
+      box-shadow:
+        0 42px 110px rgba(0, 0, 0, 0.5),
+        0 0 42px color-mix(in srgb, var(--artwork-accent), transparent 86%);
+    }
+
+    to {
+      filter: saturate(1.2) contrast(1.07) brightness(1.06);
+      box-shadow:
+        0 50px 140px rgba(0, 0, 0, 0.54),
+        0 0 92px color-mix(in srgb, var(--artwork-accent), transparent 70%);
+    }
+  }
+
+  @media (max-width: 700px) {
+    [data-cinematic-idle-root] > .cinematic-presence-phrase {
+      right: 1rem;
+      bottom: 5rem;
+      width: min(23rem, calc(100vw - 2rem));
+      max-height: 4.6em;
+      font-size: 2.35rem;
+      -webkit-text-stroke-width: 0.7px;
+    }
+
+    [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] > .cinematic-presence-layer {
+      opacity: 0.48;
+    }
+
+    [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] > .cinematic-presence-dispersal-field {
+      opacity: 0.34;
+    }
+
+    html[data-presence-route="works"][data-presence-phase="dreaming"] [data-artwork-slug]:not([data-presence-subject="true"]),
+    html[data-presence-route="series"][data-presence-phase="dreaming"] .series-constellation-node:not(.is-active) {
+      opacity: 0.62;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
     [data-cinematic-idle-root] > .cinematic-idle-veil,
+    [data-cinematic-idle-root] > .cinematic-presence-layer,
+    [data-cinematic-idle-root] > .cinematic-presence-phrase,
+    [data-cinematic-idle-root] > .cinematic-presence-dispersal-field,
+    .cinematic-presence-word,
     [data-cinematic-idle] {
       transition-duration: 1ms !important;
       transition-delay: 0ms !important;
+      animation: none !important;
       transform: none !important;
       filter: none !important;
+    }
+
+    [data-cinematic-idle-root] > .cinematic-presence-dispersal-field {
+      display: none;
+    }
+
+    [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] > .cinematic-presence-layer {
+      opacity: 0.28;
+    }
+
+    [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] > .cinematic-presence-phrase {
+      opacity: 0.035;
     }
   }
 </style>

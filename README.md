@@ -18,6 +18,11 @@ The project is now focused on an authored viewing flow rather than a conventiona
 
 ## Current Status
 
+ARTIST STAGE is currently an advanced cinematic art-direction beta. The primary route architecture,
+living atmosphere systems and collector journey are implemented. Route-specific environment art
+direction, authentic content, AR realism, commerce approval and production-device QA remain active
+work.
+
 Core routes are active:
 
 - `/`
@@ -55,7 +60,11 @@ Secondary and experimental routes remain available, but are outside the primary 
 - Long routes now share the same canonical frame / header axis and use a shared `Top` return gesture where the page length needs it.
 - `/series` now preloads key covers and no longer flashes black placeholder surfaces during route arrival.
 - Home selected manifestations now use smoother cinematic switching, floating artwork motion, hover/click activation of background works, and a `Next` gesture into the next section.
-- `/process` includes an experimental cinematic stillness behavior where secondary content gradually recedes during inactivity and returns on activity.
+- Site-wide inactivity is directed by the Presence system: content settles, disperses and reforms in
+  continuing dream acts instead of ending in a frozen fade.
+- Process, Artist and Contact share a bounded Living Background lifecycle but use distinct route
+  cinematography. Works intentionally uses canvas-free archive illumination instead of duplicating
+  paintings in a full-screen WebGL layer.
 
 ## Local Commands
 
@@ -63,6 +72,10 @@ Secondary and experimental routes remain available, but are outside the primary 
 - `npm run dev`
 - `npm run build`
 - `npm run preview`
+
+Create a local `.env` from `.env.example` before testing checkout flows. `PUBLIC_SITE_URL` may use
+the local development URL; `STRIPE_SECRET_KEY` must remain private and is only required by the
+server-side checkout endpoint.
 
 ## Build Notes
 
@@ -75,7 +88,12 @@ Secondary and experimental routes remain available, but are outside the primary 
 ## Key Handoff Docs
 
 - `docs/project-brief.md`
+- `docs/artist-stage-v3-current-status-2026-07-15.md`
+- `docs/artist-stage-v3-roadmap.md`
 - `docs/artist-stage-v3-current-development-handoff.md`
+- `docs/artist-stage-v3-next-chat-handoff.md`
+- `docs/artist-stage-v3-living-background-route-profiles.md`
+- `docs/living-background-environment-universal-tool.md`
 - `docs/artist-stage-v3-series-chapter-route.md`
 - `docs/artist-stage-v3-series-field-route.md`
 - `docs/artist-stage-v3-home-selected-manifestations-field.md`
@@ -83,6 +101,5 @@ Secondary and experimental routes remain available, but are outside the primary 
 - `docs/artist-stage-v3-work-detail-collector-ar-completion.md`
 - `docs/artist-stage-v3-series-webgl-atmosphere-field.md`
 - `docs/artist-stage-v3-home-cinematic-field-motion.md`
-- `docs/artist-stage-v3-current-status-2026-07-06.md`
 - `docs/artist-stage-v3-global-shell-header-calibration.md`
 - `docs/artist-stage-v3-performance-stability-pass.md`

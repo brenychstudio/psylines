@@ -2,6 +2,7 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import AtmosphericBackdropRoot from "../../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
 import ArtworkAtmosphereBridge from "../../components/artwork-atmosphere/ArtworkAtmosphereBridge.astro";
+import WorksArchiveIllumination from "../../components/works/WorksArchiveIllumination.astro";
 import { artworkSeries } from "../../data/site/series";
 import { getFlagshipArtworks, getSelectedArtworks } from "../../data/site/artworkCollections";
 import { getWorksIndexContext } from "../../data/site/worksIndex";
@@ -103,19 +104,14 @@ const filterItems = [
   })),
 ];
 
-const fieldHref = makeWorksHref({ view: null });
-const indexHref = makeWorksHref({ view: "index" });
+const fieldHref = makeWorksHref({ view: "field" });
+const indexHref = makeWorksHref({ view: null });
 const hasActiveFilter =
   worksIndex.isSeriesFiltered ||
   worksIndex.register !== "all" ||
   Boolean(Astro.url.searchParams.get("format")) ||
   Boolean(Astro.url.searchParams.get("orientation")) ||
   Boolean(Astro.url.searchParams.get("status"));
-
-const worksFieldContext =
-  worksIndex.viewMode === "index"
-    ? "Index mode is the complete archive register for the current context."
-    : "Field mode is a curated visual route through the current context.";
 
 function getAvailabilityLabel(work: { availableAsPrint: boolean; editionCandidate?: boolean }) {
   if (work.availableAsPrint) return "edition route";
@@ -130,12 +126,18 @@ function getCycleRegisterLabel(slug: string, title: string) {
   return title;
 }
 
-function getManifestationEntryClass(index: number, aspect: string) {
+function getManifestationEntryClass(aspect: string) {
   const classes = ["manifestation-entry", "works-archive-item", `aspect-${aspect}`];
 
-  if (index === 3 || index === 6) classes.push("manifestation-entry--wide");
-
   return classes.join(" ");
+}
+
+function getWorksLightTone(slug: string) {
+  if (["mt-3", "mt-5", "mt-6"].includes(slug)) return "moss";
+  if (["mt-1", "mt-9"].includes(slug)) return "oxide";
+  if (["mt-2", "mt-7", "ash-1"].includes(slug)) return "amber";
+  if (["mt-8", "mt-10", "mt-11"].includes(slug)) return "mineral";
+  return "neutral";
 }
 ---
 
@@ -144,36 +146,42 @@ function getManifestationEntryClass(index: number, aspect: string) {
   description="A curated field of manifestations, studies, editions, and original works."
   canonicalPath="/works"
 >
+  <WorksArchiveIllumination mode={worksIndex.viewMode} />
   <AtmosphericBackdropRoot />
   <ArtworkAtmosphereBridge slug={worksAtmosphereSlug} mode="works" />
-
   <main
     class="works-index-shell works-page-shell"
     data-works-atmosphere-field
     data-works-view={worksIndex.viewMode}
     data-works-register={worksIndex.register}
     data-works-series={worksIndex.series?.slug ?? "all"}
+    data-cinematic-idle-root
+    data-cinematic-idle-delay="6500"
+    data-cinematic-idle-reduced-delay="10400"
+    data-cinematic-idle-wake-duration="3800"
+    data-cinematic-idle-settle-duration="3200"
+    data-cinematic-idle-dream-duration="9000"
   >
     <header class="works-index-header" id="works-curated-header" data-atmosphere-section="works-intro">
-      <p class="eyebrow">WORKS FIELD</p>
+      <div class="works-index-overline" data-cinematic-idle="detail">
+        <p class="eyebrow">WORKS / ARCHIVE</p>
+        <p class="works-index-overline-count">{String(worksIndex.filteredWorks.length).padStart(2, "0")} OBJECTS</p>
+      </div>
+
       <div class="works-index-headline-row">
         <div class="works-index-copy">
-          <h1 class="works-index-title">A field of manifestations, cycles, editions, and original works.</h1>
-          <p class="works-index-text">
-            Move through works as states, surfaces, and collector routes. Field mode opens an authored route; Index mode keeps the archive scannable.
+          <h1 class="works-index-title" data-cinematic-idle="anchor">Works</h1>
+          <p class="works-index-deck" data-cinematic-idle="voice">
+            A field of manifestations, cycles, editions, and original works.
           </p>
         </div>
 
-        <div class="works-index-meta" aria-label="Works field register">
-          <p class="works-index-meta-label">FIELD COUNT</p>
-          <p class="works-index-count" id="works-count">{worksIndex.filteredWorks.length}</p>
-          <p class="works-index-meta-label" id="works-count-note">{worksIndex.activeCountLabel}</p>
-          <div class="works-active-register" aria-live="polite">
-            <p class="works-index-meta-label">ACTIVE REGISTER</p>
-            <p class="works-active-register-title" id="works-active-register-title">{worksIndex.activeTitle}</p>
-            <p class="works-active-register-note" id="works-active-register-note">
-              {worksIndex.viewMode === "index" ? "Complete index register" : "Curated field route"}
-            </p>
+        <div class="works-index-meta" aria-label="Active works register" data-cinematic-idle="line" aria-live="polite">
+          <p class="works-index-meta-label">ACTIVE REGISTER</p>
+          <p class="works-active-register-title" id="works-active-register-title">{worksIndex.activeTitle}</p>
+          <div class="works-index-meta-line">
+            <span>{worksIndex.viewMode === "index" ? "Index" : "Field"}</span>
+            <span id="works-count-note">{hasActiveFilter ? "Filtered" : "Complete"}</span>
           </div>
         </div>
       </div>
@@ -181,31 +189,31 @@ function getManifestationEntryClass(index: number, aspect: string) {
 
     {worksIndex.isSeriesFiltered && !worksIndex.isValidSeries ? (
       <aside class="works-active-series-register works-active-series-register--invalid" aria-label="Invalid series register">
-        <p class="works-active-series-kicker">SERIES REGISTER</p>
+        <p class="works-active-series-kicker" data-cinematic-idle="detail">SERIES REGISTER</p>
 
         <div class="works-active-series-copy">
-          <h2>Series not found.</h2>
-          <p>This works view does not match a confirmed series register.</p>
-          <div class="works-active-series-links">
+          <h2 data-cinematic-idle="anchor">Series not found.</h2>
+          <p data-cinematic-idle="voice">This works view does not match a confirmed series register.</p>
+          <div class="works-active-series-links" data-cinematic-idle="action">
             <a href="/series">Open series field</a>
             <a href="/works">Return to all works</a>
           </div>
         </div>
       </aside>
-    ) : (
+    ) : hasActiveFilter ? (
       <aside class="works-active-series-register" aria-label="Active works context">
-        <p class="works-active-series-kicker">
+        <p class="works-active-series-kicker" data-cinematic-idle="detail">
           {worksIndex.series ? "ACTIVE SERIES REGISTER" : "ACTIVE WORKS REGISTER"}
         </p>
 
         <div class="works-active-series-copy">
-          <h2>{worksIndex.activeTitle}</h2>
-          <p>{worksIndex.activeDescription}</p>
-          <div class="works-active-series-meta">
+          <h2 data-cinematic-idle="anchor">{worksIndex.activeTitle}</h2>
+          <p data-cinematic-idle="voice">{worksIndex.activeDescription}</p>
+          <div class="works-active-series-meta" data-cinematic-idle="line">
             <span>{worksIndex.activeCountLabel}</span>
             <span>{worksIndex.viewMode === "index" ? "Index mode" : "Field mode"}</span>
           </div>
-          <div class="works-active-series-links">
+          <div class="works-active-series-links" data-cinematic-idle="action">
             {worksIndex.series ? (
               <a href={`/series/${worksIndex.series.slug}`}>Open series chapter</a>
             ) : null}
@@ -215,51 +223,48 @@ function getManifestationEntryClass(index: number, aspect: string) {
           </div>
         </div>
       </aside>
-    )}
+    ) : null}
 
     <div class="works-register-controls">
-      <nav class="works-filter-bar" aria-label="Works filters">
+      <nav class="works-filter-bar" aria-label="Works filters" data-cinematic-idle="action">
         {filterItems.map((item) => (
           <a
             class={`works-filter-btn ${item.isActive ? "is-active" : ""}`}
             href={item.href}
             data-filter={item.key}
+            aria-current={item.isActive ? "page" : undefined}
           >
             {item.label}
           </a>
         ))}
       </nav>
 
-      <div class="works-view-rail">
-        <nav class="works-view-toggle" aria-label="Works view mode">
-          <a
-            href={fieldHref}
-            class={`works-view-btn ${worksIndex.viewMode === "field" ? "is-active" : ""}`}
-            data-view="field"
-          >
-            Field
-          </a>
-          <a
-            href={indexHref}
-            class={`works-view-btn ${worksIndex.viewMode === "index" ? "is-active" : ""}`}
-            data-view="index"
-          >
-            Index
-          </a>
-        </nav>
-
-        <p class="works-field-context" id="works-field-context">
-          {worksFieldContext}
-        </p>
-      </div>
+      <nav class="works-view-toggle" aria-label="Works view mode" data-cinematic-idle="action">
+        <a
+          href={fieldHref}
+          class={`works-view-btn ${worksIndex.viewMode === "field" ? "is-active" : ""}`}
+          data-view="field"
+          aria-current={worksIndex.viewMode === "field" ? "page" : undefined}
+        >
+          Field
+        </a>
+        <a
+          href={indexHref}
+          class={`works-view-btn ${worksIndex.viewMode === "index" ? "is-active" : ""}`}
+          data-view="index"
+          aria-current={worksIndex.viewMode === "index" ? "page" : undefined}
+        >
+          Index
+        </a>
+      </nav>
     </div>
 
     {worksIndex.filteredWorks.length === 0 ? (
       <section class="works-empty-register" id="works-empty-state">
-        <p class="works-active-series-kicker">EMPTY REGISTER</p>
-        <h2>No confirmed works in this register yet.</h2>
-        <p>This view is prepared for future author-approved works. Return to all works or open the Series field.</p>
-        <div class="works-active-series-links">
+        <p class="works-active-series-kicker" data-cinematic-idle="detail">EMPTY REGISTER</p>
+        <h2 data-cinematic-idle="anchor">No confirmed works in this register yet.</h2>
+        <p data-cinematic-idle="voice">This view is prepared for future author-approved works. Return to all works or open the Series field.</p>
+        <div class="works-active-series-links" data-cinematic-idle="action">
           <a href="/works">Return to all works</a>
           <a href="/series">Open series field</a>
         </div>
@@ -278,14 +283,15 @@ function getManifestationEntryClass(index: number, aspect: string) {
           return (
             <a
               href={`/works/${work.slug}`}
-              class={getManifestationEntryClass(index, work.aspect)}
+              class={getManifestationEntryClass(work.aspect)}
               data-series={seriesEntry?.slug ?? "independent"}
               data-edition={work.availableAsPrint ? "true" : "false"}
               data-artwork-slug={work.slug}
+              data-works-light-tone={getWorksLightTone(work.slug)}
               data-atmosphere-handoff-slug={work.meta.atmosphereProfile || work.slug}
               data-register-label={seriesEntry ? getCycleRegisterLabel(seriesEntry.slug, seriesEntry.title) : "Independent"}
             >
-              <div class="manifestation-entry__image works-archive-media">
+              <div class="manifestation-entry__image works-archive-media" data-cinematic-idle="image">
                 {coverSrc ? (
                   <img
                     src={coverImage.src}
@@ -293,7 +299,8 @@ function getManifestationEntryClass(index: number, aspect: string) {
                     sizes="(min-width: 1280px) 30vw, (min-width: 760px) 44vw, 92vw"
                     alt={`${work.title} manifestation surface`}
                     class="manifestation-entry__img works-archive-image"
-                    loading="lazy"
+                    loading={index < 3 ? "eager" : "lazy"}
+                    fetchpriority={index < 3 ? "high" : "auto"}
                     decoding="async"
                     data-cinematic-cover
                   />
@@ -301,18 +308,20 @@ function getManifestationEntryClass(index: number, aspect: string) {
                   <div class="works-archive-surface" data-cinematic-cover></div>
                 )}
 
-                {availabilityLabel ? (
-                  <div class="manifestation-entry__route works-archive-badge">{availabilityLabel}</div>
-                ) : null}
               </div>
 
               <div class="manifestation-entry__signal works-archive-info">
-                <p class="manifestation-entry__kicker works-archive-kicker">
-                  {seriesEntry ? `${getCycleRegisterLabel(seriesEntry.slug, seriesEntry.title)} / ${work.year}` : `Independent / ${work.year}`}
-                </p>
+                <div class="manifestation-entry__kicker-row">
+                  <p class="manifestation-entry__kicker works-archive-kicker" data-cinematic-idle="detail">
+                    {seriesEntry ? `${getCycleRegisterLabel(seriesEntry.slug, seriesEntry.title)} / ${work.year}` : `Independent / ${work.year}`}
+                  </p>
+                  {availabilityLabel ? (
+                    <span class="manifestation-entry__route" data-cinematic-idle="detail">{availabilityLabel}</span>
+                  ) : null}
+                </div>
 
-                <h2 class="manifestation-entry__title works-archive-title">{work.title}</h2>
-                <p class="manifestation-entry__statement works-archive-statement">{work.statement}</p>
+                <h2 class="manifestation-entry__title works-archive-title" data-cinematic-idle="line">{work.title}</h2>
+                <p class="manifestation-entry__statement works-archive-statement" data-cinematic-idle="trace">{work.statement}</p>
               </div>
             </a>
           );
@@ -326,7 +335,7 @@ function getManifestationEntryClass(index: number, aspect: string) {
         data-view-mode="index"
         data-atmosphere-section="works-index"
       >
-        {indexEntries.map(({ work, coverSrc, coverImage, seriesEntry }) => {
+        {indexEntries.map(({ work, coverSrc, coverImage, seriesEntry }, index) => {
           const availabilityLabel = getAvailabilityLabel(work);
 
           return (
@@ -336,17 +345,19 @@ function getManifestationEntryClass(index: number, aspect: string) {
               data-series={seriesEntry?.slug ?? "independent"}
               data-edition={work.availableAsPrint ? "true" : "false"}
               data-artwork-slug={work.slug}
+              data-works-light-tone={getWorksLightTone(work.slug)}
               data-atmosphere-handoff-slug={work.meta.atmosphereProfile || work.slug}
               aria-label={`Enter ${work.title}`}
             >
-              <div class="works-compact-media">
+              <div class="works-compact-media" data-cinematic-idle="image">
                 {coverSrc ? (
                   <img
                     src={coverImage.src}
                     srcset={coverImage.srcset}
                     alt={`${work.title} manifestation surface`}
                     class="works-compact-image"
-                    loading="lazy"
+                    loading={index < 5 ? "eager" : "lazy"}
+                    fetchpriority={index < 5 ? "high" : "auto"}
                     decoding="async"
                     data-cinematic-cover
                     sizes="(min-width: 1500px) 20vw, (min-width: 1260px) 25vw, (min-width: 900px) 33vw, 50vw"
@@ -356,14 +367,14 @@ function getManifestationEntryClass(index: number, aspect: string) {
                 )}
 
                 {availabilityLabel ? (
-                  <div class="works-archive-badge">{availabilityLabel}</div>
+                  <div class="works-archive-badge" data-cinematic-idle="detail">{availabilityLabel}</div>
                 ) : null}
               </div>
 
               <div class="works-compact-meta">
-                <p class="works-compact-year">{work.meta.year ?? work.year}</p>
-                <h2 class="works-compact-title">{work.meta.inventoryNumber ?? work.title}</h2>
-                <p class="works-compact-cycle">
+                <p class="works-compact-year" data-cinematic-idle="detail">{work.meta.year ?? work.year}</p>
+                <h2 class="works-compact-title" data-cinematic-idle="line">{work.meta.inventoryNumber ?? work.title}</h2>
+                <p class="works-compact-cycle" data-cinematic-idle="trace">
                   {seriesEntry ? getCycleRegisterLabel(seriesEntry.slug, seriesEntry.title) : "Independent"}
                 </p>
               </div>
@@ -713,6 +724,557 @@ function getManifestationEntryClass(index: number, aspect: string) {
       .works-page-shell[data-works-view="index"] .works-compact-year,
       .works-page-shell[data-works-view="index"] .works-compact-cycle {
         font-size: 0.66rem;
+      }
+    }
+  </style>
+
+  <style>
+    /* V3 Works - Register + Exhibition Pass */
+    .works-index-shell.works-page-shell {
+      padding-top: 4.25rem;
+      padding-bottom: 7rem;
+    }
+
+    .works-index-shell.works-page-shell::before {
+      inset: 1rem 0 auto;
+      height: 22rem;
+      opacity: 1;
+      background:
+        linear-gradient(90deg, rgba(2, 5, 4, 0.48) 0%, rgba(2, 5, 4, 0.16) 38%, transparent 68%),
+        linear-gradient(180deg, rgba(5, 8, 7, 0.05), transparent 72%);
+    }
+
+    .works-index-header {
+      display: grid;
+      gap: 1.15rem;
+      padding-bottom: 1.65rem;
+      border-bottom: 1px solid rgba(235, 240, 232, 0.09);
+    }
+
+    .works-index-overline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .works-index-overline .eyebrow,
+    .works-index-overline-count {
+      margin: 0;
+      color: rgba(235, 240, 232, 0.48);
+      font-size: 0.66rem;
+      line-height: 1;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .works-index-headline-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem);
+      gap: 3.5rem;
+      align-items: end;
+    }
+
+    .works-index-copy {
+      display: grid;
+      grid-template-columns: minmax(12rem, 0.34fr) minmax(25rem, 0.66fr);
+      gap: 2rem;
+      align-items: end;
+      width: 100%;
+      max-width: 76rem;
+    }
+
+    .works-index-title {
+      max-width: none;
+      margin: 0;
+      color: rgba(245, 248, 242, 0.94);
+      font-size: 4.65rem;
+      font-weight: 300;
+      line-height: 0.9;
+      letter-spacing: 0;
+    }
+
+    .works-index-deck {
+      max-width: 34ch;
+      margin: 0;
+      color: rgba(235, 240, 232, 0.76);
+      font-size: 1.72rem;
+      font-weight: 300;
+      line-height: 1.14;
+      letter-spacing: 0;
+    }
+
+    .works-index-meta {
+      display: grid;
+      gap: 0.42rem;
+      align-self: end;
+      min-width: 0;
+      margin: 0;
+      padding: 0.15rem 0 0.15rem 1.25rem;
+      border: 0;
+      border-left: 1px solid rgba(235, 240, 232, 0.12);
+      border-radius: 0;
+      background: transparent;
+    }
+
+    .works-index-meta-label {
+      font-size: 0.64rem;
+      letter-spacing: 0;
+    }
+
+    .works-active-register-title {
+      margin: 0;
+      color: rgba(245, 248, 242, 0.9);
+      font-size: 1.08rem;
+      line-height: 1.22;
+      letter-spacing: 0;
+    }
+
+    .works-index-meta-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem 0.8rem;
+      color: rgba(235, 240, 232, 0.42);
+      font-size: 0.64rem;
+      line-height: 1.2;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .works-active-series-register,
+    .works-empty-register {
+      width: 100%;
+      margin: 0;
+      padding: 1.1rem 0 1.25rem;
+      border-top: 0;
+      border-bottom: 1px solid rgba(235, 240, 232, 0.075);
+      grid-template-columns: minmax(10rem, 15rem) minmax(0, 42rem);
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .works-active-series-copy h2,
+    .works-empty-register h2 {
+      font-size: 1.65rem;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .works-active-series-copy p,
+    .works-empty-register p {
+      margin-top: 0.45rem;
+      font-size: 0.9rem;
+      line-height: 1.48;
+    }
+
+    .works-active-series-meta {
+      margin-top: 0.65rem;
+      font-size: 0.62rem;
+      letter-spacing: 0;
+    }
+
+    .works-active-series-links {
+      margin-top: 0.7rem;
+    }
+
+    .works-register-controls {
+      position: sticky;
+      top: var(--site-header-height);
+      z-index: 20;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1.5rem;
+      align-items: center;
+      margin: 0 0 1.65rem;
+      padding: 0.8rem 0;
+      border-bottom: 1px solid rgba(235, 240, 232, 0.085);
+      background: rgba(5, 8, 6, 0.88);
+      backdrop-filter: blur(16px);
+    }
+
+    .works-filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.28rem 1rem;
+      min-width: 0;
+      padding: 0;
+    }
+
+    .works-filter-btn {
+      min-height: 2rem;
+      padding: 0.4rem 0 0.42rem;
+      font-size: 0.66rem;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .works-view-toggle {
+      flex: none;
+      margin: 0;
+      padding: 0.25rem;
+    }
+
+    .works-view-btn {
+      min-width: 4rem;
+      min-height: 2rem;
+      padding: 0.42rem 0.72rem;
+      font-size: 0.66rem;
+      letter-spacing: 0;
+    }
+
+    .works-filter-btn:focus-visible,
+    .works-view-btn:focus-visible {
+      outline: 1px solid rgba(235, 240, 232, 0.58);
+      outline-offset: 3px;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-register-controls {
+      margin-bottom: 1.65rem;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 2.2rem 1.1rem;
+      width: 100%;
+      margin: 0;
+      align-items: start;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-item {
+      gap: 0.55rem;
+      min-width: 0;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-media {
+      min-height: 0;
+      max-height: none;
+      aspect-ratio: auto;
+      overflow: visible;
+      background: transparent;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-image {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: none;
+      object-fit: contain;
+      object-position: center;
+      box-shadow: 0 20px 58px rgba(0, 0, 0, 0.28);
+      transition: transform 420ms ease, filter 420ms ease, box-shadow 420ms ease;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-item:hover .works-compact-image,
+    .works-page-shell[data-works-view="index"] .works-compact-item:focus-visible .works-compact-image {
+      transform: translateY(-2px);
+      filter: saturate(1.05) contrast(1.025);
+      box-shadow: 0 28px 76px var(--artwork-shadow);
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-meta {
+      gap: 0.1rem;
+      padding: 0;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-title {
+      font-size: 0.96rem;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .works-page-shell[data-works-view="index"] .works-compact-year,
+    .works-page-shell[data-works-view="index"] .works-compact-cycle {
+      font-size: 0.59rem;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .works-page-shell[data-works-view="field"] .manifestation-field.works-archive-grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 3.6rem 1.35rem;
+      width: 100%;
+      margin: 0;
+      align-items: start;
+    }
+
+    .works-page-shell[data-works-view="field"] .manifestation-entry,
+    .works-page-shell[data-works-view="field"] .manifestation-entry--primary,
+    .works-page-shell[data-works-view="field"] .manifestation-entry--tall,
+    .works-page-shell[data-works-view="field"] .manifestation-entry--wide,
+    .works-page-shell[data-works-view="field"] .manifestation-entry--lead,
+    .works-page-shell[data-works-view="field"] .manifestation-entry--support {
+      grid-column: span 4;
+      min-width: 0;
+      max-width: none;
+      margin: 0;
+    }
+
+    .works-page-shell[data-works-view="field"] .manifestation-entry__image {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: clamp(24rem, 48svh, 34rem);
+      overflow: visible;
+      box-shadow: none;
+    }
+
+    .works-page-shell[data-works-view="field"] .manifestation-entry__image::before {
+      inset: 12% 2% 4%;
+      opacity: calc(0.48 + (var(--artwork-density) * 0.12));
+    }
+
+    .works-page-shell[data-works-view="field"] .manifestation-entry__img,
+    .works-page-shell[data-works-view="field"] .manifestation-entry .works-archive-image {
+      position: absolute;
+      inset: 0;
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: 100%;
+      max-height: 100%;
+      min-height: 0;
+      object-fit: contain;
+      object-position: center;
+      box-shadow: none;
+      filter: drop-shadow(0 24px 34px rgba(0, 0, 0, 0.38));
+    }
+
+    .works-page-shell[data-works-view="field"] .manifestation-entry:hover .manifestation-entry__img,
+    .works-page-shell[data-works-view="field"] .manifestation-entry:hover .works-archive-image,
+    .works-page-shell[data-works-view="field"] .manifestation-entry:focus-visible .manifestation-entry__img,
+    .works-page-shell[data-works-view="field"] .manifestation-entry:focus-visible .works-archive-image {
+      filter:
+        saturate(1.06)
+        contrast(1.025)
+        drop-shadow(0 30px 42px var(--artwork-shadow));
+    }
+
+    .works-page-shell[data-works-view="field"] .manifestation-entry__signal {
+      width: min(100%, 26rem);
+      margin: 0.9rem auto 0;
+      padding: 0;
+    }
+
+    .works-page-shell[data-works-view="field"] .manifestation-entry__kicker-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .works-page-shell[data-works-view="field"] .manifestation-entry__kicker {
+      margin: 0;
+      font-size: 0.62rem;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .works-page-shell[data-works-view="field"] .manifestation-entry__title {
+      margin-top: 0.32rem;
+      font-size: 1.08rem;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .works-page-shell[data-works-view="field"] .manifestation-entry__statement {
+      display: -webkit-box;
+      max-width: 30rem;
+      margin-top: 0.4rem;
+      overflow: hidden;
+      color: rgba(235, 240, 232, 0.5);
+      font-size: 0.82rem;
+      line-height: 1.5;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    .works-page-shell[data-works-view="field"] .manifestation-entry__route {
+      position: static;
+      flex: none;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: rgba(178, 207, 146, 0.54);
+      font-size: 0.58rem;
+      line-height: 1.2;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    @media (min-width: 1700px) {
+      .works-page-shell[data-works-view="index"] .works-compact-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 1120px) {
+      .works-index-headline-row {
+        grid-template-columns: minmax(0, 1fr) minmax(12rem, 15rem);
+        gap: 2rem;
+      }
+
+      .works-index-copy {
+        grid-template-columns: 1fr;
+        gap: 0.85rem;
+      }
+
+      .works-index-title {
+        font-size: 3.8rem;
+      }
+
+      .works-index-deck {
+        max-width: 39ch;
+        font-size: 1.45rem;
+      }
+
+      .works-page-shell[data-works-view="index"] .works-compact-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .works-page-shell[data-works-view="field"] .manifestation-field.works-archive-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 3.2rem 1.25rem;
+      }
+
+      .works-page-shell[data-works-view="field"] .manifestation-entry,
+      .works-page-shell[data-works-view="field"] .manifestation-entry--primary,
+      .works-page-shell[data-works-view="field"] .manifestation-entry--tall,
+      .works-page-shell[data-works-view="field"] .manifestation-entry--wide,
+      .works-page-shell[data-works-view="field"] .manifestation-entry--lead,
+      .works-page-shell[data-works-view="field"] .manifestation-entry--support {
+        grid-column: auto;
+      }
+
+      .works-page-shell[data-works-view="field"] .manifestation-entry__image {
+        height: min(48svh, 31rem);
+      }
+    }
+
+    @media (max-width: 760px) {
+      .works-index-shell.works-page-shell {
+        padding-top: 2.9rem;
+        padding-bottom: 5rem;
+      }
+
+      .works-index-header {
+        gap: 1rem;
+        padding-bottom: 1.3rem;
+      }
+
+      .works-index-headline-row {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+      }
+
+      .works-index-title {
+        font-size: 3.15rem;
+      }
+
+      .works-index-deck {
+        max-width: 32ch;
+        font-size: 1.28rem;
+      }
+
+      .works-index-meta {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 0.75rem;
+        align-items: baseline;
+        padding: 0.75rem 0 0;
+        border-top: 1px solid rgba(235, 240, 232, 0.1);
+        border-left: 0;
+      }
+
+      .works-index-meta-line {
+        justify-content: flex-end;
+      }
+
+      .works-active-series-register,
+      .works-empty-register {
+        grid-template-columns: 1fr;
+        gap: 0.65rem;
+      }
+
+      .works-register-controls {
+        grid-template-columns: 1fr;
+        gap: 0.65rem;
+        padding: 0.7rem 0 0.75rem;
+      }
+
+      .works-filter-bar {
+        flex-wrap: nowrap;
+        gap: 0.85rem;
+        width: 100%;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+
+      .works-filter-bar::-webkit-scrollbar {
+        display: none;
+      }
+
+      .works-view-toggle {
+        order: -1;
+        justify-self: start;
+      }
+
+      .works-page-shell[data-works-view="index"] .works-compact-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1.8rem 0.8rem;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .works-index-overline-count {
+        display: none;
+      }
+
+      .works-index-meta {
+        grid-template-columns: 1fr;
+        gap: 0.3rem;
+      }
+
+      .works-index-meta-line {
+        justify-content: flex-start;
+      }
+
+      .works-page-shell[data-works-view="field"] .manifestation-field.works-archive-grid {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+      }
+
+      .works-page-shell[data-works-view="field"] .manifestation-entry__image {
+        height: min(62svh, 32rem);
+      }
+    }
+
+    @media (max-width: 420px) {
+      .works-index-title {
+        font-size: 2.65rem;
+      }
+
+      .works-index-deck {
+        font-size: 1.12rem;
+      }
+
+      .works-view-toggle {
+        display: inline-flex;
+        width: auto;
+      }
+
+      .works-page-shell[data-works-view="index"] .works-compact-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .works-register-controls {
+        backdrop-filter: none;
+      }
+
+      .works-page-shell[data-works-view="index"] .works-compact-image {
+        transition: none;
       }
     }
   </style>

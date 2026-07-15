@@ -153,18 +153,33 @@ const MAP_HEIGHT = 1980;
   hideFooter
 >
   {primarySeries ? <ArtworkAtmosphereBridge slug={primarySeries.atmosphereProfile} mode="page" /> : null}
-
   <div class="series-webgl-backdrop" data-series-webgl-backdrop aria-hidden="true"></div>
-  <SeriesConstellationField
-    nodes={constellationNodes}
-    mapWidth={MAP_WIDTH}
-    mapHeight={MAP_HEIGHT}
-    client:load
-  />
+  <div
+    class="series-presence-root"
+    data-cinematic-idle-root
+    data-cinematic-idle-delay="6600"
+    data-cinematic-idle-reduced-delay="10400"
+    data-cinematic-idle-wake-duration="3900"
+    data-cinematic-idle-settle-duration="3200"
+    data-cinematic-idle-dream-duration="9000"
+  >
+    <SeriesConstellationField
+      nodes={constellationNodes}
+      mapWidth={MAP_WIDTH}
+      mapHeight={MAP_HEIGHT}
+      client:load
+    />
+  </div>
   <SeriesWebGLBackdrop />
 </BaseLayout>
 
 <style is:global>
+  .series-presence-root {
+    position: relative;
+    z-index: 2;
+    min-height: calc(100svh - 1px);
+  }
+
   .series-constellation-page {
     --series-atmo-a: rgba(72, 88, 50, 0.58);
     --series-atmo-b: rgba(142, 130, 82, 0.28);
@@ -182,10 +197,9 @@ const MAP_HEIGHT = 1980;
     min-height: calc(100svh - 1px);
     overflow: clip;
     background:
-      radial-gradient(circle at var(--series-glow-x) var(--series-glow-y), color-mix(in srgb, var(--series-accent), transparent 72%), transparent 36rem),
-      radial-gradient(circle at calc(var(--series-glow-x) + 18%) calc(var(--series-glow-y) - 12%), rgba(142, 130, 82, 0.06), transparent 32rem),
-      radial-gradient(ellipse at 50% 100%, rgba(0, 0, 0, 0.3), transparent 44rem),
-      linear-gradient(180deg, rgba(5, 8, 7, 0.02), rgba(3, 6, 5, 0.14));
+      radial-gradient(circle at var(--series-glow-x) var(--series-glow-y), color-mix(in srgb, var(--series-accent), transparent 97%), transparent 18rem),
+      radial-gradient(ellipse at 50% 100%, rgba(0, 0, 0, 0.12), transparent 42rem),
+      linear-gradient(180deg, rgba(5, 8, 7, 0), rgba(3, 6, 5, 0.05));
   }
 
   .series-constellation-page[data-active-tone="blue"] {
@@ -225,9 +239,7 @@ const MAP_HEIGHT = 1980;
     inset: 4rem 0 0;
     z-index: 1;
     pointer-events: none;
-    background:
-      linear-gradient(90deg, rgba(4, 6, 5, 0.68), rgba(4, 6, 5, 0.18) 26%, rgba(4, 6, 5, 0) 58%),
-      radial-gradient(circle at 20% 58%, rgba(245, 248, 242, 0.045), transparent 22rem);
+    display: none;
   }
 
   .series-constellation-shell::after {
@@ -236,12 +248,7 @@ const MAP_HEIGHT = 1980;
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    background:
-      linear-gradient(90deg, rgba(235, 240, 232, 0.028) 1px, transparent 1px),
-      linear-gradient(180deg, rgba(235, 240, 232, 0.018) 1px, transparent 1px);
-    background-size: 7.5rem 7.5rem;
-    mask-image: radial-gradient(ellipse at 56% 42%, black, transparent 72%);
-    opacity: 0.28;
+    display: none;
   }
 
   .series-constellation-panel {
@@ -251,12 +258,13 @@ const MAP_HEIGHT = 1980;
     z-index: 8;
     width: min(31rem, calc(100vw - 2.5rem));
     padding: clamp(1.15rem, 2vw, 1.85rem);
-    border-left: 1px solid rgba(245, 248, 242, 0.14);
+    border-left: 1px solid rgba(245, 248, 242, 0.08);
     background:
-      linear-gradient(90deg, rgba(5, 8, 7, 0.72), rgba(5, 8, 7, 0.22) 72%, transparent),
-      radial-gradient(circle at 0 0, var(--series-accent), transparent 22rem);
+      linear-gradient(90deg, rgba(5, 8, 7, 0.42), rgba(5, 8, 7, 0.12) 48%, rgba(5, 8, 7, 0) 100%),
+      radial-gradient(circle at 0 0, color-mix(in srgb, var(--series-accent), transparent 92%), transparent 14rem);
     backdrop-filter: none;
-    box-shadow: -26px 0 110px rgba(0, 0, 0, 0.22);
+    box-shadow: none;
+    mask-image: linear-gradient(90deg, black 0%, black 58%, rgba(0, 0, 0, 0.62) 78%, transparent 100%);
   }
 
   .series-constellation-kicker,
@@ -551,7 +559,7 @@ const MAP_HEIGHT = 1980;
     margin: 0;
     overflow: visible;
     isolation: isolate;
-    background: rgba(12, 18, 13, 0.12);
+    background: transparent;
   }
 
   .series-constellation-node figure::before {
@@ -560,9 +568,9 @@ const MAP_HEIGHT = 1980;
     inset: -16%;
     z-index: -1;
     background:
-      radial-gradient(circle at 50% 42%, var(--node-accent), transparent 40%),
+      radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--node-accent), transparent 22%), transparent 38%),
       radial-gradient(ellipse at 50% 84%, rgba(0, 0, 0, 0.38), transparent 70%);
-    opacity: 0.42;
+    opacity: 0.32;
     filter: blur(2px);
     transform: scale(1);
     transition:
@@ -576,11 +584,7 @@ const MAP_HEIGHT = 1980;
     inset: -7%;
     z-index: 1;
     pointer-events: none;
-    background:
-      radial-gradient(ellipse at 52% 44%, rgba(255, 255, 244, 0.055), transparent 58%),
-      linear-gradient(180deg, rgba(255, 255, 244, 0.035), transparent 42%, rgba(0, 0, 0, 0.12));
-    opacity: 0.35;
-    mix-blend-mode: soft-light;
+    display: none;
   }
 
   .series-constellation-node img,
@@ -591,10 +595,10 @@ const MAP_HEIGHT = 1980;
     object-fit: contain;
     position: relative;
     z-index: 2;
-    background: rgba(12, 18, 13, 0.12);
+    background: transparent;
     box-shadow:
       0 34px 108px rgba(0, 0, 0, 0.42),
-      0 0 58px color-mix(in srgb, var(--node-accent), transparent 78%),
+      0 0 44px color-mix(in srgb, var(--node-accent), transparent 86%),
       0 0 0 1px rgba(245, 248, 242, 0.035);
     -webkit-user-drag: none;
     user-select: none;
@@ -742,42 +746,45 @@ const MAP_HEIGHT = 1980;
   }
 
   .series-constellation-node.is-hovered:not(.is-active) figure::before {
-    opacity: 0.72;
-    transform: scale(1.08);
+    opacity: 0.5;
+    transform: scale(1.055);
   }
 
   .series-constellation-node.is-hovered:not(.is-active) img {
     box-shadow:
       0 44px 124px rgba(0, 0, 0, 0.44),
-      0 0 80px color-mix(in srgb, var(--node-accent), transparent 68%),
+      0 0 62px color-mix(in srgb, var(--node-accent), transparent 78%),
       0 0 0 1px rgba(245, 248, 242, 0.06);
   }
 
   .series-constellation-node.is-active img {
     box-shadow:
       0 50px 150px rgba(0, 0, 0, 0.46),
-      0 0 110px color-mix(in srgb, var(--node-accent), transparent 62%),
+      0 0 74px color-mix(in srgb, var(--node-accent), transparent 78%),
       0 0 0 1px rgba(245, 248, 242, 0.07);
+    animation: seriesActiveArtworkShadow 9.5s cubic-bezier(0.45, 0, 0.2, 1) infinite alternate;
   }
 
   .series-constellation-node.is-active figure::before {
-    opacity: 0.9;
-    transform: scale(1.12);
+    opacity: 0.58;
+    transform: scale(1.075);
+    animation: seriesLocalColorPulse 9.5s cubic-bezier(0.45, 0, 0.2, 1) infinite alternate;
   }
 
   .series-constellation-node.is-active::after {
     content: "";
     position: absolute;
-    inset: -1.1rem;
+    inset: -10%;
     z-index: -1;
-    border: 1px solid rgba(245, 248, 242, 0.08);
+    border: 0;
     background:
-      radial-gradient(circle at 44% 34%, var(--node-accent), transparent 54%),
-      linear-gradient(180deg, rgba(245, 248, 242, 0.025), rgba(245, 248, 242, 0));
-    opacity: 0.72;
-    transform: translate3d(0, 1.4rem, 0);
-    box-shadow: 0 30px 150px var(--node-glow);
+      radial-gradient(ellipse at 50% 48%, color-mix(in srgb, var(--node-accent), transparent 68%), transparent 58%),
+      radial-gradient(ellipse at 50% 86%, rgba(0, 0, 0, 0.22), transparent 72%);
+    opacity: 0.32;
+    transform: translate3d(0, 0.6rem, 0);
+    box-shadow: none;
     pointer-events: none;
+    animation: seriesLocalHaloPulse 9.5s cubic-bezier(0.45, 0, 0.2, 1) infinite alternate;
   }
 
   .series-constellation-node.is-selected-pulse img {
@@ -919,12 +926,12 @@ const MAP_HEIGHT = 1980;
     z-index: 0;
     pointer-events: none;
     background:
-      radial-gradient(circle at var(--series-glow-x) var(--series-glow-y), var(--series-accent), transparent 22rem),
-      radial-gradient(circle at calc(var(--series-glow-x) - 18%) calc(var(--series-glow-y) + 18%), var(--series-atmo-b), transparent 30rem),
-      radial-gradient(ellipse at 54% 56%, rgba(245, 248, 242, 0.025), transparent 42rem);
-    opacity: calc(var(--series-glow-opacity) * 0.42);
-    mix-blend-mode: screen;
-    filter: blur(34px);
+      radial-gradient(circle at var(--series-glow-x) var(--series-glow-y), color-mix(in srgb, var(--series-accent), transparent 78%), transparent 18rem),
+      radial-gradient(circle at calc(var(--series-glow-x) - 18%) calc(var(--series-glow-y) + 18%), color-mix(in srgb, var(--series-atmo-b), transparent 86%), transparent 24rem),
+      radial-gradient(ellipse at 54% 56%, rgba(245, 248, 242, 0.012), transparent 38rem);
+    opacity: calc(var(--series-glow-opacity) * 0.04);
+    mix-blend-mode: soft-light;
+    filter: blur(42px);
     transform: translate3d(calc(var(--series-pan-x) * -0.018), calc(var(--series-pan-y) * -0.018), 0);
     animation: seriesAtmoBreath 13s ease-in-out infinite alternate;
   }
@@ -1115,6 +1122,66 @@ const MAP_HEIGHT = 1980;
     }
   }
 
+  @keyframes seriesLocalColorPulse {
+    0% {
+      opacity: 0.18;
+      transform: scale(1.015);
+      filter: blur(2px);
+    }
+
+    42% {
+      opacity: 0.42;
+      transform: scale(1.075);
+      filter: blur(4px);
+    }
+
+    100% {
+      opacity: 0.26;
+      transform: scale(1.035);
+      filter: blur(3px);
+    }
+  }
+
+  @keyframes seriesLocalHaloPulse {
+    0% {
+      opacity: 0.14;
+      transform: translate3d(0, 0.25rem, 0) scale(0.98);
+    }
+
+    48% {
+      opacity: 0.36;
+      transform: translate3d(0, 0.65rem, 0) scale(1.075);
+    }
+
+    100% {
+      opacity: 0.2;
+      transform: translate3d(0, 0.45rem, 0) scale(1.02);
+    }
+  }
+
+  @keyframes seriesActiveArtworkShadow {
+    0% {
+      box-shadow:
+        0 48px 136px rgba(0, 0, 0, 0.46),
+        0 0 38px color-mix(in srgb, var(--node-accent), transparent 88%),
+        0 0 0 1px rgba(245, 248, 242, 0.06);
+    }
+
+    46% {
+      box-shadow:
+        0 54px 158px rgba(0, 0, 0, 0.48),
+        0 0 86px color-mix(in srgb, var(--node-accent), transparent 76%),
+        0 0 0 1px rgba(245, 248, 242, 0.08);
+    }
+
+    100% {
+      box-shadow:
+        0 50px 146px rgba(0, 0, 0, 0.47),
+        0 0 52px color-mix(in srgb, var(--node-accent), transparent 84%),
+        0 0 0 1px rgba(245, 248, 242, 0.07);
+    }
+  }
+
   @keyframes seriesNeuralDrift {
     from {
       stroke-dashoffset: 0;
@@ -1173,6 +1240,9 @@ const MAP_HEIGHT = 1980;
   @media (prefers-reduced-motion: reduce) {
     .series-constellation__atmosphere,
     .series-constellation-node.is-return-pulse figure::after,
+    .series-constellation-node.is-active img,
+    .series-constellation-node.is-active::after,
+    .series-constellation-node.is-active figure::before,
     .series-neural-link__body,
     .series-neural-link__signal,
     .series-neural-node {

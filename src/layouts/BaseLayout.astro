@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import LivingAtmosphereBoot from "../components/living-atmosphere/LivingAtmosphereBoot.astro";
 import LivingAtmosphereOrchestratorBoot from "../components/living-atmosphere/LivingAtmosphereOrchestratorBoot.astro";
+import CinematicIdleField from "../components/cinematic/CinematicIdleField.astro";
 import SiteScrollTop from "../components/navigation/SiteScrollTop.astro";
 import { resolveMood } from "../lib/living-atmosphere/resolveMood";
 import { siteMeta } from "../data/site/seo";
@@ -41,6 +42,13 @@ const resolvedOgTitle = ogTitle ?? title;
 const resolvedOgDescription = ogDescription ?? description;
 const resolvedOgImage = toAbsoluteUrl(ogImage, baseUrl);
 const pathname = Astro.url.pathname;
+const presenceRoute = pathname === "/"
+  ? "home"
+  : pathname.startsWith("/works/")
+    ? "work-detail"
+    : pathname.startsWith("/series/")
+      ? "series-detail"
+      : pathname.split("/").filter(Boolean)[0] || "home";
 
 const isActive = (href: string) => {
   if (href === "/") return pathname === "/";
@@ -58,7 +66,12 @@ function toAbsoluteUrl(value: string | null | undefined, base: string) {
 }
 ---
 <!doctype html>
-<html lang="en" data-atmosphere-mood={atmosphereMood} data-atmosphere-route={pathname}>
+<html
+  lang="en"
+  data-atmosphere-mood={atmosphereMood}
+  data-atmosphere-route={pathname}
+  data-presence-route={presenceRoute}
+>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -91,10 +104,24 @@ function toAbsoluteUrl(value: string | null | undefined, base: string) {
 
           if (payload?.mode === "controlled-route" && target?.pathname === window.location.pathname && isFresh && !isCollectionIndex) {
             document.documentElement.setAttribute("data-cinematic-transition", "arriving");
+            document.documentElement.dataset.cinematicHandoffKind = payload.transitionKind || "default";
+            if (payload.palette?.accent) {
+              document.documentElement.style.setProperty("--cinematic-handoff-accent", payload.palette.accent);
+            }
+            if (payload.palette?.wash) {
+              document.documentElement.style.setProperty("--cinematic-handoff-wash", payload.palette.wash);
+            }
+            if (payload.palette?.ink) {
+              document.documentElement.style.setProperty("--cinematic-handoff-ink", payload.palette.ink);
+            }
 
             window.setTimeout(() => {
               if (document.documentElement.getAttribute("data-cinematic-transition") === "arriving") {
                 document.documentElement.removeAttribute("data-cinematic-transition");
+                delete document.documentElement.dataset.cinematicHandoffKind;
+                document.documentElement.style.removeProperty("--cinematic-handoff-accent");
+                document.documentElement.style.removeProperty("--cinematic-handoff-wash");
+                document.documentElement.style.removeProperty("--cinematic-handoff-ink");
               }
             }, 3200);
           }
@@ -106,6 +133,7 @@ function toAbsoluteUrl(value: string | null | undefined, base: string) {
     <script src="/scripts/artist-stage-cinematic-transition.js" defer></script>
   </head>
   <body>
+    <CinematicIdleField />
     <LivingAtmosphereBoot />
     <div class="site-shell">
       <div class="site-artwork-atmosphere-field" data-artwork-atmosphere-field aria-hidden="true"></div>

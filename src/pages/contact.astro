@@ -1,10 +1,12 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import AtmosphericBackdropRoot from "../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
+import LivingRouteEnvironment from "../components/living-background/LivingRouteEnvironment.astro";
 import {
   buildCollectorInquiryMailto,
   readCollectorInquiryPrefill,
 } from "../lib/contactInquiry";
+import { getResponsivePublicImage } from "../lib/assets/responsiveImage";
 
 const studioEmail = "info@brenych.com";
 const inquiryPrefill = readCollectorInquiryPrefill(Astro.url.searchParams);
@@ -22,43 +24,69 @@ const studioLinks = [
   { label: "YouTube", href: "https://www.youtube.com/@PSYLINES" },
   { label: "TikTok", href: "https://www.tiktok.com/@psylines" },
 ];
+
+const contactSignal = getResponsivePublicImage("/artworks/test-painting-2/mt-9.jpg", { defaultWidth: 2000 });
+const contactQuiet = getResponsivePublicImage("/artworks/test-painting-2/mt-6.jpg", { defaultWidth: 2000 });
+const contactField = getResponsivePublicImage("/artworks/test-painting-2/mt-3.jpg", { defaultWidth: 2000 });
+const contactRoute = getResponsivePublicImage("/artworks/test-painting-2/mt-5.jpg", { defaultWidth: 2000 });
+const contactEnvironmentTextures = [
+  { slug: "contact-signal", src: contactSignal.src },
+  { slug: "contact-quiet", src: contactQuiet.src },
+  { slug: "contact-field", src: contactField.src },
+  { slug: "contact-route", src: contactRoute.src },
+];
 ---
 <BaseLayout
   title="Contact - ARTIST STAGE"
   description="Direct studio contact for collector inquiries, curatorial conversations, commissions, press, and broader studio dialogue."
   canonicalPath="/contact"
+  preloadImages={[contactSignal.src, contactQuiet.src]}
 >
+  <LivingRouteEnvironment
+    profile="contact"
+    textures={contactEnvironmentTextures}
+    initialSlug="contact-signal"
+    memorySlug="contact-quiet"
+  />
   <AtmosphericBackdropRoot />
-
-  <section class="contact-direct-field" aria-labelledby="contact-title">
-    <section class="contact-direct-threshold" data-atmosphere-section="contact-threshold">
+  <section
+    class="contact-direct-field"
+    aria-labelledby="contact-title"
+    data-cinematic-idle-root
+    data-cinematic-idle-delay="6200"
+    data-cinematic-idle-reduced-delay="9800"
+    data-cinematic-idle-wake-duration="3600"
+    data-cinematic-idle-settle-duration="3000"
+    data-cinematic-idle-dream-duration="8200"
+  >
+    <section class="contact-direct-threshold" data-atmosphere-section="contact-threshold" data-lbe-target="contact-signal">
       <div class="contact-direct-copy">
-        <p class="contact-kicker">CONTACT / STUDIO ROUTE</p>
+        <p class="contact-kicker" data-cinematic-idle="detail">CONTACT / STUDIO ROUTE</p>
 
-        <h1 id="contact-title">Contact the studio.</h1>
+        <h1 id="contact-title" data-cinematic-idle="anchor">Contact the studio.</h1>
 
-        <p>
+        <p data-cinematic-idle="voice">
           For collector inquiries, curatorial conversations, gallery context, commissions,
           press, or studio dialogue.
         </p>
 
-        <p class="contact-secondary-note">
+        <p class="contact-secondary-note" data-cinematic-idle="voice">
           For available works, start from the selected object page when possible. For broader
           context, send a direct studio message.
         </p>
 
-        <nav class="contact-route-links" aria-label="Contact route signals">
+        <nav class="contact-route-links" aria-label="Contact route signals" data-cinematic-idle="action">
           <a href="/works">View works</a>
           <a href="/series">Open series field</a>
           <a href="/collectors">Collector process</a>
         </nav>
       </div>
 
-      <section class="contact-direct" aria-label="Direct contact">
-        <p class="contact-kicker">DIRECT CONTACT</p>
+      <section class="contact-direct" aria-label="Direct contact" data-cinematic-idle="presence">
+        <p class="contact-kicker" data-cinematic-idle="detail">DIRECT CONTACT</p>
 
         {inquiryPrefill ? (
-          <div class="contact-prefill-note" aria-label="Current inquiry context">
+          <div class="contact-prefill-note" aria-label="Current inquiry context" data-cinematic-idle="line">
             <p class="contact-kicker">CURRENT COLLECTOR CONTEXT</p>
             <p class="contact-prefill-summary">
               {inquirySummaryParts.join(" / ")}
@@ -70,7 +98,7 @@ const studioLinks = [
               {inquiryPrefill.priceLabel ? <span>Price: {inquiryPrefill.priceLabel}</span> : null}
             </div>
 
-            <nav class="contact-prefill-links" aria-label="Return routes">
+            <nav class="contact-prefill-links" aria-label="Return routes" data-cinematic-idle="action">
               {inquiryWorkHref ? <a href={inquiryWorkHref}>Return to work</a> : null}
               {inquirySeriesHref ? <a href={inquirySeriesHref}>Open series chapter</a> : null}
               <a href="/works">Works field</a>
@@ -78,18 +106,18 @@ const studioLinks = [
           </div>
         ) : null}
 
-        <h2>Email</h2>
+        <h2 data-cinematic-idle="detail">Email</h2>
 
-        <a class="contact-email" href={mailtoHref}>
+        <a class="contact-email" href={mailtoHref} data-cinematic-idle="contact">
           {studioEmail}
         </a>
 
-        <div class="contact-direct-actions">
+        <div class="contact-direct-actions" data-cinematic-idle="action">
           <a href={mailtoHref}>Open mail</a>
           <button type="button" data-copy-email={studioEmail}>Copy email</button>
         </div>
 
-        <div class="contact-direct-meta">
+        <div class="contact-direct-meta" data-cinematic-idle="action">
           <p class="contact-kicker">STUDIO CHANNELS</p>
           <nav class="contact-social-links" aria-label="Studio channels">
             {studioLinks.map((link) => (
@@ -100,11 +128,11 @@ const studioLinks = [
       </section>
     </section>
 
-    <section class="contact-context-grid" data-atmosphere-section="contact-context">
+    <section class="contact-context-grid" data-atmosphere-section="contact-context" data-lbe-target="contact-quiet">
       <section class="contact-contexts" aria-label="Inquiry contexts">
-        <p class="contact-kicker">MESSAGE CONTEXT</p>
+        <p class="contact-kicker" data-cinematic-idle="detail">MESSAGE CONTEXT</p>
 
-        <div class="contact-context-row">
+        <div class="contact-context-row" data-cinematic-idle="line" data-cinematic-idle-order="0">
           <h2>Collector inquiry</h2>
           <p>
             For originals, editions, availability, shipping, certificate context, or
@@ -112,7 +140,7 @@ const studioLinks = [
           </p>
         </div>
 
-        <div class="contact-context-row">
+        <div class="contact-context-row" data-cinematic-idle="line" data-cinematic-idle-order="0.34">
           <h2>Curatorial / gallery</h2>
           <p>
             For exhibitions, institutional context, presentation requests, or gallery
@@ -120,7 +148,7 @@ const studioLinks = [
           </p>
         </div>
 
-        <div class="contact-context-row">
+        <div class="contact-context-row" data-cinematic-idle="line" data-cinematic-idle-order="0.67">
           <h2>Studio / press</h2>
           <p>
             For collaborations, press, commissions, or broader studio communication.
@@ -129,9 +157,9 @@ const studioLinks = [
       </section>
 
       <section class="contact-message-guide" aria-label="What to include">
-        <p class="contact-kicker">INCLUDE WHEN RELEVANT</p>
+        <p class="contact-kicker" data-cinematic-idle="detail">INCLUDE WHEN RELEVANT</p>
 
-        <ul>
+        <ul data-cinematic-idle="line">
           <li>Work title or series</li>
           <li>Original / edition / format interest</li>
           <li>Shipping country or region</li>
@@ -141,19 +169,19 @@ const studioLinks = [
       </section>
     </section>
 
-    <section class="contact-work-note" aria-label="Work acquisition note" data-atmosphere-section="contact-work-route">
+    <section class="contact-work-note" aria-label="Work acquisition note" data-atmosphere-section="contact-work-route" data-lbe-target="contact-route">
       <div>
-        <p class="contact-kicker">WORK ROUTE</p>
-        <h2>Start from the selected work.</h2>
+        <p class="contact-kicker" data-cinematic-idle="detail">WORK ROUTE</p>
+        <h2 data-cinematic-idle="anchor">Start from the selected work.</h2>
       </div>
 
       <div>
-        <p>
+        <p data-cinematic-idle="voice">
           Available works carry their own object context, selected format, interior scale
           preview, and secure checkout route where enabled.
         </p>
 
-        <div class="contact-route-links">
+        <div class="contact-route-links" data-cinematic-idle="action">
           <a href="/works">View works</a>
           <a href="/works/mt-3">Open MT-3 object</a>
           <a href="/collectors">Collector process</a>
@@ -197,6 +225,7 @@ const studioLinks = [
   .contact-direct-field {
     padding: clamp(6.5rem, 10vw, 9rem) 0 clamp(5rem, 9vw, 8rem);
     position: relative;
+    z-index: 1;
     isolation: isolate;
     overflow-x: clip;
   }
@@ -204,15 +233,14 @@ const studioLinks = [
   .contact-direct-field::before {
     content: "";
     position: fixed;
-    inset: -18vmax;
+    inset: var(--site-header-height) 0 0;
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(circle at 22% 32%, rgba(132, 140, 122, 0.13), transparent 38%),
-      radial-gradient(circle at 72% 46%, rgba(108, 112, 108, 0.12), transparent 42%),
-      radial-gradient(circle at 42% 82%, rgba(70, 74, 68, 0.12), transparent 56%);
+      linear-gradient(90deg, rgba(3, 6, 5, 0.72) 0%, rgba(3, 6, 5, 0.34) 36%, transparent 66%),
+      linear-gradient(180deg, rgba(4, 7, 6, 0.035), rgba(4, 7, 6, 0.18));
     filter: none;
-    opacity: 0.82;
+    opacity: 0.72;
   }
 
   .contact-direct-threshold,
@@ -306,14 +334,19 @@ const studioLinks = [
   .contact-direct::before {
     content: "";
     position: absolute;
-    inset: -20% -12%;
+    inset: -42% -16%;
     z-index: -1;
     pointer-events: none;
-    background:
-      radial-gradient(circle at 40% 34%, rgba(235, 240, 232, 0.06), transparent 42%),
-      radial-gradient(circle at 68% 64%, rgba(120, 128, 112, 0.12), transparent 52%);
+    background: linear-gradient(
+      112deg,
+      transparent 22%,
+      rgba(235, 240, 232, 0.025) 43%,
+      rgba(145, 93, 76, 0.065) 55%,
+      transparent 76%
+    );
     filter: none;
-    opacity: 0.8;
+    opacity: 0.68;
+    transform: skewX(-5deg);
   }
 
   .contact-direct h2 {

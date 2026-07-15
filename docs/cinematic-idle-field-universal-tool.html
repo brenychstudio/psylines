@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cinematic Idle Field - Universal Interaction Tool</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #18201a;
+        --muted: #5f6a62;
+        --soft: #e9ece5;
+        --paper: #fbfaf5;
+        --line: #cfd5ca;
+        --accent: #60784f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.55;
+      }
+
+      body {
+        padding: 42px;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+      }
+
+      h1,
+      h2,
+      h3 {
+        color: #101611;
+        font-weight: 520;
+        line-height: 1.08;
+      }
+
+      h1 {
+        margin: 0 0 18px;
+        font-size: 44px;
+        letter-spacing: -0.02em;
+      }
+
+      h2 {
+        margin: 42px 0 14px;
+        padding-top: 22px;
+        border-top: 1px solid var(--line);
+        font-size: 26px;
+      }
+
+      h3 {
+        margin: 26px 0 10px;
+        font-size: 18px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul,
+      ol {
+        margin: 10px 0 18px 22px;
+        padding: 0;
+      }
+
+      li {
+        margin: 5px 0;
+      }
+
+      code,
+      pre {
+        font-family:
+          "SFMono-Regular",
+          Consolas,
+          "Liberation Mono",
+          monospace;
+      }
+
+      code {
+        padding: 0.08rem 0.28rem;
+        border-radius: 4px;
+        background: #eef1eb;
+        color: #263025;
+        font-size: 0.92em;
+      }
+
+      pre {
+        margin: 14px 0 22px;
+        padding: 15px 17px;
+        overflow: auto;
+        border: 1px solid #d7ddd2;
+        border-radius: 8px;
+        background: #f1f4ee;
+        color: #1e261f;
+        font-size: 12.5px;
+        line-height: 1.48;
+        white-space: pre-wrap;
+      }
+
+      table {
+        width: 100%;
+        margin: 14px 0 24px;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        padding: 10px 11px;
+        border: 1px solid var(--line);
+        vertical-align: top;
+      }
+
+      th {
+        background: #eef2eb;
+        text-align: left;
+        font-weight: 650;
+      }
+
+      .cover {
+        min-height: 420px;
+        display: grid;
+        align-content: center;
+        padding: 54px;
+        border: 1px solid var(--line);
+        background:
+          radial-gradient(circle at 76% 20%, rgba(96, 120, 79, 0.18), transparent 32%),
+          linear-gradient(135deg, #fdfcf7, #eef3eb);
+      }
+
+      .eyebrow {
+        margin: 0 0 12px;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 760;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .subtitle {
+        max-width: 720px;
+        color: var(--muted);
+        font-size: 18px;
+      }
+
+      .meta {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-top: 42px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .meta strong {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--ink);
+      }
+
+      .callout {
+        margin: 18px 0 24px;
+        padding: 16px 18px;
+        border-left: 4px solid var(--accent);
+        background: #f0f4ec;
+      }
+
+      .state-flow {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        margin: 16px 0 24px;
+      }
+
+      .state-flow span {
+        display: grid;
+        min-height: 54px;
+        align-items: center;
+        justify-items: center;
+        padding: 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f3f6f0;
+        color: #273126;
+        font-size: 12px;
+        font-weight: 720;
+        text-align: center;
+        text-transform: uppercase;
+      }
+
+      .page-break {
+        break-before: page;
+      }
+
+      @media print {
+        body {
+          padding: 0;
+        }
+
+        main {
+          max-width: none;
+        }
+
+        .cover {
+          min-height: 90vh;
+        }
+
+        h2 {
+          break-after: avoid;
+        }
+
+        pre,
+        table,
+        .callout,
+        .state-flow {
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="cover">
+        <p class="eyebrow">Universal interaction pattern</p>
+        <h1>Cinematic Idle Field</h1>
+        <p class="subtitle">
+          Документація reusable UX-системи для сторінок, які під час бездіяльності
+          не просто зникають, а переходять у кінематографічний стан тиші: текст
+          стишується, розпливається, починає поводитись як примара, а зображення
+          стають більш присутніми.
+        </p>
+        <div class="meta">
+          <p><strong>Проект-джерело</strong>ARTIST STAGE v3</p>
+          <p><strong>Дата документа</strong>2026-07-06</p>
+          <p><strong>Основний файл</strong><code>CinematicIdleField.astro</code></p>
+        </div>
+      </section>
+
+      <section>
+        <h2>1. Призначення</h2>
+        <p>
+          <strong>Cinematic Idle Field</strong> - це поведінковий шар для довгих,
+          атмосферних або contemplative сторінок. Він реагує не на натискання кнопки,
+          а на відсутність дії: коли користувач перестає рухати мишкою, скролити або
+          взаємодіяти, сторінка поступово стишується.
+        </p>
+        <p>
+          Мета інструмента - не сховати контент, а змінити стан сприйняття.
+          Текст стає менш буквальним і більш примарним, другорядні деталі
+          відходять у поле, а образи можуть залишатися активними або навіть
+          ставати сильнішими.
+        </p>
+
+        <div class="callout">
+          <strong>Ключовий принцип:</strong> idle-ефект має відчуватися як повільна
+          зміна стану сторінки, а не як технічний fade-out.
+        </div>
+
+        <h2>2. UX-Контракт</h2>
+        <ul>
+          <li>Ефект входить поступово, кількома фазами, без різкого blur або snap.</li>
+          <li>Текст не просто зникає, а втрачає фокус, розпливається і дрейфує.</li>
+          <li>Зображення не повинні темніти, якщо задум сторінки вимагає їхньої присутності.</li>
+          <li>Повернення до нормального стану після руху або скролу має бути плавним.</li>
+          <li>Система повинна поважати <code>prefers-reduced-motion</code>.</li>
+          <li>Ефект має бути reusable через data-attributes, без прив'язки до конкретної сторінки.</li>
+        </ul>
+
+        <h2>3. State Machine</h2>
+        <p>
+          Поточна реалізація використовує п'ять станів. Це дозволяє уникнути різкого
+          переходу з повністю читабельної сторінки у повністю розмиту.
+        </p>
+
+        <div class="state-flow">
+          <span>awake</span>
+          <span>settling</span>
+          <span>idle</span>
+          <span>dreaming</span>
+          <span>waking</span>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Стан</th>
+              <th>Що відбувається</th>
+              <th>Візуальна роль</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>awake</code></td>
+              <td>Нормальний стан сторінки після активності користувача.</td>
+              <td>Повна читабельність, стандартний layout.</td>
+            </tr>
+            <tr>
+              <td><code>settling</code></td>
+              <td>Перша фаза тиші після idle delay.</td>
+              <td>Контент м'яко стишується, blur мінімальний.</td>
+            </tr>
+            <tr>
+              <td><code>idle</code></td>
+              <td>Середня фаза бездіяльності.</td>
+              <td>Текст помітно втрачає фокус, але ще читається як слід.</td>
+            </tr>
+            <tr>
+              <td><code>dreaming</code></td>
+              <td>Глибока фаза після довшої бездіяльності.</td>
+              <td>Текст галюцинує, дрейфує, розпливається; зображення лишаються присутніми.</td>
+            </tr>
+            <tr>
+              <td><code>waking</code></td>
+              <td>Плавне повернення після руху, скролу, touch або клавіатури.</td>
+              <td>Без різкого snap-back; сторінка повільно збирається назад.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>4. HTML API</h2>
+        <p>
+          Інструмент працює через root-контейнер та child-елементи, позначені ролями.
+          Це дозволяє підключити поведінку до будь-якої сторінки без переписування
+          її структури.
+        </p>
+
+        <pre><code>&lt;main
+  data-cinematic-idle-root
+  data-cinematic-idle-delay="5600"
+  data-cinematic-idle-reduced-delay="9000"
+  data-cinematic-idle-settle-duration="2800"
+  data-cinematic-idle-dream-duration="7600"
+  data-cinematic-idle-wake-duration="3600"
+&gt;
+  &lt;h1 data-cinematic-idle="anchor"&gt;The body appears from gesture.&lt;/h1&gt;
+  &lt;p data-cinematic-idle="voice"&gt;Long readable body copy.&lt;/p&gt;
+  &lt;article data-cinematic-idle="line"&gt;Repeated structured row.&lt;/article&gt;
+  &lt;figure data-cinematic-idle="image"&gt;...&lt;/figure&gt;
+&lt;/main&gt;</code></pre>
+
+        <h3>Root Attributes</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Attribute</th>
+              <th>Default</th>
+              <th>Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>data-cinematic-idle-root</code></td>
+              <td>required</td>
+              <td>Позначає область сторінки, на яку поширюється idle behavior.</td>
+            </tr>
+            <tr>
+              <td><code>data-cinematic-idle-delay</code></td>
+              <td><code>5600</code></td>
+              <td>Час бездіяльності перед входом у <code>settling</code>.</td>
+            </tr>
+            <tr>
+              <td><code>data-cinematic-idle-reduced-delay</code></td>
+              <td><code>9000</code></td>
+              <td>Delay для reduced-motion користувачів.</td>
+            </tr>
+            <tr>
+              <td><code>data-cinematic-idle-settle-duration</code></td>
+              <td><code>2600</code></td>
+              <td>Скільки триває перехід <code>settling -> idle</code>.</td>
+            </tr>
+            <tr>
+              <td><code>data-cinematic-idle-dream-duration</code></td>
+              <td><code>6400</code></td>
+              <td>Коли після початку idle запускати глибшу фазу <code>dreaming</code>.</td>
+            </tr>
+            <tr>
+              <td><code>data-cinematic-idle-wake-duration</code></td>
+              <td><code>3200</code></td>
+              <td>Тривалість плавного повернення в <code>awake</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>5. Role API</h2>
+        <p>
+          Кожен елемент може отримати роль. Роль визначає, як саме він поводиться
+          під час idle-фаз.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Recommended Use</th>
+              <th>Idle Behavior</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>anchor</code></td>
+              <td>H1, H2, великі statement-заголовки.</td>
+              <td>Повільно розфокусується, отримує ghost text-shadow.</td>
+            </tr>
+            <tr>
+              <td><code>voice</code></td>
+              <td>Основний абзац, lead, authored copy.</td>
+              <td>Стишується сильніше, розпливається і дрейфує.</td>
+            </tr>
+            <tr>
+              <td><code>line</code></td>
+              <td>Рядки таблиць, steps, metadata rows.</td>
+              <td>Найшвидше відходить у поле, найменш активний у deep idle.</td>
+            </tr>
+            <tr>
+              <td><code>detail</code></td>
+              <td>Kickers, labels, формули, дрібні пояснення.</td>
+              <td>Стихає майже до примарного стану.</td>
+            </tr>
+            <tr>
+              <td><code>image</code></td>
+              <td>Головні зображення або об'єкти.</td>
+              <td>Залишається активним, може ставати трохи яскравішим.</td>
+            </tr>
+            <tr>
+              <td><code>field</code></td>
+              <td>Interactive maps, spatial fields, WebGL/canvas-adjacent surfaces.</td>
+              <td>Stays present with minimal drift; use it for the living environment, not dissolving text.</td>
+            </tr>
+            <tr>
+              <td><code>trace</code></td>
+              <td>Другорядні образи, фрагменти, матеріальні сліди.</td>
+              <td>Не темніє; може м'яко посилювати присутність.</td>
+            </tr>
+            <tr>
+              <td><code>presence</code></td>
+              <td>Елементи, які мають залишатися майже стабільними.</td>
+              <td>Мінімальні зміни, легкий cinematic drift.</td>
+            </tr>
+            <tr>
+              <td><code>contact</code></td>
+              <td>Email, телефон, прямі контактні дані.</td>
+              <td>Залишається видимим і доступним; стишується як світловий сигнал, без сильного blur.</td>
+            </tr>
+            <tr>
+              <td><code>action</code></td>
+              <td>CTA, навігаційні маршрути, кнопки, social links.</td>
+              <td>Стишується повільно, але лишається достатньо видимим для взаємодії.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>6. Timing Model</h2>
+        <p>
+          Таймінги мають бути довгими. Короткі transition-и роблять ефект технічним
+          і різким. Для cinematic behavior краще думати не в сотнях мілісекунд,
+          а в секундах.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Параметр</th>
+              <th>М'який режим</th>
+              <th>Глибокий режим</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Idle delay</td>
+              <td>4500-6500ms</td>
+              <td>6500-9000ms</td>
+            </tr>
+            <tr>
+              <td>Settle duration</td>
+              <td>2200-3200ms</td>
+              <td>3200-4200ms</td>
+            </tr>
+            <tr>
+              <td>Dream trigger</td>
+              <td>6000-8000ms</td>
+              <td>9000-14000ms</td>
+            </tr>
+            <tr>
+              <td>Wake duration</td>
+              <td>2800-4200ms</td>
+              <td>4200-5600ms</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>7. Implementation Notes</h2>
+        <h3>JavaScript Responsibilities</h3>
+        <ul>
+          <li>Find every <code>[data-cinematic-idle-root]</code>.</li>
+          <li>Inject a passive visual veil inside each root.</li>
+          <li>Calculate per-element delays using distance, role weight, order and hash jitter.</li>
+          <li>Move root state through <code>awake</code>, <code>settling</code>, <code>idle</code>, <code>dreaming</code>, <code>waking</code>.</li>
+          <li>Listen for activity events: pointer, wheel, scroll, keydown, touch.</li>
+          <li>Respect hidden documents and focus-within states.</li>
+        </ul>
+
+        <h3>CSS Responsibilities</h3>
+        <ul>
+          <li>Define the visual behavior of each state.</li>
+          <li>Keep text and images tuned separately.</li>
+          <li>Use long transition durations and cinematic easing.</li>
+          <li>Disable animations in reduced-motion mode.</li>
+          <li>Avoid making all elements fade/blur at the same time.</li>
+        </ul>
+
+        <h2>8. Accessibility Rules</h2>
+        <ul>
+          <li>Never remove content from the DOM.</li>
+          <li>Do not use <code>display: none</code> or <code>visibility: hidden</code> for readable content.</li>
+          <li>When the root has <code>:focus-within</code>, do not enter idle.</li>
+          <li>Respect <code>prefers-reduced-motion: reduce</code>.</li>
+          <li>Keep navigation, top buttons and essential recovery paths available.</li>
+          <li>Idle effects should be reversible through ordinary interaction.</li>
+        </ul>
+
+        <h2>9. Tuning Recipes</h2>
+        <h3>If blur appears too suddenly</h3>
+        <ul>
+          <li>Add a <code>settling</code> phase with blur under <code>0.8px</code>.</li>
+          <li>Increase <code>data-cinematic-idle-settle-duration</code>.</li>
+          <li>Reduce enter-delay jitter if the page feels chaotic.</li>
+        </ul>
+
+        <h3>If the page becomes unreadable too fast</h3>
+        <ul>
+          <li>Raise opacity for <code>anchor</code> and <code>voice</code> in <code>idle</code>.</li>
+          <li>Delay <code>dreaming</code> by increasing <code>data-cinematic-idle-dream-duration</code>.</li>
+          <li>Keep deep hallucination only for <code>dreaming</code>, not <code>settling</code>.</li>
+        </ul>
+
+        <h3>If images feel inactive</h3>
+        <ul>
+          <li>Do not lower image opacity in idle.</li>
+          <li>Use <code>brightness(1.03)</code> and <code>saturate(1.05)</code> lightly.</li>
+          <li>Use scale below <code>1.02</code> to avoid layout drama.</li>
+        </ul>
+
+        <h3>If wake feels abrupt</h3>
+        <ul>
+          <li>Increase <code>data-cinematic-idle-wake-duration</code>.</li>
+          <li>Use a softer wake easing curve.</li>
+          <li>Keep the <code>waking</code> state long enough that repeated micro-movements do not snap the page.</li>
+        </ul>
+
+        <h2>10. Minimal Portable Version</h2>
+        <p>
+          For another project, the portable version only needs one script/component,
+          one root wrapper and role attributes.
+        </p>
+
+        <pre><code>&lt;CinematicIdleField /&gt;
+
+&lt;main
+  data-cinematic-idle-root
+  data-cinematic-idle-delay="5600"
+  data-cinematic-idle-settle-duration="2800"
+  data-cinematic-idle-dream-duration="7600"
+  data-cinematic-idle-wake-duration="3600"
+&gt;
+  &lt;h1 data-cinematic-idle="anchor"&gt;Main sentence&lt;/h1&gt;
+  &lt;p data-cinematic-idle="voice"&gt;Supporting copy&lt;/p&gt;
+  &lt;figure data-cinematic-idle="image"&gt;...&lt;/figure&gt;
+  &lt;section data-cinematic-idle="field"&gt;...&lt;/section&gt;
+  &lt;a href="mailto:studio@example.com" data-cinematic-idle="contact"&gt;
+    studio@example.com
+  &lt;/a&gt;
+  &lt;nav data-cinematic-idle="action"&gt;...&lt;/nav&gt;
+  &lt;div data-cinematic-idle="line"&gt;Repeated row&lt;/div&gt;
+&lt;/main&gt;</code></pre>
+
+        <h2>12. Contact Page Adaptation</h2>
+        <p>
+          На контактних сторінках не можна поводитися з email або кнопками так само,
+          як із фоновим текстом. Контактні дані мають стишуватись атмосферно, але
+          залишатися доступними. Для цього використовуються ролі <code>contact</code>
+          і <code>action</code>.
+        </p>
+
+        <pre><code>&lt;section
+  data-cinematic-idle-root
+  data-cinematic-idle-delay="6200"
+  data-cinematic-idle-settle-duration="3000"
+  data-cinematic-idle-dream-duration="8200"
+  data-cinematic-idle-wake-duration="3600"
+&gt;
+  &lt;h1 data-cinematic-idle="anchor"&gt;Contact the studio.&lt;/h1&gt;
+  &lt;p data-cinematic-idle="voice"&gt;For collector inquiries...&lt;/p&gt;
+  &lt;a class="contact-email" href="mailto:studio@example.com" data-cinematic-idle="contact"&gt;
+    studio@example.com
+  &lt;/a&gt;
+  &lt;div data-cinematic-idle="action"&gt;
+    &lt;a href="mailto:studio@example.com"&gt;Open mail&lt;/a&gt;
+    &lt;button type="button"&gt;Copy email&lt;/button&gt;
+  &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+
+        <h2>13. Global Route Scaling</h2>
+        <p>
+          For a full site, keep one state machine but adapt the role map per route.
+          The effect should support the page contract instead of applying one generic blur to everything.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Route type</th>
+              <th>Idle behavior</th>
+              <th>Do not fade</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Home</td>
+              <td>Threshold copy dissolves; selected artwork and living field stay present.</td>
+              <td>Active work image, route actions, next gesture.</td>
+            </tr>
+            <tr>
+              <td>Works</td>
+              <td>Archive metadata quiets down so object surfaces become more dominant.</td>
+              <td>Artwork media, filters, view toggles, work links.</td>
+            </tr>
+            <tr>
+              <td>Series</td>
+              <td>Panel language softens while the constellation and WebGL atmosphere keep breathing.</td>
+              <td>Active node image, map interaction, open actions.</td>
+            </tr>
+            <tr>
+              <td>Immersive</td>
+              <td>Entrance copy becomes threshold-like and atmospheric.</td>
+              <td>Enter field CTA and return routes.</td>
+            </tr>
+            <tr>
+              <td>Contact</td>
+              <td>Secondary explanation recedes.</td>
+              <td>Email, copy button, direct links.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>
+          Avoid assigning an idle role directly to elements whose transform is already used for
+          spatial layout, camera panning, drag maps, carousel positioning or physics. Put the
+          role on inner text/media elements instead.
+        </p>
+
+        <h2>14. QA Checklist</h2>
+        <ul>
+          <li>Wait for idle delay: page should enter <code>settling</code> gently.</li>
+          <li>Wait longer: text should reach <code>dreaming</code> without sudden jump.</li>
+          <li>Move mouse once: page should begin waking, not snap instantly.</li>
+          <li>Scroll: recovery should remain smooth.</li>
+          <li>Focus keyboard controls: idle should not interrupt focus interaction.</li>
+          <li>Enable reduced motion: animations and long hallucination drift should stop.</li>
+          <li>Check mobile: touch and scroll should wake the page reliably.</li>
+        </ul>
+
+        <h2>15. Current ARTIST STAGE Parameters</h2>
+        <pre><code>&lt;main
+  class="process-method-field"
+  data-cinematic-idle-root
+  data-cinematic-idle-delay="5600"
+  data-cinematic-idle-reduced-delay="9000"
+  data-cinematic-idle-wake-duration="3600"
+  data-cinematic-idle-settle-duration="2800"
+  data-cinematic-idle-dream-duration="7600"
+&gt;</code></pre>
+
+        <div class="callout">
+          <strong>Recommended reuse:</strong> start with the ARTIST STAGE values,
+          then tune only one dimension at a time: delay, depth, or recovery.
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

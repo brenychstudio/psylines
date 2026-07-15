@@ -257,34 +257,56 @@ Relevant files:
 ### Current watch items
 - Keep performance stable; avoid expensive full-screen canvas/WebGL for the connector system unless absolutely necessary.
 - Maintain enough spacing between nodes so the route reads as a field, not a crowded gallery.
-- Continue to prefer authored tone tokens over automatic pixel extraction until the visual language is locked.
+- Keep automatic artwork sampling constrained by authored tone tokens so new images cannot break contrast or visual continuity.
 
-## Current Update - WebGL Atmosphere Field
+## Current Update - Living Pigment Field
 
-The `/series` constellation now includes a WebGL atmosphere layer adapted from the local extract:
+The `/series` constellation now includes a dedicated living pigment layer:
 
-- source/reference folder: `backdrop-16-kool-berk-webgl-background-extract/`
-- runtime script: `public/scripts/kool-berk-background.js`
+- earlier source/reference only: `backdrop-16-kool-berk-webgl-background-extract/`
+- active runtime script: `public/scripts/artist-stage-series-field.js`
 - Astro mount component: `src/components/series/SeriesWebGLBackdrop.astro`
 
 Important implementation decision:
 
 ```txt
 The WebGL host is mounted in `src/pages/series/index.astro`, outside the React island.
+The Presence root is also an Astro wrapper outside the React island.
 ```
 
-This prevents React hydration from removing the canvas after it appears for a moment. Do not move the WebGL host back inside `SeriesConstellationField.tsx` unless the React component becomes responsible for owning and preserving the canvas lifecycle.
+This prevents React hydration from removing the canvas or detecting generated Presence layers as mismatched server markup. Do not move either owner back inside `SeriesConstellationField.tsx` unless React becomes responsible for its full lifecycle.
+
+Stacking contract: `.series-webgl-backdrop` is the background at `z-index: 1`; `.series-presence-root` owns the constellation and Presence layers at `z-index: 2`.
 
 Current behavior:
 
-- background cloud field is visible behind the constellation;
-- atmosphere receives active tone variables from the selected series/object;
-- drag/wheel/selection movement sends motion energy to the background;
-- node halos use authored tone variables so artworks feel more attached to the surrounding atmosphere;
-- legacy heavy overlays were reduced so the WebGL layer can remain visible.
+- organic membrane forms and pigment currents replace the former cloud/storm field;
+- the active image provides sampled dominant, secondary, highlight, and deep colors;
+- sampled colors are blended with authored tone tokens before reaching the shader;
+- the field focus follows the active artwork's viewport position;
+- drag/wheel/selection movement sends a temporary metamorphosis impulse to the background;
+- node halos continue to use authored tone variables so artworks remain attached to the surrounding atmosphere;
+- mobile and reduced-motion modes lower DPR and motion complexity.
 
 Watch items:
 
-- Continue tuning density, darkness, and color response so the WebGL field supports artworks instead of becoming a separate decorative sky.
+- Author-review density, contour visibility, and color-transition pace across every current artwork.
 - Keep the artwork surfaces visually primary.
-- Keep low-powered hardware performance in mind; this is a living field, not a full-screen WebGL demo page.
+- Run real-device low-powered hardware QA; this is a living field, not a full-screen WebGL demo page.
+
+## Current Update - Continuous Chapter / Work Route
+
+The constellation no longer ends at navigation. It now hands its active artwork and palette into the chapter, then continues through the fullscreen Inspector and Work Detail.
+
+Implemented:
+
+- explicit map-artwork -> chapter-artwork arrival target;
+- palette-aware route bridge with route-specific pacing;
+- active work and Inspector restore on Work Detail return or browser Back;
+- exact compatible map-pan restore when returning to `/series`;
+- reduced-motion state continuity without the artwork morph;
+- stable mobile Inspector action layout.
+
+Detailed implementation and QA:
+
+- `docs/artist-stage-v3-series-route-continuity.md`

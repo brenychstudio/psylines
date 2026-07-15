@@ -1,49 +1,338 @@
 <script is:inline>
   (() => {
-    const SCRIPT_SRC = "/scripts/kool-berk-background.js";
+    const SCRIPT_SRC = "/scripts/artist-stage-series-field.js";
     const HOST_SELECTOR = "[data-series-webgl-backdrop]";
     const ROOT_SELECTOR = "[data-series-constellation]";
 
     const toneTokens = {
       earth: {
-        palette: { bg: "#071008", deep: "#10170d", accent: "#a6b86e" },
-        atmosphere: { intensity: 0.54, haze: 0.5, beam: 0.26, tint: 0.16, drift: 0.32 },
-        reducedAtmosphere: { intensity: 0.42, haze: 0.36, beam: 0.18, tint: 0.08, drift: 0.02 },
+        palette: {
+          ink: "#020403",
+          deep: "#11180d",
+          pigmentA: "#9bc42f",
+          pigmentB: "#c08a3e",
+          highlight: "#efe19a",
+        },
+        field: { intensity: 0.94, morph: 0.86, contour: 0.58, bloom: 0.76, grain: 0.3, drift: 0.64 },
+        reducedField: { intensity: 0.74, morph: 0.3, contour: 0.54, bloom: 0.48, grain: 0.2, drift: 0.04 },
       },
       green: {
-        palette: { bg: "#071207", deep: "#10200c", accent: "#91bd5f" },
-        atmosphere: { intensity: 0.56, haze: 0.52, beam: 0.25, tint: 0.17, drift: 0.34 },
-        reducedAtmosphere: { intensity: 0.42, haze: 0.36, beam: 0.17, tint: 0.08, drift: 0.02 },
+        palette: {
+          ink: "#020402",
+          deep: "#101b0a",
+          pigmentA: "#a8d928",
+          pigmentB: "#c18d35",
+          highlight: "#eef77f",
+        },
+        field: { intensity: 1, morph: 0.92, contour: 0.6, bloom: 0.84, grain: 0.3, drift: 0.7 },
+        reducedField: { intensity: 0.78, morph: 0.32, contour: 0.56, bloom: 0.52, grain: 0.2, drift: 0.04 },
       },
       blue: {
-        palette: { bg: "#060b0f", deep: "#0a1218", accent: "#6a9bab" },
-        atmosphere: { intensity: 0.5, haze: 0.52, beam: 0.28, tint: 0.13, drift: 0.3 },
-        reducedAtmosphere: { intensity: 0.38, haze: 0.38, beam: 0.18, tint: 0.07, drift: 0.02 },
+        palette: {
+          ink: "#020405",
+          deep: "#0a171b",
+          pigmentA: "#45a5b4",
+          pigmentB: "#a96758",
+          highlight: "#c7ebe2",
+        },
+        field: { intensity: 0.9, morph: 0.8, contour: 0.54, bloom: 0.72, grain: 0.28, drift: 0.58 },
+        reducedField: { intensity: 0.72, morph: 0.28, contour: 0.52, bloom: 0.46, grain: 0.19, drift: 0.035 },
       },
       ash: {
-        palette: { bg: "#0a0806", deep: "#17120d", accent: "#b9a276" },
-        atmosphere: { intensity: 0.5, haze: 0.48, beam: 0.22, tint: 0.13, drift: 0.28 },
-        reducedAtmosphere: { intensity: 0.36, haze: 0.32, beam: 0.15, tint: 0.06, drift: 0.02 },
+        palette: {
+          ink: "#030403",
+          deep: "#171713",
+          pigmentA: "#9bad5c",
+          pigmentB: "#ad927e",
+          highlight: "#e3eadb",
+        },
+        field: { intensity: 0.86, morph: 0.72, contour: 0.62, bloom: 0.64, grain: 0.34, drift: 0.5 },
+        reducedField: { intensity: 0.7, morph: 0.26, contour: 0.58, bloom: 0.42, grain: 0.24, drift: 0.03 },
       },
       red: {
-        palette: { bg: "#100604", deep: "#1d0a06", accent: "#c06a4f" },
-        atmosphere: { intensity: 0.54, haze: 0.46, beam: 0.24, tint: 0.16, drift: 0.3 },
-        reducedAtmosphere: { intensity: 0.38, haze: 0.3, beam: 0.15, tint: 0.06, drift: 0.02 },
+        palette: {
+          ink: "#050202",
+          deep: "#1f0b09",
+          pigmentA: "#c94e3d",
+          pigmentB: "#d2a13e",
+          highlight: "#f2b981",
+        },
+        field: { intensity: 0.98, morph: 0.9, contour: 0.58, bloom: 0.82, grain: 0.3, drift: 0.66 },
+        reducedField: { intensity: 0.76, morph: 0.3, contour: 0.54, bloom: 0.5, grain: 0.2, drift: 0.04 },
+      },
+      warm: {
+        palette: {
+          ink: "#050302",
+          deep: "#201108",
+          pigmentA: "#cf743d",
+          pigmentB: "#c2ae51",
+          highlight: "#f0cc8d",
+        },
+        field: { intensity: 0.94, morph: 0.84, contour: 0.56, bloom: 0.76, grain: 0.3, drift: 0.62 },
+        reducedField: { intensity: 0.74, morph: 0.28, contour: 0.52, bloom: 0.48, grain: 0.2, drift: 0.035 },
+      },
+      cold: {
+        palette: {
+          ink: "#020405",
+          deep: "#09191a",
+          pigmentA: "#48a69b",
+          pigmentB: "#7f9a7b",
+          highlight: "#c5eadf",
+        },
+        field: { intensity: 0.9, morph: 0.8, contour: 0.56, bloom: 0.72, grain: 0.28, drift: 0.56 },
+        reducedField: { intensity: 0.72, morph: 0.28, contour: 0.52, bloom: 0.44, grain: 0.19, drift: 0.03 },
       },
       neutral: {
-        palette: { bg: "#080b08", deep: "#11140f", accent: "#aab17d" },
-        atmosphere: { intensity: 0.5, haze: 0.46, beam: 0.22, tint: 0.12, drift: 0.26 },
-        reducedAtmosphere: { intensity: 0.36, haze: 0.3, beam: 0.14, tint: 0.06, drift: 0.02 },
+        palette: {
+          ink: "#030403",
+          deep: "#141713",
+          pigmentA: "#8d9d63",
+          pigmentB: "#9c8269",
+          highlight: "#dedfc0",
+        },
+        field: { intensity: 0.86, morph: 0.72, contour: 0.56, bloom: 0.64, grain: 0.3, drift: 0.5 },
+        reducedField: { intensity: 0.68, morph: 0.26, contour: 0.52, bloom: 0.4, grain: 0.2, drift: 0.03 },
       },
     };
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const paletteCache = new Map();
+
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+    const parseHex = (value) => {
+      const source = String(value || "").replace("#", "").trim();
+      const normalized = source.length === 3 ? source.split("").map((part) => part + part).join("") : source;
+
+      if (!/^[0-9a-f]{6}$/i.test(normalized)) return [0, 0, 0];
+
+      return [
+        Number.parseInt(normalized.slice(0, 2), 16),
+        Number.parseInt(normalized.slice(2, 4), 16),
+        Number.parseInt(normalized.slice(4, 6), 16),
+      ];
+    };
+
+    const toHex = (rgb) =>
+      `#${rgb
+        .map((channel) => Math.round(clamp(channel, 0, 255)).toString(16).padStart(2, "0"))
+        .join("")}`;
+
+    const mixRgb = (from, to, amount) =>
+      from.map((channel, index) => channel + (to[index] - channel) * amount);
+
+    const rgbToHsl = ([red, green, blue]) => {
+      const r = red / 255;
+      const g = green / 255;
+      const b = blue / 255;
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const lightness = (max + min) / 2;
+
+      if (max === min) return [0, 0, lightness];
+
+      const delta = max - min;
+      const saturation = lightness > 0.5 ? delta / (2 - max - min) : delta / (max + min);
+      let hue = 0;
+
+      if (max === r) hue = (g - b) / delta + (g < b ? 6 : 0);
+      if (max === g) hue = (b - r) / delta + 2;
+      if (max === b) hue = (r - g) / delta + 4;
+
+      return [hue / 6, saturation, lightness];
+    };
+
+    const hslToRgb = ([hue, saturation, lightness]) => {
+      if (saturation === 0) return [lightness * 255, lightness * 255, lightness * 255];
+
+      const hueToRgb = (p, q, sourceHue) => {
+        let h = sourceHue;
+        if (h < 0) h += 1;
+        if (h > 1) h -= 1;
+        if (h < 1 / 6) return p + (q - p) * 6 * h;
+        if (h < 1 / 2) return q;
+        if (h < 2 / 3) return p + (q - p) * (2 / 3 - h) * 6;
+        return p;
+      };
+
+      const q = lightness < 0.5
+        ? lightness * (1 + saturation)
+        : lightness + saturation - lightness * saturation;
+      const p = 2 * lightness - q;
+
+      return [
+        hueToRgb(p, q, hue + 1 / 3) * 255,
+        hueToRgb(p, q, hue) * 255,
+        hueToRgb(p, q, hue - 1 / 3) * 255,
+      ];
+    };
+
+    const shapeColor = (rgb, options = {}) => {
+      const [hue, saturation, lightness] = rgbToHsl(rgb);
+      return hslToRgb([
+        hue,
+        clamp(saturation * (options.saturationScale ?? 1), options.minSaturation ?? 0, options.maxSaturation ?? 1),
+        clamp(options.lightness ?? lightness, 0.02, 0.92),
+      ]);
+    };
+
+    const colorDistance = (a, b) =>
+      Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+    const hueDistance = (a, b) => {
+      const difference = Math.abs(rgbToHsl(a)[0] - rgbToHsl(b)[0]);
+      return Math.min(difference, 1 - difference);
+    };
+
+    const resolveTone = (root) => {
+      const tone = root.getAttribute("data-active-tone") || "earth";
+      return toneTokens[tone] || toneTokens.earth;
+    };
+
+    const setHostPalette = (host, palette) => {
+      host.style.setProperty("--series-ink", palette.ink);
+      host.style.setProperty("--series-deep", palette.deep);
+      host.style.setProperty("--series-pigment-a", palette.pigmentA);
+      host.style.setProperty("--series-pigment-b", palette.pigmentB);
+      host.style.setProperty("--series-highlight", palette.highlight);
+    };
+
+    const buildArtworkPalette = (pixels, tokenPalette) => {
+      const buckets = new Map();
+
+      for (let index = 0; index < pixels.length; index += 16) {
+        const alpha = pixels[index + 3];
+        if (alpha < 220) continue;
+
+        const red = pixels[index];
+        const green = pixels[index + 1];
+        const blue = pixels[index + 2];
+        const [, saturation, lightness] = rgbToHsl([red, green, blue]);
+        if (lightness < 0.025 || lightness > 0.965) continue;
+
+        const key = `${red >> 4}-${green >> 4}-${blue >> 4}`;
+        const bucket = buckets.get(key) || { red: 0, green: 0, blue: 0, count: 0 };
+        bucket.red += red;
+        bucket.green += green;
+        bucket.blue += blue;
+        bucket.count += 1;
+        buckets.set(key, bucket);
+      }
+
+      const colors = [...buckets.values()]
+        .filter((bucket) => bucket.count > 1)
+        .map((bucket) => {
+          const rgb = [bucket.red / bucket.count, bucket.green / bucket.count, bucket.blue / bucket.count];
+          const [, saturation, lightness] = rgbToHsl(rgb);
+          return {
+            rgb,
+            saturation,
+            lightness,
+            count: bucket.count,
+            score: bucket.count * (0.55 + saturation * 2.25) * (0.58 + Math.min(lightness * 2.3, 1)),
+          };
+        });
+
+      if (colors.length < 3) return tokenPalette;
+
+      const ranked = [...colors].sort((a, b) => b.score - a.score);
+      const primary = ranked[0];
+      const secondary = ranked.find(
+        (candidate) =>
+          candidate !== primary &&
+          colorDistance(candidate.rgb, primary.rgb) > 58 &&
+          hueDistance(candidate.rgb, primary.rgb) > 0.075 &&
+          candidate.saturation > 0.2,
+      ) || ranked[1];
+      const bright = [...colors]
+        .filter((candidate) => candidate.lightness > 0.42)
+        .sort((a, b) => b.lightness + b.saturation * 0.2 - (a.lightness + a.saturation * 0.2))[0] || primary;
+      const dark = [...colors]
+        .filter((candidate) => candidate.lightness < 0.34)
+        .sort((a, b) => b.count - a.count || a.lightness - b.lightness)[0] || primary;
+
+      const fallback = {
+        ink: parseHex(tokenPalette.ink),
+        deep: parseHex(tokenPalette.deep),
+        pigmentA: parseHex(tokenPalette.pigmentA),
+        pigmentB: parseHex(tokenPalette.pigmentB),
+        highlight: parseHex(tokenPalette.highlight),
+      };
+      const sampledPrimary = shapeColor(primary.rgb, {
+        lightness: clamp(primary.lightness + 0.04, 0.4, 0.59),
+        minSaturation: 0.52,
+        maxSaturation: 0.94,
+        saturationScale: 1.18,
+      });
+      const sampledSecondary = shapeColor(secondary.rgb, {
+        lightness: clamp(secondary.lightness + 0.035, 0.36, 0.55),
+        minSaturation: 0.38,
+        maxSaturation: 0.88,
+        saturationScale: 1.15,
+      });
+      const sampledHighlight = shapeColor(bright.rgb, {
+        lightness: clamp(bright.lightness + 0.12, 0.7, 0.86),
+        minSaturation: 0.28,
+        maxSaturation: 0.7,
+        saturationScale: 0.95,
+      });
+      const sampledDeep = shapeColor(dark.rgb, {
+        lightness: 0.105,
+        minSaturation: 0.16,
+        maxSaturation: 0.52,
+        saturationScale: 0.8,
+      });
+
+      return {
+        ink: toHex(mixRgb([2, 4, 3], sampledDeep, 0.18)),
+        deep: toHex(mixRgb(fallback.deep, sampledDeep, 0.76)),
+        pigmentA: toHex(mixRgb(fallback.pigmentA, sampledPrimary, 0.86)),
+        pigmentB: toHex(mixRgb(fallback.pigmentB, sampledSecondary, 0.82)),
+        highlight: toHex(mixRgb(fallback.highlight, sampledHighlight, 0.74)),
+      };
+    };
+
+    const extractArtworkPalette = (src, tokenPalette) => {
+      if (!src) return Promise.resolve(tokenPalette);
+      if (paletteCache.has(src)) return paletteCache.get(src);
+
+      const request = new Promise((resolve) => {
+        const image = new Image();
+        const absoluteSrc = new URL(src, window.location.href);
+        if (absoluteSrc.origin !== window.location.origin) image.crossOrigin = "anonymous";
+        image.decoding = "async";
+
+        image.addEventListener("load", () => {
+          try {
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d", { willReadFrequently: true });
+            if (!context) {
+              resolve(tokenPalette);
+              return;
+            }
+
+            canvas.width = 52;
+            canvas.height = 52;
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+            resolve(buildArtworkPalette(pixels, tokenPalette));
+          } catch {
+            resolve(tokenPalette);
+          }
+        }, { once: true });
+
+        image.addEventListener("error", () => resolve(tokenPalette), { once: true });
+        image.src = absoluteSrc.href;
+      });
+
+      paletteCache.set(src, request);
+      return request;
+    };
 
     const loadRuntime = () => {
-      if (window.KoolBerkWebGLBackground) return Promise.resolve();
+      if (window.ArtistStageSeriesField) return Promise.resolve();
 
       const existing = document.querySelector(`script[src="${SCRIPT_SRC}"]`);
-
       if (existing) {
         return new Promise((resolve, reject) => {
           existing.addEventListener("load", resolve, { once: true });
@@ -55,160 +344,257 @@
         const script = document.createElement("script");
         script.src = SCRIPT_SRC;
         script.async = true;
-        script.dataset.seriesWebglRuntime = "true";
+        script.dataset.seriesLivingFieldRuntime = "true";
         script.addEventListener("load", resolve, { once: true });
         script.addEventListener("error", reject, { once: true });
         document.head.appendChild(script);
       });
     };
 
-    const resolveTone = (root) => {
-      const tone = root.getAttribute("data-active-tone") || "earth";
-      return toneTokens[tone] || toneTokens.earth;
-    };
-
-    const syncHostState = (host, root) => {
-      const computed = window.getComputedStyle(root);
-      const tone = root.getAttribute("data-active-tone") || "earth";
-      const cssVars = ["--series-accent", "--series-glow-x", "--series-glow-y", "--series-pan-x", "--series-pan-y"];
-
-      host.dataset.activeTone = tone;
-
-      cssVars.forEach((name) => {
-        const value = computed.getPropertyValue(name).trim();
-
-        if (value) {
-          host.style.setProperty(name, value);
-        }
-      });
-    };
-
     const mountBackdrop = () => {
       const host = document.querySelector(HOST_SELECTOR);
-      const root = document.querySelector(ROOT_SELECTOR);
+      let root = document.querySelector(ROOT_SELECTOR);
 
-      if (!host || !root) {
-        return false;
-      }
-
-      if (host.dataset.seriesWebglMounted === "true" || host.dataset.seriesWebglMounting === "true") {
-        return true;
-      }
-
-      if (host.dataset.seriesWebglFailed === "true") {
-        return true;
-      }
+      if (!host || !root) return false;
+      if (host.dataset.seriesWebglMounted === "true" || host.dataset.seriesWebglMounting === "true") return true;
+      if (host.dataset.seriesWebglFailed === "true") return true;
 
       host.dataset.seriesWebglMounting = "true";
-      syncHostState(host, root);
 
       loadRuntime()
         .then(() => {
-          if (!window.KoolBerkWebGLBackground || !document.body.contains(host)) return;
+          if (!window.ArtistStageSeriesField || !document.body.contains(host)) return;
 
-          const compactViewport = window.innerWidth < 760;
-          const token = resolveTone(root);
-          let lastPanX = 0;
-          let lastPanY = 0;
-          let motionEnergy = 0;
-          let toneToken = token;
-          let breatheRaf = 0;
-          const background = window.KoolBerkWebGLBackground.mount(host, {
-            preset: {
-              label: "ARTIST STAGE / SERIES",
-              palette: token.palette,
-              atmosphere: reducedMotion.matches || compactViewport ? token.reducedAtmosphere : token.atmosphere,
-            },
-            maxDpr: compactViewport ? 1 : 1.35,
-            pointer: false,
+          const compactViewport = window.innerWidth < 900;
+          const initialToken = resolveTone(root);
+          const background = window.ArtistStageSeriesField.mount(host, {
+            palette: initialToken.palette,
+            field: reducedMotion.matches || compactViewport ? initialToken.reducedField : initialToken.field,
+            maxDpr: compactViewport ? 1 : 1.3,
+            pointer: !compactViewport,
             reducedMotion: reducedMotion.matches || compactViewport,
-            addHostClass: false,
-            manageContainer: false,
           });
+
+          let lastPan = null;
+          let lastTone = "";
+          let lastArtwork = "";
+          let paletteRequest = 0;
+          let motionEnergy = 0;
+          let decayRaf = 0;
+          let syncRaf = 0;
+          let presencePhase = document.documentElement.dataset.presencePhase || "awake";
+          let dreamCycle = document.documentElement.dataset.presenceDreamCycle || "gathering";
+          const rootOwner = root.closest("astro-island") || root.parentElement || document.documentElement;
+
+          const shouldReduce = () => reducedMotion.matches || window.innerWidth < 900;
+
+          const resolvePresenceField = (token) => {
+            const source = shouldReduce() ? token.reducedField : token.field;
+            if (shouldReduce()) return source;
+
+            if (presencePhase === "dreaming") {
+              const cycleAdjustments = {
+                gathering: { intensity: 1.03, morph: 1.04, contour: 0.06, bloom: 0.045, grain: -0.02, drift: 0.42 },
+                dispersing: { intensity: 1.09, morph: 1.14, contour: 0.14, bloom: 0.11, grain: -0.05, drift: 0.55 },
+                reforming: { intensity: 1.05, morph: 1.09, contour: 0.09, bloom: 0.07, grain: -0.035, drift: 0.46 },
+              };
+              const cycle = cycleAdjustments[dreamCycle] || cycleAdjustments.gathering;
+
+              return {
+                ...source,
+                intensity: Math.min(1, source.intensity * cycle.intensity),
+                morph: Math.min(1, source.morph * cycle.morph),
+                contour: Math.min(1, source.contour + cycle.contour),
+                bloom: Math.min(1, source.bloom + cycle.bloom),
+                grain: Math.max(0.2, source.grain + cycle.grain),
+                drift: source.drift * cycle.drift,
+              };
+            }
+
+            if (presencePhase === "contemplating") {
+              return {
+                ...source,
+                morph: Math.min(1, source.morph * 1.04),
+                contour: Math.min(1, source.contour + 0.045),
+                bloom: Math.min(1, source.bloom + 0.035),
+                drift: source.drift * 0.68,
+              };
+            }
+
+            if (presencePhase === "settling") {
+              return { ...source, drift: source.drift * 0.82 };
+            }
+
+            return source;
+          };
+
+          const applyField = (token) => {
+            background.setReducedMotion(shouldReduce());
+            background.setField(resolvePresenceField(token));
+          };
+
+          const applyPalette = (palette) => {
+            background.setPalette(palette);
+            setHostPalette(host, palette);
+          };
+
+          const syncFocus = () => {
+            const activeImage = root.querySelector("[data-series-node].is-active img");
+            const target = activeImage || root.querySelector("[data-series-node].is-active");
+            if (!target) return;
+
+            const hostRect = host.getBoundingClientRect();
+            const targetRect = target.getBoundingClientRect();
+            if (!hostRect.width || !hostRect.height) return;
+
+            const x = clamp((targetRect.left + targetRect.width * 0.5 - hostRect.left) / hostRect.width, 0.06, 0.94);
+            const y = clamp((targetRect.top + targetRect.height * 0.48 - hostRect.top) / hostRect.height, 0.08, 0.92);
+            background.setFocus({ x, y });
+            host.style.setProperty("--series-focus-x", `${(x * 100).toFixed(2)}%`);
+            host.style.setProperty("--series-focus-y", `${(y * 100).toFixed(2)}%`);
+          };
 
           const readPan = () => ({
             x: Number.parseFloat(root.style.getPropertyValue("--series-pan-x")) || 0,
             y: Number.parseFloat(root.style.getPropertyValue("--series-pan-y")) || 0,
           });
 
-          const applyAtmosphere = (energy = motionEnergy) => {
-            const shouldReduce = reducedMotion.matches || window.innerWidth < 760;
-            const base = shouldReduce ? toneToken.reducedAtmosphere : toneToken.atmosphere;
-
-            background.setAtmosphere({
-              intensity: Math.min(0.82, base.intensity + energy * 0.18),
-              haze: Math.min(0.78, base.haze + energy * 0.16),
-              beam: Math.min(0.62, base.beam + energy * 0.1),
-              tint: Math.min(0.28, base.tint + energy * 0.05),
-              drift: shouldReduce ? base.drift : Math.min(0.58, base.drift + energy * 0.22),
-            });
-            background.setReducedMotion(shouldReduce);
-          };
-
-          const applyTone = () => {
-            syncHostState(host, root);
-            toneToken = resolveTone(root);
-            background.setPalette(toneToken.palette);
-            applyAtmosphere();
-          };
-
-          const breathe = () => {
-            motionEnergy *= 0.92;
+          const decayEnergy = () => {
+            motionEnergy *= 0.91;
             host.style.setProperty("--series-motion-energy", motionEnergy.toFixed(3));
-            applyAtmosphere();
-
             if (motionEnergy > 0.01) {
-              breatheRaf = window.requestAnimationFrame(breathe);
+              decayRaf = window.requestAnimationFrame(decayEnergy);
             } else {
-              breatheRaf = 0;
+              decayRaf = 0;
+              host.style.setProperty("--series-motion-energy", "0");
             }
           };
 
-          const requestBreathe = () => {
-            if (!breatheRaf) {
-              breatheRaf = window.requestAnimationFrame(breathe);
-            }
-          };
-
-          const observer = new MutationObserver((mutations) => {
-            syncHostState(host, root);
-
+          const registerMotion = () => {
             const pan = readPan();
-            const distance = Math.hypot(pan.x - lastPanX, pan.y - lastPanY);
-            lastPanX = pan.x;
-            lastPanY = pan.y;
-            motionEnergy = Math.max(motionEnergy * 0.72, Math.min(distance / 120, 1));
-            host.style.setProperty("--series-motion-energy", motionEnergy.toFixed(3));
-            applyAtmosphere();
-            requestBreathe();
-
-            if (mutations.some((mutation) => mutation.attributeName === "data-active-tone")) {
-              applyTone();
+            if (lastPan) {
+              const distance = Math.hypot(pan.x - lastPan.x, pan.y - lastPan.y);
+              const nextEnergy = Math.min(distance / 42, 1);
+              motionEnergy = Math.max(motionEnergy * 0.74, nextEnergy);
+              background.setEnergy(motionEnergy);
+              host.style.setProperty("--series-motion-energy", motionEnergy.toFixed(3));
+              if (!decayRaf && motionEnergy > 0.01) decayRaf = window.requestAnimationFrame(decayEnergy);
             }
-          });
-          observer.observe(root, { attributes: true, attributeFilter: ["data-active-tone", "style"] });
+            lastPan = pan;
+          };
 
-          const handleMotionChange = () => applyTone();
+          const sync = () => {
+            syncRaf = 0;
+            const liveRoot = rootOwner.querySelector?.(ROOT_SELECTOR) || document.querySelector(ROOT_SELECTOR);
+
+            if (liveRoot && liveRoot !== root) {
+              root = liveRoot;
+              lastTone = "";
+              lastArtwork = "";
+              lastPan = null;
+              host.dataset.seriesWebglLive = "true";
+            }
+
+            const tone = root.getAttribute("data-active-tone") || "earth";
+            const artwork = root.getAttribute("data-active-artwork") || "";
+            const token = resolveTone(root);
+            const selectionChanged = tone !== lastTone || artwork !== lastArtwork;
+
+            host.dataset.activeTone = tone;
+            syncFocus();
+            registerMotion();
+
+            if (!selectionChanged) return;
+
+            lastTone = tone;
+            lastArtwork = artwork;
+            applyField(token);
+            applyPalette(token.palette);
+            background.pulseField(0.96);
+            background.setEnergy(0.72);
+
+            const requestId = ++paletteRequest;
+            extractArtworkPalette(artwork, token.palette).then((palette) => {
+              if (requestId !== paletteRequest || artwork !== lastArtwork) return;
+              applyPalette(palette);
+              background.pulseField(0.56);
+            });
+          };
+
+          const requestSync = () => {
+            if (!syncRaf) syncRaf = window.requestAnimationFrame(sync);
+          };
+
+          const observer = new MutationObserver(requestSync);
+          observer.observe(rootOwner, {
+            attributes: true,
+            childList: true,
+            subtree: true,
+            attributeFilter: ["data-active-tone", "data-active-artwork", "style"],
+          });
+
+          const handleMotionChange = () => {
+            applyField(resolveTone(root));
+            requestSync();
+          };
+          const handleResize = () => {
+            applyField(resolveTone(root));
+            requestSync();
+          };
+          const handlePresencePhase = (event) => {
+            presencePhase = event.detail?.phase || document.documentElement.dataset.presencePhase || "awake";
+            host.dataset.presencePhase = presencePhase;
+            if (presencePhase !== "dreaming") delete host.dataset.presenceDreamCycle;
+            applyField(resolveTone(root));
+
+            if (presencePhase === "dreaming") {
+              background.setEnergy(0.18);
+              background.pulseField(0.34);
+            } else if (presencePhase === "contemplating") {
+              background.setEnergy(0.12);
+            } else if (presencePhase === "waking") {
+              background.setEnergy(0.34);
+              background.pulseField(0.24);
+            }
+          };
+          const handleDreamCycle = (event) => {
+            dreamCycle = event.detail?.cycle || document.documentElement.dataset.presenceDreamCycle || "gathering";
+            host.dataset.presenceDreamCycle = dreamCycle;
+
+            if (presencePhase !== "dreaming" || shouldReduce()) return;
+            applyField(resolveTone(root));
+            background.setEnergy(dreamCycle === "dispersing" ? 0.2 : 0.13);
+            background.pulseField(dreamCycle === "dispersing" ? 0.16 : 0.1);
+          };
           const handlePageHide = () => {
             observer.disconnect();
             reducedMotion.removeEventListener?.("change", handleMotionChange);
-            if (breatheRaf) window.cancelAnimationFrame(breatheRaf);
+            window.removeEventListener("resize", handleResize);
+            window.removeEventListener("artist-stage:presence-phase", handlePresencePhase);
+            window.removeEventListener("artist-stage:presence-dream-cycle", handleDreamCycle);
+            if (decayRaf) window.cancelAnimationFrame(decayRaf);
+            if (syncRaf) window.cancelAnimationFrame(syncRaf);
             background.destroy();
             delete host.dataset.seriesWebglMounted;
           };
 
           reducedMotion.addEventListener?.("change", handleMotionChange);
+          window.addEventListener("resize", handleResize, { passive: true });
+          window.addEventListener("artist-stage:presence-phase", handlePresencePhase);
+          window.addEventListener("artist-stage:presence-dream-cycle", handleDreamCycle);
           window.addEventListener("pagehide", handlePageHide, { once: true });
 
           host.dataset.seriesWebglMounted = "true";
-          root.dataset.seriesWebglLive = "true";
+          host.dataset.presencePhase = presencePhase;
+          if (presencePhase === "dreaming") host.dataset.presenceDreamCycle = dreamCycle;
+          host.dataset.seriesWebglLive = "true";
           delete host.dataset.seriesWebglMounting;
-          applyTone();
+          sync();
         })
         .catch((error) => {
           host.dataset.seriesWebglFailed = "true";
           delete host.dataset.seriesWebglMounting;
-          console.warn("Series WebGL backdrop could not mount.", error);
+          console.warn("Series living pigment field could not mount.", error);
         });
 
       return true;
@@ -235,30 +621,30 @@
 
 <style is:global>
   .series-webgl-backdrop {
-    --series-accent: rgba(167, 190, 117, 0.44);
-    --series-glow-x: 50%;
-    --series-glow-y: 44%;
-    --series-pan-x: 0px;
-    --series-pan-y: 0px;
+    --series-ink: #020403;
+    --series-deep: #11180d;
+    --series-pigment-a: #85a72b;
+    --series-pigment-b: #9b7437;
+    --series-highlight: #d7d58e;
+    --series-focus-x: 57%;
+    --series-focus-y: 50%;
     --series-motion-energy: 0;
     position: fixed;
     inset: var(--site-header-height, 3.25rem) 0 0;
     z-index: 1;
     overflow: hidden;
     pointer-events: none;
-    opacity: 0.68;
-    filter: saturate(0.7) contrast(1.02) brightness(0.9);
-    mix-blend-mode: normal;
+    opacity: 0.96;
+    filter: saturate(1.12) contrast(1.08) brightness(0.91);
     background:
-      radial-gradient(ellipse at 26% 38%, rgba(166, 184, 110, 0.22), transparent 32rem),
-      radial-gradient(ellipse at 68% 54%, rgba(76, 98, 56, 0.28), transparent 36rem),
-      linear-gradient(112deg, rgba(3, 7, 5, 0.72), rgba(16, 28, 14, 0.6) 48%, rgba(3, 7, 5, 0.86));
-    background-size: 118% 118%, 124% 124%, 100% 100%;
-    transform: translate3d(calc(var(--series-pan-x) * -0.012), calc(var(--series-pan-y) * -0.012), 0);
-    animation: seriesWebglFallbackDrift 28s ease-in-out infinite alternate;
+      linear-gradient(126deg, var(--series-ink) 0%, var(--series-deep) 38%, color-mix(in srgb, var(--series-pigment-a), #030504 78%) 62%, var(--series-ink) 100%);
+    background-size: 145% 135%;
+    transform: translate3d(0, 0, 0) scale(1.012);
+    animation: seriesPigmentFallback 24s cubic-bezier(0.45, 0, 0.2, 1) infinite alternate;
     transition:
-      opacity 900ms cubic-bezier(0.16, 1, 0.3, 1),
-      filter 900ms cubic-bezier(0.16, 1, 0.3, 1);
+      opacity 1200ms cubic-bezier(0.16, 1, 0.3, 1),
+      filter 1600ms cubic-bezier(0.16, 1, 0.3, 1),
+      background-color 1800ms ease;
   }
 
   .series-webgl-backdrop::before,
@@ -272,66 +658,62 @@
 
   .series-webgl-backdrop::before {
     background:
-      radial-gradient(ellipse at 50% 48%, rgba(12, 28, 12, 0), rgba(3, 6, 5, 0.1) 68%, rgba(3, 6, 5, 0.58) 100%),
-      linear-gradient(90deg, rgba(4, 7, 6, 0.42), rgba(4, 7, 6, 0.02) 42%, rgba(4, 7, 6, 0.32) 100%);
+      linear-gradient(180deg, rgba(1, 3, 2, 0.28), transparent 18%, transparent 74%, rgba(1, 2, 2, 0.32)),
+      linear-gradient(90deg, rgba(1, 3, 2, 0.22), transparent 15%, transparent 84%, rgba(1, 3, 2, 0.3));
   }
 
   .series-webgl-backdrop::after {
     background:
-      radial-gradient(circle at var(--series-glow-x) var(--series-glow-y), var(--series-accent), transparent 34rem),
-      linear-gradient(180deg, rgba(2, 4, 4, 0.18), rgba(2, 4, 4, 0.68));
-    opacity: calc(0.18 + (var(--series-motion-energy) * 0.14));
+      radial-gradient(ellipse 62% 76% at var(--series-focus-x) var(--series-focus-y), color-mix(in srgb, var(--series-pigment-a), transparent 88%), transparent 76%),
+      linear-gradient(115deg, transparent 22%, color-mix(in srgb, var(--series-pigment-b), transparent 90%) 54%, transparent 82%);
+    opacity: calc(0.4 + var(--series-motion-energy) * 0.16);
     mix-blend-mode: soft-light;
+    transition: opacity 800ms ease;
   }
 
   .series-webgl-backdrop canvas {
+    position: relative;
+    z-index: 1;
     opacity: 1;
-    z-index: 1 !important;
+    transform: scale(1.01);
   }
 
-  .series-webgl-backdrop[data-active-tone="blue"] {
-    opacity: 0.62;
-    filter: saturate(0.62) contrast(1) brightness(0.84);
-  }
-
-  .series-webgl-backdrop[data-active-tone="red"] {
-    opacity: 0.66;
-    filter: saturate(0.76) contrast(1.02) brightness(0.88);
-  }
-
-  .series-webgl-backdrop[data-active-tone="ash"] {
-    opacity: 0.62;
-    filter: saturate(0.54) contrast(1) brightness(0.86);
+  .series-webgl-backdrop[data-series-webgl-mounted="true"] {
+    background: var(--series-ink);
   }
 
   @media (max-width: 900px) {
     .series-webgl-backdrop {
+      opacity: 0.88;
+      filter: saturate(1.06) contrast(1.04) brightness(0.92);
+      transform: none;
+    }
+
+    .series-webgl-backdrop::after {
       opacity: 0.36;
-      filter: saturate(0.62) contrast(0.98) brightness(0.84);
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .series-webgl-backdrop {
-      opacity: 0.28;
-      transform: none;
+      opacity: 0.82;
       animation: none;
+      transform: none;
+    }
+
+    .series-webgl-backdrop::after {
+      opacity: 0.22;
+      transition: none;
     }
   }
 
-  @keyframes seriesWebglFallbackDrift {
-    0% {
-      background-position:
-        44% 48%,
-        55% 52%,
-        0 0;
+  @keyframes seriesPigmentFallback {
+    from {
+      background-position: 18% 36%;
     }
 
-    100% {
-      background-position:
-        54% 42%,
-        46% 58%,
-        0 0;
+    to {
+      background-position: 82% 64%;
     }
   }
 </style>

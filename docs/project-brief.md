@@ -1,6 +1,6 @@
 # ARTIST STAGE - Current Project Brief
 
-Last updated: 2026-07-06
+Last updated: 2026-07-15
 
 ## Purpose
 
@@ -35,8 +35,11 @@ The project is no longer a conventional portfolio, product grid, or static galle
 Core visual system: advanced cinematic prototype / demo-ready for art-direction review
 Core route architecture: implemented
 Home living field: implemented and motion-polished
+Multi-route living background cinematography: implemented for Process, Artist, and Contact
+Works archive illumination: implemented without full-screen artwork WebGL
 Series constellation map: implemented with WebGL atmosphere integration
 Series chapter + inspector: implemented and stabilized
+Immersive pressure threshold: implemented as a Presence-aware Three.js entry into WebXR
 Work Detail collector route: implemented as strong object/acquisition surface
 Process route: implemented from studio technique documentation
 AR / 3D scale preview: integrated prototype, not final production AR asset pipeline
@@ -93,18 +96,35 @@ Therefore:
 
 ## Recently Implemented
 
+- Home now includes the approved `Living Background Environment v1.0`: a full-viewport artwork-derived
+  WebGL material field with current/previous memory, a temporary incoming texture, autonomous pigment
+  flow, a 5.2-second cinematic handoff, scroll-dominance targeting, Presence Director integration and
+  directed DOM lighting across the Hero and lower editorial route. The complete reusable concept,
+  architecture, integration contract and QA protocol are documented in
+  `docs/living-background-environment-universal-tool.md` and its companion PDF.
+- The same lifecycle technology now has route-specific cinematography rather than copied visual
+  effects: Process is a softened trace field under raking work light, Artist is a dissolved practice
+  palimpsest, and Contact is a near-black signal chamber. All three use 2000px real-artwork sources,
+  distinct image construction and no synthetic pixel grain. Works intentionally leaves this WebGL
+  family and uses a clean tone-aware museum light so archive comparison remains primary. Immersive
+  keeps its dedicated pressure membrane. The rollout and QA record are in
+  `docs/artist-stage-v3-living-background-route-profiles.md`.
 - Shared `Top` return gesture for long cinematic pages.
 - Header/frame alignment across Home, Works, Artist, Contact, Process, and the main public routes.
 - Home selected manifestations upgraded with smoother carousel motion, floating works, hover/click activation of background works, and a `Next` gesture into the next section.
 - `/series` upgraded from a static constellation into a WebGL-backed atmosphere field with tone-aware and motion-aware background behavior.
 - `/series` route entry stabilized so black placeholder cover flashes no longer appear during navigation.
 - `/series/[slug]` fullscreen inspector stabilized and synchronized so closing the inspector leaves the carousel on the last viewed image.
+- `/works` rebuilt as a compact archive register: Index is now the default, while Field is a separate responsive three-work exhibition with bounded, uncropped artwork stages.
+- `/immersive` rebuilt as a resilient full-viewport pigment membrane using only 2000px responsive fragments of MT-3, MT-1, and MT-6. Domain-warped strata, a coherent directional palette cycle, compression folds, charcoal veins, three-act color metamorphosis, broad pointer influence, luminous exposure, Presence Director depth, reduced-motion support, and a direct WebXR entry create a living field without procedural bodies or external generated imagery.
 - `/works/[slug]` upgraded into a strong collector/product route with format switching, acquisition/inquiry hierarchy, collector details, scale preview, AR preview, and process-aware metadata.
 - Print AR / 3D preview module integrated from the provided ZIP modules and adapted into the site's visual language.
 - Artwork surface lens/magnifier introduced on Work Detail for close surface inspection.
 - Collector details reveal reworked away from internal scrollbars toward a cleaner cinematic expansion pattern.
 - `/process` created from the studio source PDF on technique and process.
-- Process route received a stillness/idle cinematic behavior: content gradually recedes during inactivity and returns on user activity.
+- The earlier stillness fade has become a site-wide Presence Director: inactivity reveals a focus artwork, key phrase, pigment field, and peripheral traces, then continues through `gathering -> dispersing -> reforming` before rebuilding the interface in a wake wave.
+- Secondary text now produces visual-only dispersal traces; Process passes focus between material rows, while Series keeps artwork opacity stable and moves the living WebGL pigment instead.
+- The Series map, chapter, fullscreen Inspector, and Work Detail now form one continuous artwork route with palette-aware morphing, active-work restore, browser-Back support, and exact map-position return.
 
 ## Living Systems
 
@@ -113,16 +133,21 @@ Implemented:
 ```txt
 Living atmosphere boot
 Living atmosphere orchestrator
+Living Background Environment v1.0
+Living Background route cinematography / Process, Artist, Contact
+Works archive illumination / canvas-free retained light
 Artwork atmosphere bridge
 Route atmosphere handoff memory
 Section atmosphere state
 Stillness / idle presence behavior
+Presence Director / site-wide Metamorphosis Mode
 Home living editorial field
 Home cinematic carousel motion
 Series WebGL atmosphere backdrop
 Series constellation field
 Series chapter atmosphere
 Fullscreen series photo inspector
+Immersive Three.js pressure threshold
 Cinematic route transition manager
 Explicit cinematic source selector for inspector -> work transitions
 Responsive generated artwork assets
@@ -184,7 +209,9 @@ Known non-blocking warnings:
 
 ## Current Watch Items
 
-- The WebGL Series background is visually promising but still needs final art-direction tuning so it supports artworks without overpowering them.
+- The WebGL Series background, editorial route cinematography, Immersive pressure threshold, and
+  three-act deep-idle behavior are visually promising but still need final author review and
+  real-device performance tuning.
 - AR/3D preview works as an integrated prototype, but frame/material realism still needs a dedicated visual-quality pass.
 - Mobile AR requires production GLB/USDZ hosting, validation, and device QA.
 - Home motion is stronger now, but final mobile tuning should be repeated.
@@ -195,14 +222,15 @@ Known non-blocking warnings:
 ## Next Recommended Sequence
 
 ```txt
-1. Visual QA of Home -> Series -> Series Chapter -> Inspector -> Work flow.
-2. Art-direction pass for Series WebGL atmosphere: color sync, density, performance, and artwork integration.
-3. AR/3D material realism pass: frame depth, paper surface, glass/reflection, lighting, and scale.
-4. Mobile/tablet QA for Home field, Series map, Series chapter inspector, Work Detail, and AR overlay.
-5. Final author review of titles, statements, years, status, series placement, paper, material, technique fields.
-6. Commerce readiness audit: Stripe, policies, legal copy, availability, inquiry/acquire flow.
-7. Documentation cleanup / CSS consolidation after visual direction is locked.
+1. Route background direction pass 02: Process, Artist, Contact, then Works.
+2. Cross-route identity review and selective Immersive reassessment.
+3. Real-device mobile/tablet and long-idle QA for all living routes.
+4. Replace Process prototypes with authentic studio material and complete author content review.
+5. AR/3D material realism and production mobile asset pipeline.
+6. Commerce, legal, deployment and production-readiness audit.
 ```
+
+The detailed phase plan and exit criteria live in `docs/artist-stage-v3-roadmap.md`.
 
 ## Working Rule
 

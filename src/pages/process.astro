@@ -1,7 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import AtmosphericBackdropRoot from "../app/atmosphere/AtmosphericBackdropSystem/AtmosphericBackdropRoot.astro";
-import CinematicIdleField from "../components/cinematic/CinematicIdleField.astro";
+import LivingRouteEnvironment from "../components/living-background/LivingRouteEnvironment.astro";
 import {
   bodyManifestationMaterials,
   bodyManifestationMetadata,
@@ -12,10 +12,17 @@ import {
 } from "../data/site/process";
 import { getResponsivePublicImage } from "../lib/assets/responsiveImage";
 
-const processPrimary = getResponsivePublicImage("/artworks/test-painting-2/mt-3.jpg", { defaultWidth: 1400 });
-const processTrace = getResponsivePublicImage("/artworks/test-painting-2/mt-2.jpg", { defaultWidth: 960 });
-const processStructure = getResponsivePublicImage("/artworks/test-painting-2/mt-5.jpg", { defaultWidth: 960 });
-const processStudy = getResponsivePublicImage("/images/works/p-1.jpg", { defaultWidth: 960 });
+const processPrimary = getResponsivePublicImage("/artworks/test-painting-2/mt-3.jpg", { defaultWidth: 2000 });
+const processTrace = getResponsivePublicImage("/artworks/test-painting-2/mt-2.jpg", { defaultWidth: 2000 });
+const processStructure = getResponsivePublicImage("/artworks/test-painting-2/mt-5.jpg", { defaultWidth: 2000 });
+const processStudy = getResponsivePublicImage("/images/works/p-1.jpg", { defaultWidth: 2000 });
+
+const processEnvironmentTextures = [
+  { slug: "process-field", src: processPrimary.src },
+  { slug: "process-trace", src: processTrace.src },
+  { slug: "process-structure", src: processStructure.src },
+  { slug: "process-study", src: processStudy.src },
+];
 
 const preloadImages = [processPrimary.src, processTrace.src, processStructure.src].filter(Boolean);
 const metadataRows = Object.entries(bodyManifestationMetadata);
@@ -27,16 +34,23 @@ const metadataRows = Object.entries(bodyManifestationMetadata);
   canonicalPath="/process"
   preloadImages={preloadImages}
 >
+  <LivingRouteEnvironment
+    profile="process"
+    textures={processEnvironmentTextures}
+    initialSlug="process-field"
+    memorySlug="process-trace"
+  />
   <AtmosphericBackdropRoot />
-  <CinematicIdleField />
-
   <main
     class="process-method-field"
     data-cinematic-idle-root
     data-cinematic-idle-delay="5600"
     data-cinematic-idle-reduced-delay="9000"
+    data-cinematic-idle-wake-duration="3600"
+    data-cinematic-idle-settle-duration="2800"
+    data-cinematic-idle-dream-duration="7600"
   >
-    <section class="process-threshold" aria-labelledby="process-title" data-atmosphere-section="process-threshold">
+    <section class="process-threshold" aria-labelledby="process-title" data-atmosphere-section="process-threshold" data-lbe-target="process-field">
       <div class="process-threshold__copy">
         <p class="process-kicker" data-cinematic-idle="detail">{bodyManifestationProcess.eyebrow}</p>
         <h1 id="process-title" data-cinematic-idle="anchor">{bodyManifestationProcess.headline}</h1>
@@ -91,7 +105,7 @@ const metadataRows = Object.entries(bodyManifestationMetadata);
       </div>
     </section>
 
-    <section class="process-canon" aria-labelledby="process-canon-title" data-atmosphere-section="process-canon">
+    <section class="process-canon" aria-labelledby="process-canon-title" data-atmosphere-section="process-canon" data-lbe-target="process-trace">
       <div>
         <p class="process-kicker" data-cinematic-idle="detail">Method canon</p>
         <h2 id="process-canon-title" data-cinematic-idle="anchor">A work begins as a field before it becomes a body.</h2>
@@ -106,7 +120,7 @@ const metadataRows = Object.entries(bodyManifestationMetadata);
       </div>
     </section>
 
-    <section class="process-sequence" id="process-sequence" aria-labelledby="process-sequence-title" data-atmosphere-section="process-sequence">
+    <section class="process-sequence" id="process-sequence" aria-labelledby="process-sequence-title" data-atmosphere-section="process-sequence" data-lbe-target="process-trace">
       <div class="process-section-head">
         <p class="process-kicker" data-cinematic-idle="detail">Process sequence</p>
         <h2 id="process-sequence-title" data-cinematic-idle="anchor">Seven stages of manifestation.</h2>
@@ -124,7 +138,7 @@ const metadataRows = Object.entries(bodyManifestationMetadata);
       </div>
     </section>
 
-    <section class="process-materials" id="process-materials" aria-labelledby="process-materials-title" data-atmosphere-section="process-materials">
+    <section class="process-materials" id="process-materials" aria-labelledby="process-materials-title" data-atmosphere-section="process-materials" data-lbe-target="process-structure">
       <div class="process-materials__head">
         <p class="process-kicker" data-cinematic-idle="detail">Material stack</p>
         <h2 id="process-materials-title" data-cinematic-idle="anchor">Material is not support. It is the route of appearance.</h2>
@@ -141,7 +155,7 @@ const metadataRows = Object.entries(bodyManifestationMetadata);
       </div>
     </section>
 
-    <section class="process-difference" aria-labelledby="process-difference-title" data-atmosphere-section="process-difference">
+    <section class="process-difference" aria-labelledby="process-difference-title" data-atmosphere-section="process-difference" data-lbe-target="process-study">
       <div class="process-difference__image" data-cinematic-idle="image">
         <img
           src={processStudy.src}
@@ -172,7 +186,7 @@ const metadataRows = Object.entries(bodyManifestationMetadata);
       </div>
     </section>
 
-    <section class="process-records" aria-labelledby="process-records-title" data-atmosphere-section="process-records">
+    <section class="process-records" aria-labelledby="process-records-title" data-atmosphere-section="process-records" data-lbe-target="process-field">
       <div>
         <p class="process-kicker" data-cinematic-idle="detail">Work detail / COA</p>
         <h2 id="process-records-title" data-cinematic-idle="anchor">Collector records need calm technical language.</h2>
@@ -196,7 +210,7 @@ const metadataRows = Object.entries(bodyManifestationMetadata);
       </div>
     </section>
 
-    <section class="process-xr" aria-labelledby="process-xr-title" data-atmosphere-section="process-xr">
+    <section class="process-xr" aria-labelledby="process-xr-title" data-atmosphere-section="process-xr" data-lbe-target="process-structure">
       <div class="process-xr__head">
         <p class="process-kicker" data-cinematic-idle="detail">WhisperXR bridge</p>
         <h2 id="process-xr-title" data-cinematic-idle="anchor">The digital layer should extend the method, not replace it.</h2>
@@ -223,6 +237,7 @@ const metadataRows = Object.entries(bodyManifestationMetadata);
   .process-method-field {
     position: relative;
     z-index: 1;
+    isolation: isolate;
     box-sizing: border-box;
     width: 100%;
     overflow-x: clip;
@@ -231,14 +246,13 @@ const metadataRows = Object.entries(bodyManifestationMetadata);
 
   .process-method-field::before {
     content: "";
-    position: absolute;
-    inset: 4rem 0 auto;
+    position: fixed;
+    inset: var(--site-header-height) 0 0;
     z-index: -1;
-    height: min(58rem, 82svh);
+    height: auto;
     background:
-      radial-gradient(circle at 24% 34%, rgba(181, 205, 145, 0.14), transparent 33rem),
-      radial-gradient(circle at 68% 42%, rgba(150, 96, 72, 0.22), transparent 36rem),
-      linear-gradient(180deg, rgba(5, 8, 7, 0), rgba(5, 8, 7, 0.36));
+      linear-gradient(90deg, rgba(3, 6, 5, 0.64) 0%, rgba(3, 6, 5, 0.32) 28%, transparent 58%),
+      linear-gradient(180deg, rgba(5, 8, 7, 0.04), rgba(5, 8, 7, 0.16));
     pointer-events: none;
   }
 
