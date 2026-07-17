@@ -253,8 +253,11 @@
     };
 
     const setRootState = (root, state, source, origin) => {
+      if (root.dataset.cinematicIdleState === state) return false;
+
       root.dataset.cinematicIdleState = state;
       announcePhase(root, state, source, origin);
+      return true;
     };
 
     const hashElement = (element, index) => {
@@ -422,11 +425,20 @@
       };
 
       const wake = (origin) => {
+        const currentState = root.dataset.cinematicIdleState || "awake";
+
+        // Pointer and scroll input can arrive many times during one gesture. Once
+        // the wake transition has started, let it complete instead of restarting
+        // its CSS transitions and timer for every input sample.
+        if (currentState === "waking") {
+          schedule();
+          return;
+        }
+
         const wasContemplating =
-          root.dataset.cinematicIdleState === "settling" ||
-          root.dataset.cinematicIdleState === "idle" ||
-          root.dataset.cinematicIdleState === "dreaming" ||
-          root.dataset.cinematicIdleState === "waking";
+          currentState === "settling" ||
+          currentState === "idle" ||
+          currentState === "dreaming";
 
         if (wasContemplating) {
           prepareWave(root, origin);
@@ -439,7 +451,7 @@
               setRootState(root, "awake", "wake-complete", origin);
             }
           }, reducedMotion.matches ? 160 : wakeDuration);
-        } else {
+        } else if (currentState !== "awake") {
           setRootState(root, "awake", "activity", origin);
         }
 
