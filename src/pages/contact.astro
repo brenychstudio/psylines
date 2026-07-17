@@ -25,10 +25,10 @@ const studioLinks = [
   { label: "TikTok", href: "https://www.tiktok.com/@psylines" },
 ];
 
-const contactSignal = getResponsivePublicImage("/artworks/test-painting-2/mt-9.jpg", { defaultWidth: 2000 });
-const contactQuiet = getResponsivePublicImage("/artworks/test-painting-2/mt-6.jpg", { defaultWidth: 2000 });
-const contactField = getResponsivePublicImage("/artworks/test-painting-2/mt-3.jpg", { defaultWidth: 2000 });
-const contactRoute = getResponsivePublicImage("/artworks/test-painting-2/mt-5.jpg", { defaultWidth: 2000 });
+const contactSignal = getResponsivePublicImage("/artworks/test-painting-2/mt-11.jpg", { defaultWidth: 2000 });
+const contactQuiet = getResponsivePublicImage("/artworks/test-painting-2/mt-8.jpg", { defaultWidth: 2000 });
+const contactField = getResponsivePublicImage("/artworks/test-painting-2/mt-6.jpg", { defaultWidth: 2000 });
+const contactRoute = getResponsivePublicImage("/artworks/test-painting-2/mt-4.jpg", { defaultWidth: 2000 });
 const contactEnvironmentTextures = [
   { slug: "contact-signal", src: contactSignal.src },
   { slug: "contact-quiet", src: contactQuiet.src },
@@ -37,7 +37,7 @@ const contactEnvironmentTextures = [
 ];
 ---
 <BaseLayout
-  title="Contact - ARTIST STAGE"
+  title="Contact — Rostyslav Brenych"
   description="Direct studio contact for collector inquiries, curatorial conversations, commissions, press, and broader studio dialogue."
   canonicalPath="/contact"
   preloadImages={[contactSignal.src, contactQuiet.src]}
@@ -59,7 +59,7 @@ const contactEnvironmentTextures = [
     data-cinematic-idle-settle-duration="3000"
     data-cinematic-idle-dream-duration="8200"
   >
-    <section class="contact-direct-threshold" data-atmosphere-section="contact-threshold" data-lbe-target="contact-signal">
+    <section class="contact-direct-threshold" data-atmosphere-section="contact-threshold" data-lbe-target="contact-signal" data-lbe-scene="0.10">
       <div class="contact-direct-copy">
         <p class="contact-kicker" data-cinematic-idle="detail">CONTACT / STUDIO ROUTE</p>
 
@@ -128,7 +128,7 @@ const contactEnvironmentTextures = [
       </section>
     </section>
 
-    <section class="contact-context-grid" data-atmosphere-section="contact-context" data-lbe-target="contact-quiet">
+    <section class="contact-context-grid" data-atmosphere-section="contact-context" data-lbe-target="contact-quiet" data-lbe-scene="0.54">
       <section class="contact-contexts" aria-label="Inquiry contexts">
         <p class="contact-kicker" data-cinematic-idle="detail">MESSAGE CONTEXT</p>
 
@@ -169,7 +169,7 @@ const contactEnvironmentTextures = [
       </section>
     </section>
 
-    <section class="contact-work-note" aria-label="Work acquisition note" data-atmosphere-section="contact-work-route" data-lbe-target="contact-route">
+    <section class="contact-work-note" aria-label="Work acquisition note" data-atmosphere-section="contact-work-route" data-lbe-target="contact-route" data-lbe-scene="0.92">
       <div>
         <p class="contact-kicker" data-cinematic-idle="detail">WORK ROUTE</p>
         <h2 data-cinematic-idle="anchor">Start from the selected work.</h2>
@@ -223,6 +223,19 @@ const contactEnvironmentTextures = [
 <style>
   /* V3-36R - Contact Clarity + Direct Communication Route */
   .contact-direct-field {
+    --cinematic-idle-veil-opacity: 0.1;
+    --cinematic-idle-settle-veil-opacity: 0.035;
+    --cinematic-idle-rest-veil-opacity: 0.065;
+    --cinematic-presence-settle-opacity: 0.035;
+    --cinematic-presence-idle-opacity: 0.075;
+    --cinematic-presence-dream-opacity: 0.12;
+    --cinematic-presence-gather-opacity: 0.1;
+    --cinematic-presence-disperse-opacity: 0.145;
+    --cinematic-presence-reform-opacity: 0.12;
+    --cinematic-presence-soft-opacity: 0.1;
+    --cinematic-presence-soft-blur: 3px;
+    --cinematic-presence-dispersal-opacity: 0.045;
+    --cinematic-presence-trace-opacity: 0.06;
     padding: clamp(6.5rem, 10vw, 9rem) 0 clamp(5rem, 9vw, 8rem);
     position: relative;
     z-index: 1;
@@ -237,10 +250,15 @@ const contactEnvironmentTextures = [
     z-index: -1;
     pointer-events: none;
     background:
-      linear-gradient(90deg, rgba(3, 6, 5, 0.72) 0%, rgba(3, 6, 5, 0.34) 36%, transparent 66%),
-      linear-gradient(180deg, rgba(4, 7, 6, 0.035), rgba(4, 7, 6, 0.18));
+      radial-gradient(
+        ellipse 42vw 70vh at 6% 42%,
+        rgba(1, 3, 3, 0.42) 0%,
+        rgba(1, 3, 3, 0.16) 48%,
+        transparent 80%
+      ),
+      linear-gradient(180deg, rgba(4, 7, 6, 0.018), rgba(4, 7, 6, 0.075));
     filter: none;
-    opacity: 0.72;
+    opacity: 1;
   }
 
   .contact-direct-threshold,
@@ -341,12 +359,58 @@ const contactEnvironmentTextures = [
       112deg,
       transparent 22%,
       rgba(235, 240, 232, 0.025) 43%,
-      rgba(145, 93, 76, 0.065) 55%,
+      rgba(108, 151, 148, 0.055) 55%,
       transparent 76%
     );
     filter: none;
     opacity: 0.68;
     transform: skewX(-5deg);
+  }
+
+  .contact-direct-field[data-cinematic-idle-state="idle"] [data-cinematic-idle="voice"] {
+    opacity: 0.56 !important;
+    filter: none !important;
+  }
+
+  .contact-direct-field[data-cinematic-idle-state="idle"] [data-cinematic-idle="line"] {
+    opacity: 0.46 !important;
+    filter: none !important;
+  }
+
+  .contact-direct-field[data-cinematic-idle-state="idle"] [data-cinematic-idle="detail"] {
+    opacity: 0.48 !important;
+    filter: none !important;
+  }
+
+  .contact-direct-field[data-cinematic-idle-state="dreaming"] [data-cinematic-idle="anchor"] {
+    opacity: 0.54 !important;
+  }
+
+  .contact-direct-field[data-cinematic-idle-state="dreaming"] [data-cinematic-idle="voice"] {
+    opacity: 0.58 !important;
+    filter: none !important;
+  }
+
+  .contact-direct-field[data-cinematic-idle-state="dreaming"] [data-cinematic-idle="line"] {
+    opacity: 0.48 !important;
+    filter: none !important;
+  }
+
+  .contact-direct-field[data-cinematic-idle-state="dreaming"] [data-cinematic-idle="detail"] {
+    opacity: 0.48 !important;
+    filter: none !important;
+  }
+
+  .contact-direct-field[data-cinematic-idle-state="idle"] [data-cinematic-idle="action"],
+  .contact-direct-field[data-cinematic-idle-state="dreaming"] [data-cinematic-idle="action"] {
+    opacity: 0.82 !important;
+    filter: none !important;
+  }
+
+  .contact-direct-field[data-cinematic-idle-state="idle"] [data-cinematic-idle="contact"],
+  .contact-direct-field[data-cinematic-idle-state="dreaming"] [data-cinematic-idle="contact"] {
+    opacity: 1 !important;
+    filter: none !important;
   }
 
   .contact-direct h2 {
@@ -526,6 +590,17 @@ const contactEnvironmentTextures = [
   }
 
   @media (max-width: 900px) {
+    .contact-direct-field::before {
+      background:
+        radial-gradient(
+          ellipse 94vw 66vh at 3% 34%,
+          rgba(1, 3, 3, 0.38) 0%,
+          rgba(1, 3, 3, 0.14) 50%,
+          transparent 84%
+        ),
+        linear-gradient(180deg, rgba(4, 7, 6, 0.015), rgba(4, 7, 6, 0.065));
+    }
+
     .contact-direct-threshold,
     .contact-context-grid,
     .contact-work-note {

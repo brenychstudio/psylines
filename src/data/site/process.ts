@@ -3,7 +3,7 @@ export const bodyManifestationProcess = {
   eyebrow: "Process / Technique",
   headline: "The body appears from gesture, not reference.",
   lead:
-    "Meta-Bodies works are created through an intuitive mixed-media process on paper. A charcoal gesture opens the field, the figure is found inside that field, and the surface is carried through fixation, acrylic membrane, color, and final inner line.",
+    "Meta Bodies works are created through an intuitive mixed-media process on paper. A charcoal gesture opens the field, the figure is found inside that field, and the surface is carried through fixation, acrylic membrane, color, and final inner line.",
   shortDefinition:
     "An initial charcoal gesture is made without photographic reference or a pre-planned composition. The emerging figure is identified within the line field, fixed, sealed with transparent acrylic medium, developed through acrylic color, and completed with charcoal-pencil contours or inner structures.",
   publicFormula:

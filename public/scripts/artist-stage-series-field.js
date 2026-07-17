@@ -423,14 +423,16 @@ void main() {
     }
 
     this.container.insertBefore(this.canvas, this.container.firstChild);
-    this.maxDpr = Number.isFinite(this.options.maxDpr) ? Math.max(1, this.options.maxDpr) : 1.4;
+    this.maxDpr = Number.isFinite(this.options.maxDpr) ? Math.max(1, this.options.maxDpr) : 1;
+    this.maxFps = Number.isFinite(this.options.maxFps) ? clamp(this.options.maxFps, 12, 60) : 36;
+    this.frameInterval = 1000 / this.maxFps;
     this.reducedMotion = Boolean(this.options.reducedMotion);
     this.pointerEnabled = this.options.pointer !== false;
     this.time = 0;
     this.running = false;
     this.raf = 0;
     this.lastFrame = 0;
-    this.lastReducedFrame = 0;
+    this.lastRenderedFrame = 0;
     this.resumeAfterVisibility = false;
     this.energy = 0;
     this.targetEnergy = 0;
@@ -626,7 +628,8 @@ void main() {
   };
 
   LivingPigmentField.prototype._onFrame = function (now) {
-    if (this.reducedMotion && now - this.lastReducedFrame < 100) {
+    var frameInterval = this.reducedMotion ? 100 : this.frameInterval;
+    if (this.lastRenderedFrame && now - this.lastRenderedFrame < frameInterval) {
       if (this.running) this.raf = window.requestAnimationFrame(this._onFrame);
       return;
     }
@@ -634,7 +637,7 @@ void main() {
     var seconds = now * 0.001;
     var delta = this.lastFrame ? clamp(seconds - this.lastFrame, 0.001, 0.1) : 0.016;
     this.lastFrame = seconds;
-    this.lastReducedFrame = now;
+    this.lastRenderedFrame = now;
     this._update(delta);
     this._draw();
 
@@ -645,6 +648,7 @@ void main() {
     if (!this.running) {
       this.running = true;
       this.lastFrame = 0;
+      this.lastRenderedFrame = 0;
       this.raf = window.requestAnimationFrame(this._onFrame);
     }
     return this;
@@ -700,6 +704,12 @@ void main() {
       this.pointer.targetStrength = 0;
       this.targetEnergy = 0;
     }
+    return this;
+  };
+
+  LivingPigmentField.prototype.setMaxFps = function (maxFps) {
+    this.maxFps = clamp(Number(maxFps) || 36, 12, 60);
+    this.frameInterval = 1000 / this.maxFps;
     return this;
   };
 

@@ -85,7 +85,7 @@ export const POST: APIRoute = async ({ request }) => {
             unit_amount: amount,
             product_data: {
               name: `${product.workTitle} — ${selectedOption.label}`,
-              description: `${selectedOption.dimensions} · ${getCommerceOptionTypeLabel(selectedOption)} · Artist Stage`,
+              description: `${selectedOption.dimensions} · ${getCommerceOptionTypeLabel(selectedOption)} · Rostyslav Brenych`,
               ...(product.imageUrl ? { images: [product.imageUrl] } : {}),
               metadata: {
                 workSlug,

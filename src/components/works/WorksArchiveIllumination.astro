@@ -13,114 +13,442 @@ const { mode = "index" } = Astro.props;
   aria-hidden="true"
 >
   <div class="works-archive-illumination__ambient"></div>
+  <div class="works-archive-illumination__horizon"></div>
+  <div class="works-archive-illumination__wash"></div>
   <div class="works-archive-illumination__rake"></div>
   <div class="works-archive-illumination__counterlight"></div>
+  <div class="works-archive-illumination__canopy"></div>
+  <div class="works-archive-illumination__vignette"></div>
   <div class="works-archive-illumination__register"></div>
 </div>
 
 <script>
-  const mountedArchiveLights = new WeakMap();
-  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-  const damp = (current, target, delta, speed) =>
+  type Rgba = [number, number, number, number];
+  type ArchivePalette = {
+    tone: string;
+    wash: Rgba;
+    glow: Rgba;
+    accent: Rgba;
+    shadow: Rgba;
+    density: number;
+    pressure: number;
+  };
+
+  type ArchiveLightHost = HTMLElement & {
+    __artistStageWorksArchiveLightState?: () => Record<string, unknown>;
+  };
+
+  const mountedArchiveLights = new WeakMap<HTMLElement, { destroy: () => void }>();
+  const MEMORY_KEY = "artist-stage:works-archive-light-memory";
+  const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+  const damp = (current: number, target: number, delta: number, speed: number) =>
     current + (target - current) * (1 - Math.exp(-delta * speed));
 
-  const ARCHIVE_TONES = {
+  const ARCHIVE_TONES: Record<string, ArchivePalette> = {
     neutral: {
-      light: "rgba(191, 197, 181, 0.11)",
-      wash: "rgba(82, 91, 78, 0.08)",
+      tone: "neutral",
+      wash: [126, 139, 119, 0.32],
+      glow: [205, 214, 194, 0.2],
+      accent: [235, 238, 224, 0.28],
+      shadow: [18, 27, 21, 0.56],
+      density: 0.54,
+      pressure: 0.42,
     },
     moss: {
-      light: "rgba(150, 177, 92, 0.13)",
-      wash: "rgba(58, 82, 47, 0.09)",
+      tone: "moss",
+      wash: [105, 153, 69, 0.4],
+      glow: [172, 215, 104, 0.24],
+      accent: [221, 214, 132, 0.3],
+      shadow: [13, 38, 18, 0.6],
+      density: 0.61,
+      pressure: 0.5,
     },
     oxide: {
-      light: "rgba(180, 91, 71, 0.13)",
-      wash: "rgba(91, 45, 39, 0.09)",
+      tone: "oxide",
+      wash: [166, 65, 48, 0.4],
+      glow: [230, 127, 69, 0.24],
+      accent: [240, 195, 111, 0.3],
+      shadow: [50, 13, 10, 0.62],
+      density: 0.66,
+      pressure: 0.66,
     },
     amber: {
-      light: "rgba(198, 142, 66, 0.13)",
-      wash: "rgba(95, 66, 32, 0.09)",
+      tone: "amber",
+      wash: [188, 116, 39, 0.42],
+      glow: [239, 174, 68, 0.25],
+      accent: [244, 218, 145, 0.31],
+      shadow: [49, 28, 8, 0.61],
+      density: 0.6,
+      pressure: 0.56,
     },
     mineral: {
-      light: "rgba(114, 157, 159, 0.12)",
-      wash: "rgba(47, 70, 72, 0.085)",
+      tone: "mineral",
+      wash: [68, 135, 137, 0.4],
+      glow: [126, 204, 195, 0.24],
+      accent: [199, 226, 207, 0.3],
+      shadow: [7, 32, 32, 0.61],
+      density: 0.58,
+      pressure: 0.48,
     },
   };
 
-  function mountArchiveLight(host) {
+  const cloneColor = (color: Rgba): Rgba => [...color] as Rgba;
+  const clonePalette = (palette: ArchivePalette): ArchivePalette => ({
+    tone: palette.tone,
+    wash: cloneColor(palette.wash),
+    glow: cloneColor(palette.glow),
+    accent: cloneColor(palette.accent),
+    shadow: cloneColor(palette.shadow),
+    density: palette.density,
+    pressure: palette.pressure,
+  });
+
+  const mixColor = (fallback: Rgba, profile: Rgba, profileWeight: number, alphaScale = 1): Rgba => [
+    fallback[0] + (profile[0] - fallback[0]) * profileWeight,
+    fallback[1] + (profile[1] - fallback[1]) * profileWeight,
+    fallback[2] + (profile[2] - fallback[2]) * profileWeight,
+    clamp(profile[3] * alphaScale, fallback[3] * 0.74, fallback[3] * 1.14),
+  ];
+
+  const parseColor = (value: string | undefined, fallback: Rgba): Rgba => {
+    if (!value) return cloneColor(fallback);
+    const match = value.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:\s*[,/]\s*([\d.]+))?\s*\)/i);
+    if (!match) return cloneColor(fallback);
+
+    return [
+      clamp(Number(match[1]), 0, 255),
+      clamp(Number(match[2]), 0, 255),
+      clamp(Number(match[3]), 0, 255),
+      clamp(match[4] === undefined ? 1 : Number(match[4]), 0, 1),
+    ];
+  };
+
+  const colorToCss = (color: Rgba) =>
+    `rgba(${Number(color[0].toFixed(2))}, ${Number(color[1].toFixed(2))}, ${Number(color[2].toFixed(2))}, ${color[3].toFixed(4)})`;
+
+  const dampColor = (current: Rgba, target: Rgba, delta: number, speed: number) => {
+    current[0] = damp(current[0], target[0], delta, speed);
+    current[1] = damp(current[1], target[1], delta, speed);
+    current[2] = damp(current[2], target[2], delta, speed);
+    current[3] = damp(current[3], target[3], delta, speed);
+  };
+
+  const getEntryPalette = (entry: HTMLElement): ArchivePalette => {
+    const toneName = entry.dataset.worksLightTone || "neutral";
+    const fallback = clonePalette(ARCHIVE_TONES[toneName] || ARCHIVE_TONES.neutral);
+    const hasAuthoredProfile = Boolean(entry.dataset.worksLightWash);
+    if (!hasAuthoredProfile) return fallback;
+
+    const profileWash = parseColor(entry.dataset.worksLightWash, fallback.wash);
+    const profileGlow = parseColor(entry.dataset.worksLightGlow, fallback.glow);
+    const profileAccent = parseColor(entry.dataset.worksLightAccent, fallback.accent);
+    const profileShadow = parseColor(entry.dataset.worksLightShadow, fallback.shadow);
+
+    return {
+      tone: toneName,
+      wash: mixColor(fallback.wash, profileWash, 0.82, 0.78),
+      glow: mixColor(fallback.glow, profileGlow, 0.8, 0.9),
+      accent: mixColor(fallback.accent, profileAccent, 0.76, 0.39),
+      shadow: mixColor(fallback.shadow, profileShadow, 0.76, 0.94),
+      density: clamp(Number(entry.dataset.worksLightDensity || fallback.density), 0.34, 0.82),
+      pressure: clamp(Number(entry.dataset.worksLightPressure || fallback.pressure), 0.24, 0.86),
+    };
+  };
+
+  const readStoredPalette = (): ArchivePalette | null => {
+    try {
+      const stored = JSON.parse(window.sessionStorage.getItem(MEMORY_KEY) || "null");
+      const validColor = (value: unknown) =>
+        Array.isArray(value) && value.length === 4 && value.every((channel) => Number.isFinite(Number(channel)));
+
+      if (
+        !stored ||
+        !validColor(stored.wash) ||
+        !validColor(stored.glow) ||
+        !validColor(stored.accent) ||
+        !validColor(stored.shadow)
+      ) {
+        return null;
+      }
+
+      return {
+        tone: typeof stored.tone === "string" ? stored.tone : "neutral",
+        wash: stored.wash.map(Number) as Rgba,
+        glow: stored.glow.map(Number) as Rgba,
+        accent: stored.accent.map(Number) as Rgba,
+        shadow: stored.shadow.map(Number) as Rgba,
+        density: clamp(Number(stored.density || 0.54), 0.34, 0.82),
+        pressure: clamp(Number(stored.pressure || 0.42), 0.24, 0.86),
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  const storePalette = (palette: ArchivePalette) => {
+    try {
+      window.sessionStorage.setItem(MEMORY_KEY, JSON.stringify(palette));
+    } catch {
+      // Atmosphere memory is an enhancement; the archive remains fully functional without storage.
+    }
+  };
+
+  function mountArchiveLight(host: ArchiveLightHost) {
     if (mountedArchiveLights.has(host)) return;
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const mode = host.dataset.worksArchiveMode || "index";
-    let targetX = mode === "field" ? 14 : 4;
+    const mode = host.dataset.worksArchiveMode === "field" ? "field" : "index";
+    const baseIntensity = mode === "field" ? 0.92 : 0.76;
+    const activeIntensity = mode === "field" ? 1.08 : 0.96;
+    const storedPalette = readStoredPalette();
+    let targetPalette = clonePalette(storedPalette || ARCHIVE_TONES.neutral);
+    let currentPalette = clonePalette(targetPalette);
+    let targetX = mode === "field" ? 55 : 52;
     let currentX = targetX;
-    let targetIntensity = mode === "field" ? 0.74 : 0.48;
+    let targetY = mode === "field" ? 48 : 42;
+    let currentY = targetY;
+    let targetIntensity = baseIntensity;
     let currentIntensity = targetIntensity;
-    let targetTone = "neutral";
-    let currentTone = "neutral";
-    let raf = 0;
+    let currentDensity = targetPalette.density;
+    let currentPressure = targetPalette.pressure;
+    let presenceLift = 0;
+    let activeEntry: HTMLElement | null = null;
+    let memoryUntil = storedPalette ? performance.now() + 2400 : 0;
     let releaseTimer = 0;
+    let scrollRaf = 0;
+    let raf = 0;
     let lastFrame = 0;
+    let lastDomUpdate = 0;
+    let lastDomSignature = "";
+    let renderSettled = false;
+    let lastScrollY = window.scrollY;
     let destroyed = false;
-    let activeSlug = "";
+    let observer: IntersectionObserver | null = null;
+    const visibleEntries = new Map<HTMLElement, number>();
 
     document.documentElement.dataset.worksArchiveLighting = mode;
 
-    const applyTone = (toneName) => {
-      const tone = ARCHIVE_TONES[toneName] || ARCHIVE_TONES.neutral;
-      host.style.setProperty("--works-archive-light", tone.light);
-      host.style.setProperty("--works-archive-wash", tone.wash);
+    const applyPalette = (palette: ArchivePalette) => {
+      host.style.setProperty("--works-archive-wash", colorToCss(palette.wash));
+      host.style.setProperty("--works-archive-glow", colorToCss(palette.glow));
+      host.style.setProperty("--works-archive-accent", colorToCss(palette.accent));
+      host.style.setProperty("--works-archive-shadow", colorToCss(palette.shadow));
     };
 
-    const readEntry = (event) => {
-      if (!(event.target instanceof Element)) return null;
-      return event.target.closest("[data-works-light-tone]");
+    const findEntry = (target: EventTarget | null) =>
+      target instanceof Element ? target.closest<HTMLElement>("[data-works-light-tone]") : null;
+
+    const updateIntensityTarget = (isActive = Boolean(activeEntry)) => {
+      const paletteLift = (targetPalette.density - 0.5) * 0.13 + (targetPalette.pressure - 0.42) * 0.045;
+      targetIntensity = clamp((isActive ? activeIntensity : baseIntensity) + paletteLift + presenceLift, 0.68, 1.18);
+      renderSettled = false;
     };
 
-    const focusEntry = (entry) => {
-      if (!entry) return;
-      window.clearTimeout(releaseTimer);
+    const setPaletteTarget = (entry: HTMLElement) => {
+      targetPalette = getEntryPalette(entry);
+      host.dataset.worksArchiveTone = targetPalette.tone;
+      storePalette(targetPalette);
+      updateIntensityTarget();
+    };
+
+    const setSpatialTarget = (entry: HTMLElement) => {
       const rect = entry.getBoundingClientRect();
-      const center = rect.left + rect.width * 0.5;
-      targetX = clamp((center / Math.max(window.innerWidth, 1)) * 92 - 46, -38, 38);
-      targetIntensity = mode === "field" ? 1 : 0.82;
-      targetTone = entry.getAttribute("data-works-light-tone") || "neutral";
-      activeSlug = entry.getAttribute("data-artwork-slug") || "";
-      currentTone = targetTone;
-      applyTone(currentTone);
-      host.dataset.worksArchiveActive = activeSlug;
+      const headerHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--site-header-height")) || 0;
+      const usableHeight = Math.max(window.innerHeight - headerHeight, 1);
+      const centerX = rect.left + rect.width * 0.5;
+      const centerY = rect.top + rect.height * 0.46 - headerHeight;
+      targetX = clamp((centerX / Math.max(window.innerWidth, 1)) * 100, 15, 85);
+      targetY = clamp((centerY / usableHeight) * 100, 20, 78);
     };
 
-    const handlePointerOver = (event) => focusEntry(readEntry(event));
-    const handleFocusIn = (event) => focusEntry(readEntry(event));
-    const handlePointerLeave = (event) => {
-      if (event.relatedTarget instanceof Element && event.relatedTarget.closest("[data-works-light-tone]")) {
+    const setEntryTarget = (entry: HTMLElement, source: "pointer" | "focus" | "touch" | "viewport") => {
+      window.clearTimeout(releaseTimer);
+      setSpatialTarget(entry);
+      setPaletteTarget(entry);
+
+      if (source !== "viewport") {
+        activeEntry = entry;
+        memoryUntil = performance.now() + 6400;
+        host.dataset.worksArchiveActive = entry.dataset.workSlug || entry.dataset.artworkSlug || "active";
+        updateIntensityTarget(true);
+      } else {
+        host.dataset.worksArchiveVisible = entry.dataset.workSlug || entry.dataset.artworkSlug || "visible";
+        updateIntensityTarget(false);
+      }
+    };
+
+    const getViewportScore = (entry: HTMLElement, ratio: number) => {
+      const rect = entry.getBoundingClientRect();
+      const centerY = rect.top + rect.height * 0.5;
+      const centerDistance = Math.min(Math.abs(centerY - window.innerHeight * 0.52) / Math.max(window.innerHeight * 0.72, 1), 1);
+      const visibleCenter = 1 - centerDistance;
+      return ratio * 0.68 + visibleCenter * 0.32;
+    };
+
+    const pickVisibleEntry = () => {
+      let bestEntry: HTMLElement | null = null;
+      let bestScore = -1;
+
+      visibleEntries.forEach((ratio, entry) => {
+        if (!entry.isConnected || ratio <= 0) return;
+        const score = getViewportScore(entry, ratio);
+        if (score > bestScore) {
+          bestEntry = entry;
+          bestScore = score;
+        }
+      });
+
+      return bestEntry;
+    };
+
+    const updateVisibleTarget = (force = false) => {
+      if (activeEntry && !force) return;
+      if (!force && performance.now() < memoryUntil) return;
+      const visibleEntry = pickVisibleEntry();
+      if (visibleEntry) setEntryTarget(visibleEntry, "viewport");
+    };
+
+    const releaseActiveEntry = (entry: HTMLElement | null) => {
+      if (!entry || activeEntry !== entry) return;
+      activeEntry = null;
+      delete host.dataset.worksArchiveActive;
+      memoryUntil = performance.now() + 6400;
+      updateIntensityTarget(false);
+      window.clearTimeout(releaseTimer);
+      releaseTimer = window.setTimeout(() => updateVisibleTarget(true), 6500);
+    };
+
+    const handlePointerOver = (event: PointerEvent) => {
+      const entry = findEntry(event.target);
+      if (!entry || entry === activeEntry) return;
+      setEntryTarget(entry, event.pointerType === "touch" ? "touch" : "pointer");
+    };
+
+    const handlePointerOut = (event: PointerEvent) => {
+      const entry = findEntry(event.target);
+      if (!entry) return;
+      if (event.relatedTarget instanceof Node && entry.contains(event.relatedTarget)) return;
+      if (findEntry(event.relatedTarget)) return;
+      releaseActiveEntry(entry);
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.pointerType !== "touch") return;
+      const entry = findEntry(event.target);
+      if (entry) setEntryTarget(entry, "touch");
+    };
+
+    const handleFocusIn = (event: FocusEvent) => {
+      const entry = findEntry(event.target);
+      if (entry) setEntryTarget(entry, "focus");
+    };
+
+    const handleFocusOut = (event: FocusEvent) => {
+      const entry = findEntry(event.target);
+      if (!entry) return;
+      if (event.relatedTarget instanceof Node && entry.contains(event.relatedTarget)) return;
+      releaseActiveEntry(entry);
+    };
+
+    const handlePresence = (event: Event) => {
+      const phase = (event as CustomEvent<{ phase?: string }>).detail?.phase || "awake";
+      presenceLift =
+        phase === "dreaming" ? 0.09 :
+        phase === "settling" ? 0.045 :
+        phase === "gathering" ? 0.055 :
+        phase === "reforming" ? 0.035 : 0;
+      updateIntensityTarget();
+    };
+
+    const handleDreamCycle = (event: Event) => {
+      if ((document.documentElement.dataset.presencePhase || "awake") !== "dreaming") return;
+      const cycle = (event as CustomEvent<{ cycle?: string }>).detail?.cycle || "gathering";
+      const direction =
+        cycle === "dispersing" ? [2.8, 1.4, 0.105] :
+        cycle === "reforming" ? [-1.2, -0.6, 0.075] :
+        [-1.6, -0.8, 0.095];
+      targetX = clamp(targetX + direction[0], 15, 85);
+      targetY = clamp(targetY + direction[1], 20, 78);
+      presenceLift = direction[2];
+      updateIntensityTarget();
+    };
+
+    const handleScroll = () => {
+      if (scrollRaf) return;
+      scrollRaf = window.requestAnimationFrame(() => {
+        scrollRaf = 0;
+        const nextScrollY = window.scrollY;
+        const moved = Math.abs(nextScrollY - lastScrollY);
+        lastScrollY = nextScrollY;
+        if (moved < 12) return;
+
+        const focusedEntry = findEntry(document.activeElement);
+        if (!focusedEntry) {
+          activeEntry = null;
+          delete host.dataset.worksArchiveActive;
+          memoryUntil = 0;
+          updateVisibleTarget(true);
+        }
+      });
+    };
+
+    const refreshVisibleGeometry = () => {
+      document.querySelectorAll<HTMLElement>("[data-works-light-tone]").forEach((entry) => {
+        const rect = entry.getBoundingClientRect();
+        const visibleWidth = Math.max(0, Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0));
+        const visibleHeight = Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
+        const ratio = (visibleWidth * visibleHeight) / Math.max(rect.width * rect.height, 1);
+        if (ratio > 0) visibleEntries.set(entry, ratio);
+        else visibleEntries.delete(entry);
+      });
+      updateVisibleTarget(true);
+    };
+
+    const initObserver = () => {
+      const entries = document.querySelectorAll<HTMLElement>("[data-works-light-tone]");
+      if (!("IntersectionObserver" in window)) {
+        refreshVisibleGeometry();
         return;
       }
-      window.clearTimeout(releaseTimer);
-      releaseTimer = window.setTimeout(() => {
-        activeSlug = "";
-        delete host.dataset.worksArchiveActive;
-        targetIntensity = mode === "field" ? 0.74 : 0.48;
-      }, 5200);
-    };
 
-    const handlePresence = (event) => {
-      const phase = event.detail?.phase || "awake";
-      const phaseLift = phase === "dreaming" ? 0.08 : phase === "settling" ? 0.04 : 0;
-      const activeIntensity = activeSlug ? (mode === "field" ? 1 : 0.82) : (mode === "field" ? 0.74 : 0.48);
-      targetIntensity = activeIntensity + phaseLift;
+      observer = new IntersectionObserver(
+        (changes) => {
+          changes.forEach((change) => {
+            const entry = change.target as HTMLElement;
+            if (change.isIntersecting) visibleEntries.set(entry, change.intersectionRatio);
+            else visibleEntries.delete(entry);
+          });
+          updateVisibleTarget();
+        },
+        {
+          rootMargin: "-7% 0px -12% 0px",
+          threshold: [0, 0.12, 0.25, 0.4, 0.6, 0.8, 1],
+        },
+      );
+
+      entries.forEach((entry) => observer?.observe(entry));
+      window.requestAnimationFrame(refreshVisibleGeometry);
     };
 
     const destroy = () => {
       if (destroyed) return;
       destroyed = true;
       window.cancelAnimationFrame(raf);
+      window.cancelAnimationFrame(scrollRaf);
       window.clearTimeout(releaseTimer);
+      observer?.disconnect();
       document.removeEventListener("pointerover", handlePointerOver);
+      document.removeEventListener("pointerout", handlePointerOut);
+      document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("focusin", handleFocusIn);
-      document.removeEventListener("pointerout", handlePointerLeave);
+      document.removeEventListener("focusout", handleFocusOut);
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", refreshVisibleGeometry);
       window.removeEventListener("artist-stage:presence-phase", handlePresence);
+      window.removeEventListener("artist-stage:presence-dream-cycle", handleDreamCycle);
+      window.removeEventListener("pagehide", destroy);
+      document.removeEventListener("astro:before-swap", destroy);
+      reducedMotion.removeEventListener?.("change", refreshVisibleGeometry);
       if (document.documentElement.dataset.worksArchiveLighting === mode) {
         delete document.documentElement.dataset.worksArchiveLighting;
       }
@@ -128,44 +456,137 @@ const { mode = "index" } = Astro.props;
       mountedArchiveLights.delete(host);
     };
 
-    const render = (now) => {
+    const render = (now: number) => {
       if (destroyed) return;
       if (!host.isConnected) {
         destroy();
         return;
       }
+
       raf = window.requestAnimationFrame(render);
       const delta = lastFrame ? clamp((now - lastFrame) * 0.001, 0.001, 0.08) : 0.016;
       lastFrame = now;
-      const speed = reducedMotion.matches ? 12 : 2.3;
-      currentX = damp(currentX, targetX, delta, speed);
-      currentIntensity = damp(currentIntensity, targetIntensity, delta, reducedMotion.matches ? 12 : 1.8);
-      host.style.setProperty("--works-archive-rake-x", `${currentX.toFixed(3)}%`);
-      host.style.setProperty("--works-archive-counter-x", `${(-currentX * 0.28).toFixed(3)}%`);
-      host.style.setProperty("--works-archive-intensity", currentIntensity.toFixed(4));
+      const immediateSpeed = reducedMotion.matches ? 16 : 3.4;
+      const colorSpeed = reducedMotion.matches ? 16 : 2.8;
+      if (!renderSettled) {
+        currentX = damp(currentX, targetX, delta, immediateSpeed);
+        currentY = damp(currentY, targetY, delta, immediateSpeed * 0.86);
+        currentIntensity = damp(currentIntensity, targetIntensity, delta, reducedMotion.matches ? 16 : 2.7);
+        currentDensity = damp(currentDensity, targetPalette.density, delta, colorSpeed);
+        currentPressure = damp(currentPressure, targetPalette.pressure, delta, colorSpeed);
+        dampColor(currentPalette.wash, targetPalette.wash, delta, colorSpeed);
+        dampColor(currentPalette.glow, targetPalette.glow, delta, colorSpeed);
+        dampColor(currentPalette.accent, targetPalette.accent, delta, colorSpeed);
+        dampColor(currentPalette.shadow, targetPalette.shadow, delta, colorSpeed);
+      }
+
+      const colorNear = (current: Rgba, target: Rgba) =>
+        Math.abs(current[0] - target[0]) < 0.35 &&
+        Math.abs(current[1] - target[1]) < 0.35 &&
+        Math.abs(current[2] - target[2]) < 0.35 &&
+        Math.abs(current[3] - target[3]) < 0.0015;
+      const settled =
+        Math.abs(currentX - targetX) < 0.04 &&
+        Math.abs(currentY - targetY) < 0.04 &&
+        Math.abs(currentIntensity - targetIntensity) < 0.0015 &&
+        Math.abs(currentDensity - targetPalette.density) < 0.0015 &&
+        Math.abs(currentPressure - targetPalette.pressure) < 0.0015 &&
+        colorNear(currentPalette.wash, targetPalette.wash) &&
+        colorNear(currentPalette.glow, targetPalette.glow) &&
+        colorNear(currentPalette.accent, targetPalette.accent) &&
+        colorNear(currentPalette.shadow, targetPalette.shadow);
+
+      if (!renderSettled && settled) {
+        currentX = targetX;
+        currentY = targetY;
+        currentIntensity = targetIntensity;
+        currentDensity = targetPalette.density;
+        currentPressure = targetPalette.pressure;
+        currentPalette = clonePalette(targetPalette);
+        renderSettled = true;
+      }
+
+      const renderX = clamp(currentX, 14, 86);
+      const renderY = clamp(currentY, 18, 80);
+      const washOpacity = clamp(0.4375 + currentIntensity * 0.34 + currentDensity * 0.13, 0.66, 0.96);
+      const rakeOpacity = clamp(0.2175 + currentIntensity * 0.31 + currentPressure * 0.11, 0.47, 0.78);
+      const horizonOpacity = clamp(0.23 + currentIntensity * 0.24 + currentDensity * 0.08, 0.43, 0.66);
+      const canopyOpacity = clamp(0.215 + currentIntensity * 0.21, 0.36, 0.54);
+
+      const washCss = colorToCss(currentPalette.wash);
+      const glowCss = colorToCss(currentPalette.glow);
+      const accentCss = colorToCss(currentPalette.accent);
+      const shadowCss = colorToCss(currentPalette.shadow);
+      const domSignature = [
+        renderX.toFixed(2),
+        renderY.toFixed(2),
+        washOpacity.toFixed(3),
+        rakeOpacity.toFixed(3),
+        horizonOpacity.toFixed(3),
+        canopyOpacity.toFixed(3),
+        washCss,
+        glowCss,
+        accentCss,
+        shadowCss,
+      ].join("|");
+      const domInterval = window.innerWidth <= 760 ? 40 : 1000 / 30;
+      if (!lastDomUpdate || now - lastDomUpdate >= domInterval) {
+        lastDomUpdate = now;
+        if (domSignature !== lastDomSignature) {
+          lastDomSignature = domSignature;
+          host.style.cssText = [
+            `--works-archive-anchor-x:${renderX.toFixed(2)}%`,
+            `--works-archive-anchor-y:${renderY.toFixed(2)}%`,
+            `--works-archive-counter-x:${(100 - renderX * 0.62).toFixed(2)}%`,
+            `--works-archive-rake-shift:${((renderX - 50) * 0.42).toFixed(2)}vw`,
+            `--works-archive-wash-opacity:${washOpacity.toFixed(3)}`,
+            `--works-archive-rake-opacity:${rakeOpacity.toFixed(3)}`,
+            `--works-archive-horizon-opacity:${horizonOpacity.toFixed(3)}`,
+            `--works-archive-canopy-opacity:${canopyOpacity.toFixed(3)}`,
+            `--works-archive-wash:${washCss}`,
+            `--works-archive-glow:${glowCss}`,
+            `--works-archive-accent:${accentCss}`,
+            `--works-archive-shadow:${shadowCss}`,
+          ].join(";");
+        }
+      }
     };
 
-    applyTone(currentTone);
+    applyPalette(currentPalette);
+    host.dataset.worksArchiveTone = currentPalette.tone;
     document.addEventListener("pointerover", handlePointerOver, { passive: true });
+    document.addEventListener("pointerout", handlePointerOut, { passive: true });
+    document.addEventListener("pointerdown", handlePointerDown, { passive: true });
     document.addEventListener("focusin", handleFocusIn);
-    document.addEventListener("pointerout", handlePointerLeave, { passive: true });
+    document.addEventListener("focusout", handleFocusOut);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", refreshVisibleGeometry, { passive: true });
     window.addEventListener("artist-stage:presence-phase", handlePresence);
+    window.addEventListener("artist-stage:presence-dream-cycle", handleDreamCycle);
+    document.addEventListener("astro:before-swap", destroy, { once: true });
     window.addEventListener("pagehide", destroy, { once: true });
+    reducedMotion.addEventListener?.("change", refreshVisibleGeometry);
+    initObserver();
     raf = window.requestAnimationFrame(render);
 
     host.__artistStageWorksArchiveLightState = () => ({
       mode,
-      activeSlug,
-      tone: currentTone,
-      position: currentX,
+      activeSlug: activeEntry?.dataset.workSlug || activeEntry?.dataset.artworkSlug || "",
+      visibleSlug: host.dataset.worksArchiveVisible || "",
+      tone: host.dataset.worksArchiveTone || "neutral",
+      position: [currentX, currentY],
+      targetPosition: [targetX, targetY],
       intensity: currentIntensity,
+      targetIntensity,
+      settled: renderSettled,
+      reducedMotion: reducedMotion.matches,
     });
     mountedArchiveLights.set(host, { destroy });
   }
 
   function mountAllArchiveLights() {
     document
-      .querySelectorAll("[data-works-archive-illumination]")
+      .querySelectorAll<ArchiveLightHost>("[data-works-archive-illumination]")
       .forEach((host) => mountArchiveLight(host));
   }
 
@@ -180,99 +601,191 @@ const { mode = "index" } = Astro.props;
 
 <style>
   .works-archive-illumination {
-    --works-archive-rake-x: 4%;
-    --works-archive-counter-x: -1.12%;
-    --works-archive-intensity: 0.48;
-    --works-archive-light: rgba(191, 197, 181, 0.11);
-    --works-archive-wash: rgba(82, 91, 78, 0.08);
+    --works-archive-anchor-x: 52%;
+    --works-archive-anchor-y: 42%;
+    --works-archive-counter-x: 67.76%;
+    --works-archive-rake-shift: 0vw;
+    --works-archive-wash-opacity: 0.78;
+    --works-archive-rake-opacity: 0.57;
+    --works-archive-horizon-opacity: 0.5;
+    --works-archive-canopy-opacity: 0.43;
+    --works-archive-wash: rgba(126, 139, 119, 0.32);
+    --works-archive-glow: rgba(205, 214, 194, 0.2);
+    --works-archive-accent: rgba(235, 238, 224, 0.28);
+    --works-archive-shadow: rgba(18, 27, 21, 0.56);
     position: fixed;
     inset: var(--site-header-height) 0 0;
     z-index: 0;
     overflow: hidden;
+    isolation: isolate;
     pointer-events: none;
-    background: #030504;
+    background: #050806;
   }
 
   .works-archive-illumination__ambient,
+  .works-archive-illumination__horizon,
+  .works-archive-illumination__wash,
   .works-archive-illumination__rake,
   .works-archive-illumination__counterlight,
+  .works-archive-illumination__canopy,
+  .works-archive-illumination__vignette,
   .works-archive-illumination__register {
     position: absolute;
     inset: 0;
+    pointer-events: none;
   }
 
   .works-archive-illumination__ambient {
+    inset: -2%;
     background:
-      linear-gradient(116deg, rgba(1, 3, 2, 0.98) 0%, rgba(5, 8, 6, 0.96) 38%, rgba(8, 10, 8, 0.9) 68%, rgba(2, 4, 3, 0.98) 100%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.016), transparent 28%, rgba(0, 0, 0, 0.28));
+      radial-gradient(ellipse 110% 58% at 50% -5%, rgba(226, 233, 219, 0.075), transparent 67%),
+      linear-gradient(116deg, rgba(2, 5, 3, 0.96) 0%, rgba(8, 12, 9, 0.92) 42%, rgba(10, 12, 9, 0.88) 69%, rgba(3, 6, 4, 0.97) 100%),
+      linear-gradient(180deg, #090d0a 0%, #050806 56%, #020403 100%);
+  }
+
+  .works-archive-illumination__horizon {
+    inset: 18% -8% -16%;
+    background:
+      radial-gradient(
+        ellipse 64% 54% at var(--works-archive-anchor-x) 86%,
+        rgba(104, 119, 99, 0.2) 0%,
+        rgba(17, 25, 19, 0.28) 43%,
+        transparent 74%
+      ),
+      linear-gradient(180deg, transparent 42%, rgba(225, 231, 218, 0.025) 69%, transparent 100%);
+    opacity: var(--works-archive-horizon-opacity);
+    transform: scale(1.026);
+    transform-origin: var(--works-archive-anchor-x) 76%;
+    will-change: transform, opacity;
+  }
+
+  .works-archive-illumination__wash {
+    inset: -14% -10%;
+    background:
+      radial-gradient(
+        ellipse 64% 60% at var(--works-archive-anchor-x) var(--works-archive-anchor-y),
+        var(--works-archive-wash) 0%,
+        var(--works-archive-glow) 22%,
+        transparent 74%
+      ),
+      radial-gradient(
+        ellipse 52% 64% at var(--works-archive-counter-x) 57%,
+        var(--works-archive-shadow) 0%,
+        transparent 76%
+      );
+    opacity: var(--works-archive-wash-opacity);
+    transform: scale(1.02);
+    transform-origin: var(--works-archive-anchor-x) var(--works-archive-anchor-y);
+    will-change: transform, opacity;
   }
 
   .works-archive-illumination__rake {
-    inset: -24% -38%;
+    inset: -22% -26%;
     background: linear-gradient(
-      90deg,
-      transparent 27%,
+      108deg,
+      transparent 18%,
+      var(--works-archive-shadow) 32%,
       var(--works-archive-wash) 43%,
-      var(--works-archive-light) 51%,
-      var(--works-archive-wash) 59%,
-      transparent 75%
+      var(--works-archive-accent) 52%,
+      var(--works-archive-glow) 61%,
+      transparent 81%
     );
-    opacity: calc(0.58 * var(--works-archive-intensity));
-    filter: blur(38px);
-    transform: translate3d(var(--works-archive-rake-x), 0, 0) skewX(-11deg);
+    opacity: var(--works-archive-rake-opacity);
+    transform: translate3d(var(--works-archive-rake-shift), 0, 0) skewX(-8deg) scaleX(0.9);
     will-change: transform, opacity;
   }
 
   .works-archive-illumination__counterlight {
-    inset: -12% -8%;
-    background: linear-gradient(
-      126deg,
-      transparent 41%,
-      rgba(222, 226, 214, 0.018) 50%,
-      transparent 59%
-    );
-    opacity: calc(0.7 * var(--works-archive-intensity));
-    transform: translate3d(var(--works-archive-counter-x), 0, 0);
+    inset: -8%;
+    background:
+      radial-gradient(
+        ellipse 30% 58% at var(--works-archive-counter-x) 43%,
+        rgba(201, 214, 198, 0.09) 0%,
+        transparent 74%
+      ),
+      linear-gradient(132deg, transparent 37%, rgba(235, 239, 227, 0.045) 50%, transparent 63%);
+    opacity: 0.52;
+    transform: scale(1.026);
+    transform-origin: var(--works-archive-counter-x) 50%;
+    will-change: transform;
+  }
+
+  .works-archive-illumination__canopy {
+    inset: -14% -6% 38%;
+    background:
+      radial-gradient(
+        ellipse 34% 66% at var(--works-archive-anchor-x) 0%,
+        rgba(235, 238, 221, 0.08) 0%,
+        rgba(188, 202, 183, 0.055) 25%,
+        transparent 77%
+      ),
+      linear-gradient(180deg, rgba(241, 244, 235, 0.055), transparent 65%);
+    opacity: var(--works-archive-canopy-opacity);
+  }
+
+  .works-archive-illumination__vignette {
+    z-index: 2;
+    background:
+      linear-gradient(90deg, rgba(0, 2, 1, 0.52) 0%, transparent 21%, transparent 78%, rgba(0, 2, 1, 0.44) 100%),
+      radial-gradient(ellipse 94% 96% at 50% 42%, transparent 42%, rgba(0, 2, 1, 0.44) 100%),
+      linear-gradient(180deg, rgba(0, 2, 1, 0.14), transparent 22%, transparent 76%, rgba(0, 2, 1, 0.34));
   }
 
   .works-archive-illumination__register {
+    z-index: 3;
     background-image:
-      linear-gradient(to right, rgba(238, 242, 232, 0.018) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(238, 242, 232, 0.012) 1px, transparent 1px);
+      linear-gradient(to right, rgba(238, 242, 232, 0.024) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(238, 242, 232, 0.017) 1px, transparent 1px);
     background-size: 12.5vw 9rem;
-    mask-image: linear-gradient(180deg, transparent 0%, black 20%, black 82%, transparent 100%);
-    opacity: 0.2;
+    mask-image: linear-gradient(180deg, transparent 0%, black 17%, black 85%, transparent 100%);
+    opacity: 0.24;
   }
 
-  .works-archive-illumination[data-works-archive-mode="field"] {
-    --works-archive-intensity: 0.74;
+  .works-archive-illumination[data-works-archive-mode="field"] .works-archive-illumination__ambient {
+    background:
+      radial-gradient(ellipse 112% 62% at 50% -5%, rgba(226, 233, 219, 0.085), transparent 67%),
+      linear-gradient(116deg, rgba(2, 5, 3, 0.94) 0%, rgba(9, 13, 10, 0.9) 42%, rgba(11, 13, 10, 0.86) 69%, rgba(3, 6, 4, 0.96) 100%),
+      linear-gradient(180deg, #0a0e0b 0%, #060907 56%, #020403 100%);
   }
 
-  .works-archive-illumination[data-works-archive-mode="field"] .works-archive-illumination__rake {
-    opacity: calc(0.68 * var(--works-archive-intensity));
-  }
-
-  :global(html[data-works-archive-lighting]) .site-shell::before,
-  :global(html[data-works-archive-lighting]) .site-artwork-atmosphere-field {
+  :global(html[data-works-archive-lighting] .site-shell::before),
+  :global(html[data-works-archive-lighting] .site-artwork-atmosphere-field) {
     opacity: 0;
   }
 
   @media (max-width: 760px) {
-    .works-archive-illumination__register {
-      background-size: 50vw 7rem;
-      opacity: 0.14;
+    .works-archive-illumination__wash {
+      inset: -18% -30%;
     }
 
     .works-archive-illumination__rake {
-      inset-inline: -70%;
-      filter: blur(28px);
+      inset-inline: -46%;
+    }
+
+    .works-archive-illumination__counterlight {
+      inset-inline: -20%;
+    }
+
+    .works-archive-illumination__register {
+      background-size: 50vw 7rem;
+      opacity: 0.16;
+    }
+
+    .works-archive-illumination__vignette {
+      background:
+        linear-gradient(90deg, rgba(0, 2, 1, 0.38), transparent 28%, transparent 76%, rgba(0, 2, 1, 0.32)),
+        radial-gradient(ellipse 112% 96% at 50% 42%, transparent 45%, rgba(0, 2, 1, 0.36) 100%),
+        linear-gradient(180deg, rgba(0, 2, 1, 0.1), transparent 24%, transparent 78%, rgba(0, 2, 1, 0.3));
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .works-archive-illumination__horizon,
+    .works-archive-illumination__wash,
     .works-archive-illumination__rake,
     .works-archive-illumination__counterlight {
       will-change: auto;
+      animation: none;
     }
   }
 </style>

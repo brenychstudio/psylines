@@ -22,7 +22,7 @@ function matchesFilter(work: WorkArchiveEntry, activeFilter: string) {
 }
 
 function getCycleRegisterLabel(item: WorkFilterItem) {
-  if (item.key === "meta-bodies-inner-structures") return "Meta-Bodies";
+  if (item.key === "meta-bodies-inner-structures") return "Meta Bodies";
   if (item.key === "night-water-moonwater") return "Night Water";
   if (item.key === "studies-fragments") return "Studies";
   return item.label;

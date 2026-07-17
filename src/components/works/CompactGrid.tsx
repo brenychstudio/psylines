@@ -12,7 +12,7 @@ function getAvailabilityLabel(work: WorkArchiveEntry) {
 }
 
 function getCycleRegisterLabel(seriesKey: string, seriesTitle: string) {
-  if (seriesKey === "meta-bodies-inner-structures") return "Meta-Bodies";
+  if (seriesKey === "meta-bodies-inner-structures") return "Meta Bodies";
   if (seriesKey === "night-water-moonwater") return "Night Water";
   if (seriesKey === "studies-fragments") return "Studies";
   return seriesTitle;

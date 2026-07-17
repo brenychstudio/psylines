@@ -277,13 +277,6 @@ html[data-cinematic-transition="arriving-active"] .site-shell {
   --living-counter-drift-x: 0px;
   --living-counter-drift-y: 0px;
   --living-hue-rotate: 0deg;
-  transition:
-    --artwork-wash 520ms ease,
-    --artwork-wash-strong 520ms ease,
-    --artwork-glow 520ms ease,
-    --artwork-shadow 520ms ease,
-    --artwork-shadow-wash 520ms ease,
-    --artwork-accent 520ms ease;
 }
 
 html[data-atmosphere-mood="metaBodies"] {
@@ -425,10 +418,6 @@ a {
   opacity: calc(0.3 + (var(--living-activity) * 0.1) + (var(--presence-stillness, 0) * 0.04));
   filter: none;
   transform: translate3d(var(--living-drift-x), var(--living-drift-y), 0);
-  transition:
-    background 520ms ease,
-    opacity 520ms ease,
-    transform 700ms ease;
 }
 
 .site-artwork-atmosphere-field {
@@ -475,9 +464,6 @@ a {
     ));
   filter: none;
   mix-blend-mode: normal;
-  transition:
-    opacity 520ms ease,
-    transform 700ms ease;
 }
 
 .site-artwork-atmosphere-field::before,
@@ -486,9 +472,6 @@ a {
   position: absolute;
   inset: -8%;
   pointer-events: none;
-  transition:
-    opacity 520ms ease,
-    transform 700ms ease;
 }
 
 html[data-cinematic-transition="leaving"] .site-shell::before,
@@ -948,10 +931,6 @@ html.is-checkout-loading .site-scroll-top {
     hue-rotate(var(--living-hue-rotate))
     saturate(calc(1.06 + (var(--living-activity) * 0.12)));
   transform: translate3d(var(--living-counter-drift-x), var(--living-counter-drift-y), 0);
-  transition:
-    background 520ms ease,
-    filter 520ms ease,
-    transform 700ms ease;
 }
 
 .atmo-light {
@@ -962,9 +941,6 @@ html.is-checkout-loading .site-scroll-top {
     radial-gradient(circle at var(--living-field-x-b) var(--living-field-y-b), rgba(255, 255, 255, 0.045), transparent 18%),
     radial-gradient(circle at var(--living-field-x-c) var(--living-field-y-c), rgba(255, 255, 255, 0.05), transparent 18%);
   animation: driftA 24s ease-in-out infinite alternate;
-  transition:
-    background 520ms ease,
-    opacity 520ms ease;
 }
 
 .atmo-light.atmo-light-b {
@@ -1664,9 +1640,6 @@ html[data-artwork-atmosphere-context="work-detail"] .atmo-light.atmo-light-b {
     linear-gradient(180deg, rgba(5, 8, 7, 0), rgba(5, 8, 7, 0.34));
   opacity: calc(var(--artwork-field-opacity, 0.62) * 0.82);
   pointer-events: none;
-  transition:
-    background 520ms ease,
-    opacity 520ms ease;
 }
 
 .works-index-header {
@@ -1780,9 +1753,6 @@ html[data-artwork-atmosphere-context="work-detail"] .atmo-light.atmo-light-b {
     radial-gradient(ellipse at 50% 96%, var(--artwork-shadow-wash), transparent 62%);
   opacity: calc(var(--artwork-field-opacity, 0.62) * 0.72);
   pointer-events: none;
-  transition:
-    background 520ms ease,
-    opacity 520ms ease;
 }
 
 html[data-artwork-atmosphere-state="focused"] .manifestation-field.works-archive-grid::before {
@@ -1839,9 +1809,6 @@ html[data-artwork-atmosphere-state="focused"] .manifestation-field.works-archive
   filter: none;
   opacity: calc(0.66 + (var(--artwork-density) * 0.16));
   pointer-events: none;
-  transition:
-    background 520ms ease,
-    opacity 520ms ease;
 }
 
 .manifestation-entry__img,
@@ -2409,7 +2376,6 @@ html[data-artwork-atmosphere-state="focused"] .manifestation-field.works-archive
   background: rgba(255, 255, 255, 0.012);
   transition:
     box-shadow 420ms ease,
-    background 520ms ease,
     filter 420ms ease;
 }
 
@@ -3822,5 +3788,49 @@ html[data-artwork-atmosphere-state="focused"] .manifestation-field.works-archive
   .works-index-shell,
   .manifestation-field.works-archive-grid {
     width: calc(100vw - (var(--site-frame-gutter) * 2));
+  }
+}
+
+/* Canonical public identity footer. */
+.site-footer__identity {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+}
+
+.site-footer__line,
+.site-footer__location,
+.site-footer__platform {
+  margin: 0;
+}
+
+.site-footer__line {
+  color: rgba(235, 240, 232, 0.68);
+}
+
+.site-footer__location {
+  color: rgba(235, 240, 232, 0.52);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+}
+
+.site-footer__platform {
+  margin-top: 0.42rem;
+  color: rgba(235, 240, 232, 0.28);
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.site-footer__links {
+  margin-top: 1rem;
+}
+
+@media (max-width: 620px) {
+  .site-footer__identity {
+    display: grid;
+    justify-content: start;
+    gap: 0.28rem;
   }
 }

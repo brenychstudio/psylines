@@ -48,6 +48,9 @@ const memoryTexture =
       decoding="async"
     />
   ) : null}
+  <div class="living-route-environment__key-light"></div>
+  <div class="living-route-environment__depth-light"></div>
+  <div class="living-route-environment__negative-fill"></div>
 </div>
 
 <script>
@@ -379,6 +382,8 @@ const memoryTexture =
     uniform float uScrollDirection;
     uniform float uImpulse;
     uniform float uProfile;
+    uniform float uScene;
+    uniform vec3 uDreamWeights;
 
     varying vec2 vUv;
 
@@ -422,22 +427,6 @@ const memoryTexture =
       return (uv - 0.5) * sampleScale + 0.5;
     }
 
-    vec2 containUv(vec2 uv, vec2 imageSize, vec2 screenSize, float scale, vec2 offset) {
-      float imageAspect = imageSize.x / max(imageSize.y, 1.0);
-      float screenAspect = screenSize.x / max(screenSize.y, 1.0);
-      vec2 planeScale = screenAspect > imageAspect
-        ? vec2(imageAspect / screenAspect, 1.0)
-        : vec2(1.0, screenAspect / imageAspect);
-      planeScale *= scale;
-      return (uv - 0.5 - offset) / max(planeScale, vec2(0.001)) + 0.5;
-    }
-
-    float containMask(vec2 sampleUv, float feather) {
-      vec2 lower = smoothstep(vec2(-feather), vec2(feather), sampleUv);
-      vec2 upper = 1.0 - smoothstep(vec2(1.0 - feather), vec2(1.0 + feather), sampleUv);
-      return lower.x * lower.y * upper.x * upper.y;
-    }
-
     vec2 rotateUv(vec2 uv, float angle) {
       float sine = sin(angle);
       float cosine = cos(angle);
@@ -458,13 +447,18 @@ const memoryTexture =
       float isProcess = 1.0 - smoothstep(0.18, 0.48, abs(uProfile - 0.0));
       float isArtist = 1.0 - smoothstep(0.18, 0.48, abs(uProfile - 1.0));
       float isContact = 1.0 - smoothstep(0.18, 0.48, abs(uProfile - 2.0));
+      float scene = clamp(uScene, 0.0, 1.0);
+      float gathering = uDreamWeights.x;
+      float dispersing = uDreamWeights.y;
+      float reforming = uDreamWeights.z;
 
       float fieldEnergy = clamp(
-        uImpulse * 0.72 + uScrollVelocity * 0.58 + uInteraction * 0.16,
+        uImpulse * 0.72 + uScrollVelocity * 0.58 + uInteraction * 0.16
+          + dispersing * uPresence * 0.055,
         0.0,
         1.0
       );
-      float breath = 0.5 + 0.5 * sin(time * 0.18 + uJourney * 0.13);
+      float breath = 0.5 + 0.5 * sin(time * 0.18 + uJourney * 0.13 + scene * 1.7);
       float flowA = fbm(
         uv * vec2(1.18, 1.04)
           + vec2(time * 0.018, -time * 0.012)
@@ -478,67 +472,86 @@ const memoryTexture =
       );
       vec2 flow = vec2(flowA - 0.5, flowB - 0.5);
       vec2 pointerLean = uPointer * vec2(0.0032, 0.0024) * (0.45 + uInteraction * 0.9);
-      float warpAmount = isProcess * (0.0045 + fieldEnergy * 0.0035)
-        + isArtist * (0.0065 + uPresence * 0.0025 + fieldEnergy * 0.003)
-        + isContact * (0.0024 + fieldEnergy * 0.0018);
+      float warpAmount = isProcess * (0.0052 + scene * 0.0015 + fieldEnergy * 0.0042)
+        + isArtist * (0.0072 + uPresence * 0.0032 + fieldEnergy * 0.0036)
+        + isContact * (0.0028 + scene * 0.0008 + fieldEnergy * 0.0022);
       vec2 fieldUv = uv + flow * warpAmount + pointerLean;
       fieldUv.x += sin(uv.y * 4.2 - time * 0.11 - uJourney * 0.24)
         * uScrollVelocity
         * uScrollDirection
         * (0.0035 + isProcess * 0.0035);
 
-      vec2 processScale = mix(vec2(0.94, 0.98), vec2(0.76, 0.82), portrait);
+      vec2 processScaleDesktop = mix(vec2(0.94, 0.98), vec2(0.93, 0.95), scene);
+      vec2 processScalePortrait = mix(vec2(0.76, 0.82), vec2(0.74, 0.79), scene);
+      vec2 processScale = mix(processScaleDesktop, processScalePortrait, portrait);
+      vec2 artistScaleDesktop = mix(vec2(0.82, 0.88), vec2(0.78, 0.84), scene);
+      vec2 artistScalePortrait = mix(vec2(0.9, 0.94), vec2(0.86, 0.91), scene);
+      vec2 artistScale = mix(artistScaleDesktop, artistScalePortrait, portrait);
       vec2 contactScale = mix(vec2(0.98, 1.0), vec2(0.8, 0.86), portrait);
-      vec2 coverScale = processScale * isProcess + contactScale * isContact + vec2(0.96) * isArtist;
-      vec2 coverOffset = isProcess * vec2(0.045 + sin(uJourney * 0.21) * 0.012, -0.015)
+      vec2 coverScale = processScale * isProcess + contactScale * isContact + artistScale * isArtist;
+      vec2 processSceneOffset = mix(vec2(0.025, -0.012), vec2(-0.018, 0.018), scene)
+        * mix(1.0, 0.55, portrait);
+      vec2 processMaterialDrift = vec2(sin(time * 0.024 + scene * 2.1), cos(time * 0.021 + scene * 1.4))
+        * vec2(0.01, 0.007)
+        * mix(1.0, 0.58, portrait);
+      vec2 coverOffset = isProcess * (
+          processSceneOffset
+          + processMaterialDrift
+          + vec2(sin(uJourney * 0.21) * 0.008, cos(uJourney * 0.17) * 0.004)
+        )
+        + isArtist * (
+          mix(vec2(0.05, -0.02), vec2(0.015, 0.04), portrait)
+            + mix(vec2(0.008, 0.006), vec2(-0.006, 0.01), scene)
+            + vec2(sin(time * 0.036 + uJourney * 0.16), cos(time * 0.031)) * vec2(0.004, 0.004)
+        )
         + isContact * vec2(0.02, sin(uJourney * 0.16) * 0.008);
-      float coverAngle = isProcess * 0.018 + isContact * -0.012;
+      float coverAngle = isProcess * mix(0.018, -0.024, scene) * mix(1.0, 0.55, portrait)
+        + isArtist * mix(0.022, -0.014, scene) * mix(1.0, 0.52, portrait)
+        + isContact * -0.012;
       vec2 currentCoverField = (rotateUv(fieldUv, coverAngle) - 0.5) * coverScale
         + 0.5 + coverOffset;
       vec2 memoryCoverField = (rotateUv(fieldUv, -coverAngle * 1.4 - 0.015) - 0.5)
         * (coverScale * vec2(0.98, 1.02))
         + 0.5 - coverOffset * 0.7;
 
-      float artistCurrentScale = mix(1.34, 1.04, portrait);
-      float artistMemoryScale = mix(0.96, 0.82, portrait);
-      vec2 artistCurrentOffset = mix(vec2(0.22, 0.0), vec2(0.0, 0.12), portrait)
-        + vec2(sin(time * 0.052 + uJourney * 0.18), cos(time * 0.046)) * vec2(0.018, 0.014);
-      vec2 artistMemoryOffset = mix(vec2(-0.055, 0.055), vec2(0.1, -0.1), portrait)
-        + vec2(cos(time * 0.041), sin(time * 0.038 + uJourney * 0.15)) * vec2(0.014, 0.018);
-      vec2 artistCurrentRaw = containUv(
-        rotateUv(fieldUv, 0.018),
-        uCurrentTextureSize,
-        uResolution,
-        artistCurrentScale,
-        artistCurrentOffset
-      );
-      vec2 artistMemoryRaw = containUv(
-        rotateUv(fieldUv, -0.024),
-        uMemoryTextureSize,
-        uResolution,
-        artistMemoryScale,
-        artistMemoryOffset
-      );
-
       float transitionNoise = fbm(
         uv * vec2(1.34, 1.12) + flow * 0.8 + vec2(time * 0.006, -time * 0.005) + 33.0
       );
       float processTransition = clamp(uv.y * 0.68 + uv.x * 0.14 + transitionNoise * 0.2, 0.0, 1.0);
-      float artistTransition = clamp(uv.x * 0.28 + (1.0 - uv.y) * 0.16 + transitionNoise * 0.58, 0.0, 1.0);
+      float artistTransitionDetail = fbm(
+        uv * vec2(2.18, 1.72)
+          - flow * 1.34
+          + vec2(-time * 0.0045, time * 0.0035)
+          + scene * vec2(0.92, -0.68)
+          + 61.0
+      );
+      float artistTransitionWave = 0.5 + 0.5 * sin(
+        dot(spatial, vec2(0.78, -0.48)) * 2.1
+          - time * 0.026
+          + uJourney * 0.16
+          + transitionNoise * 2.15
+      );
+      float artistTransition = clamp(
+        transitionNoise * 0.46
+          + artistTransitionDetail * 0.38
+          + artistTransitionWave * 0.16,
+        0.0,
+        1.0
+      );
       float contactTransition = clamp(uv.x * 0.76 + (1.0 - uv.y) * 0.06 + transitionNoise * 0.18, 0.0, 1.0);
       float transitionCoordinate = processTransition * isProcess
         + artistTransition * isArtist
         + contactTransition * isContact;
       float transitionThreshold = mix(-0.26, 1.26, uTransition);
       float transitionReveal = 1.0 - smoothstep(
-        transitionThreshold - (0.16 + isArtist * 0.12),
-        transitionThreshold + (0.16 + isArtist * 0.12),
+        transitionThreshold - (0.16 + isArtist * 0.2),
+        transitionThreshold + (0.16 + isArtist * 0.2),
         transitionCoordinate
       );
       float transitionPressure = sin(clamp(uTransition, 0.0, 1.0) * 3.14159265);
       vec2 transitionShear = flow
         * (isProcess * vec2(0.006, 0.004)
-          + isArtist * vec2(0.012, 0.009)
+          + isArtist * vec2(0.006, 0.0045)
           + isContact * vec2(0.003, 0.002))
         * transitionPressure;
 
@@ -557,28 +570,151 @@ const memoryTexture =
         0.002,
         0.998
       );
-      vec2 artistIncomingRaw = containUv(
-        rotateUv(fieldUv - transitionShear, 0.018),
-        uIncomingTextureSize,
-        uResolution,
-        artistCurrentScale,
-        artistCurrentOffset
+      float artistScenePhase = scene * 6.2831853;
+      vec2 artistPrimaryScale = mix(
+        vec2(
+          0.5 + sin(artistScenePhase + 0.4) * 0.035,
+          0.54 + cos(artistScenePhase * 0.82 - 0.2) * 0.04
+        ),
+        vec2(
+          0.6 + sin(artistScenePhase + 0.4) * 0.04,
+          0.66 + cos(artistScenePhase * 0.82 - 0.2) * 0.045
+        ),
+        portrait
       );
-      vec2 currentUv = mix(currentCoverUv, clamp(artistCurrentRaw, 0.002, 0.998), isArtist);
-      vec2 memoryUv = mix(memoryCoverUv, clamp(artistMemoryRaw, 0.002, 0.998), isArtist);
-      vec2 incomingUv = mix(incomingCoverUv, clamp(artistIncomingRaw, 0.002, 0.998), isArtist);
+      vec2 artistMemoryScale = mix(
+        vec2(
+          0.37 + cos(artistScenePhase * 0.9 + 1.1) * 0.035,
+          0.42 + sin(artistScenePhase * 0.74 + 0.6) * 0.04
+        ),
+        vec2(
+          0.48 + cos(artistScenePhase * 0.9 + 1.1) * 0.04,
+          0.54 + sin(artistScenePhase * 0.74 + 0.6) * 0.045
+        ),
+        portrait
+      );
+      vec2 artistDetailScale = mix(
+        vec2(
+          0.245 + sin(artistScenePhase * 1.14 + 2.1) * 0.025,
+          0.3 + cos(artistScenePhase * 0.96 + 0.7) * 0.03
+        ),
+        vec2(
+          0.36 + sin(artistScenePhase * 1.14 + 2.1) * 0.03,
+          0.42 + cos(artistScenePhase * 0.96 + 0.7) * 0.035
+        ),
+        portrait
+      );
+      vec2 artistPrimaryOffset = vec2(
+          cos(artistScenePhase * 0.84 + 0.35) * 0.105,
+          sin(artistScenePhase * 0.72 - 0.55) * 0.115
+        ) * mix(1.0, 0.68, portrait)
+        + vec2(
+          sin(time * 0.026 + uJourney * 0.12),
+          cos(time * 0.023 + uJourney * 0.09)
+        ) * vec2(0.006, 0.005);
+      vec2 artistMemoryOffset = vec2(
+          cos(artistScenePhase * 0.76 + 2.4) * 0.13,
+          sin(artistScenePhase * 0.88 + 1.2) * 0.135
+        ) * mix(1.0, 0.62, portrait)
+        + vec2(
+          cos(time * 0.021 + uJourney * 0.08),
+          sin(time * 0.025 + uJourney * 0.1)
+        ) * vec2(0.006, 0.007);
+      vec2 artistDetailOffset = vec2(
+          cos(artistScenePhase * 1.08 - 0.7) * 0.165,
+          sin(artistScenePhase * 0.92 + 2.05) * 0.15
+        ) * mix(1.0, 0.58, portrait)
+        + pointerLean * (2.2 + fieldEnergy * 0.8);
+      float artistPrimaryAngle = (
+        0.055 * sin(artistScenePhase * 0.7 + 0.4)
+          + 0.014 * sin(time * 0.024)
+      ) * mix(1.0, 0.52, portrait);
+      float artistMemoryAngle = (
+        -0.09
+          + 0.052 * cos(artistScenePhase * 0.83 + 0.8)
+      ) * mix(1.0, 0.48, portrait);
+      float artistDetailAngle = (
+        0.13
+          + 0.075 * sin(artistScenePhase * 0.95 - 0.35)
+      ) * mix(1.0, 0.45, portrait);
+      vec2 artistPrimaryField = (rotateUv(fieldUv, artistPrimaryAngle) - 0.5)
+        * artistPrimaryScale
+        + 0.5
+        + artistPrimaryOffset;
+      vec2 artistMemoryFieldUv = (rotateUv(fieldUv, artistMemoryAngle) - 0.5)
+        * artistMemoryScale
+        + 0.5
+        + artistMemoryOffset;
+      vec2 artistDetailFieldUv = (rotateUv(fieldUv, artistDetailAngle) - 0.5)
+        * artistDetailScale
+        + 0.5
+        + artistDetailOffset;
+      vec2 artistCurrentUv = clamp(
+        coverUv(artistPrimaryField + transitionShear * 0.58, uCurrentTextureSize, uResolution),
+        0.002,
+        0.998
+      );
+      vec2 artistIncomingUv = clamp(
+        coverUv(artistPrimaryField - transitionShear * 0.58, uIncomingTextureSize, uResolution),
+        0.002,
+        0.998
+      );
+      vec2 artistMemoryUv = clamp(
+        coverUv(artistMemoryFieldUv, uMemoryTextureSize, uResolution),
+        0.002,
+        0.998
+      );
+      vec2 artistCurrentDetailUv = clamp(
+        coverUv(artistDetailFieldUv + transitionShear * 0.34, uCurrentTextureSize, uResolution),
+        0.002,
+        0.998
+      );
+      vec2 artistIncomingDetailUv = clamp(
+        coverUv(artistDetailFieldUv - transitionShear * 0.34, uIncomingTextureSize, uResolution),
+        0.002,
+        0.998
+      );
+      vec2 detailScale = mix(vec2(0.63, 0.7), vec2(0.72, 0.76), portrait);
+      vec2 detailOffset = isProcess
+        * (mix(vec2(0.18, -0.12), vec2(-0.08, 0.16), scene) * mix(1.0, 0.48, portrait))
+        + isContact
+        * (mix(vec2(0.22, 0.08), vec2(-0.12, -0.1), scene) * mix(1.0, 0.52, portrait));
+      float detailAngle = isProcess * mix(-0.035, 0.028, scene)
+        + isContact * mix(0.026, -0.018, scene);
+      vec2 detailField = (rotateUv(fieldUv, detailAngle) - 0.5) * detailScale
+        + 0.5
+        + detailOffset
+        + pointerLean * (1.8 + fieldEnergy * 0.8);
+      vec2 currentDetailUv = clamp(
+        coverUv(detailField + transitionShear * 0.55, uCurrentTextureSize, uResolution),
+        0.002,
+        0.998
+      );
+      currentDetailUv = mix(currentDetailUv, artistCurrentDetailUv, isArtist);
+      vec2 incomingDetailUv = clamp(
+        coverUv(detailField - transitionShear * 0.55, uIncomingTextureSize, uResolution),
+        0.002,
+        0.998
+      );
+      incomingDetailUv = mix(incomingDetailUv, artistIncomingDetailUv, isArtist);
+      vec2 currentUv = mix(currentCoverUv, artistCurrentUv, isArtist);
+      vec2 memoryUv = mix(memoryCoverUv, artistMemoryUv, isArtist);
+      vec2 incomingUv = mix(incomingCoverUv, artistIncomingUv, isArtist);
 
-      vec2 currentTexel = vec2(1.25) / max(uCurrentTextureSize, vec2(1.0));
-      vec2 memoryTexel = vec2(1.25) / max(uMemoryTextureSize, vec2(1.0));
-      vec2 incomingTexel = vec2(1.25) / max(uIncomingTextureSize, vec2(1.0));
+      float sourceTexelRadius = 1.25 + isArtist * 2.75;
+      vec2 currentTexel = vec2(sourceTexelRadius) / max(uCurrentTextureSize, vec2(1.0));
+      vec2 memoryTexel = vec2(sourceTexelRadius) / max(uMemoryTextureSize, vec2(1.0));
+      vec2 incomingTexel = vec2(sourceTexelRadius) / max(uIncomingTextureSize, vec2(1.0));
       vec3 currentCenter = texture2D(uCurrentTexture, currentUv).rgb;
       vec3 currentX = texture2D(uCurrentTexture, clamp(currentUv + vec2(currentTexel.x, 0.0), 0.002, 0.998)).rgb;
       vec3 currentY = texture2D(uCurrentTexture, clamp(currentUv + vec2(0.0, currentTexel.y), 0.002, 0.998)).rgb;
+      vec3 currentNegX = texture2D(uCurrentTexture, clamp(currentUv - vec2(currentTexel.x, 0.0), 0.002, 0.998)).rgb;
+      vec3 currentNegY = texture2D(uCurrentTexture, clamp(currentUv - vec2(0.0, currentTexel.y), 0.002, 0.998)).rgb;
       vec3 currentSoft = currentCenter * 0.5
         + currentX * 0.125
         + currentY * 0.125
-        + texture2D(uCurrentTexture, clamp(currentUv - vec2(currentTexel.x, 0.0), 0.002, 0.998)).rgb * 0.125
-        + texture2D(uCurrentTexture, clamp(currentUv - vec2(0.0, currentTexel.y), 0.002, 0.998)).rgb * 0.125;
+        + currentNegX * 0.125
+        + currentNegY * 0.125;
       vec3 memoryCenter = texture2D(uMemoryTexture, memoryUv).rgb;
       vec3 memorySoft = memoryCenter * 0.6
         + texture2D(uMemoryTexture, clamp(memoryUv + vec2(memoryTexel.x, 0.0), 0.002, 0.998)).rgb * 0.1
@@ -586,17 +722,25 @@ const memoryTexture =
         + texture2D(uMemoryTexture, clamp(memoryUv + vec2(0.0, memoryTexel.y), 0.002, 0.998)).rgb * 0.1
         + texture2D(uMemoryTexture, clamp(memoryUv - vec2(0.0, memoryTexel.y), 0.002, 0.998)).rgb * 0.1;
       vec3 incomingCenter = texture2D(uIncomingTexture, incomingUv).rgb;
+      vec3 incomingX = texture2D(uIncomingTexture, clamp(incomingUv + vec2(incomingTexel.x, 0.0), 0.002, 0.998)).rgb;
+      vec3 incomingY = texture2D(uIncomingTexture, clamp(incomingUv + vec2(0.0, incomingTexel.y), 0.002, 0.998)).rgb;
+      vec3 incomingNegX = texture2D(uIncomingTexture, clamp(incomingUv - vec2(incomingTexel.x, 0.0), 0.002, 0.998)).rgb;
+      vec3 incomingNegY = texture2D(uIncomingTexture, clamp(incomingUv - vec2(0.0, incomingTexel.y), 0.002, 0.998)).rgb;
       vec3 incomingSoft = incomingCenter * 0.6
-        + texture2D(uIncomingTexture, clamp(incomingUv + vec2(incomingTexel.x, 0.0), 0.002, 0.998)).rgb * 0.1
-        + texture2D(uIncomingTexture, clamp(incomingUv - vec2(incomingTexel.x, 0.0), 0.002, 0.998)).rgb * 0.1
-        + texture2D(uIncomingTexture, clamp(incomingUv + vec2(0.0, incomingTexel.y), 0.002, 0.998)).rgb * 0.1
-        + texture2D(uIncomingTexture, clamp(incomingUv - vec2(0.0, incomingTexel.y), 0.002, 0.998)).rgb * 0.1;
+        + incomingX * 0.1
+        + incomingNegX * 0.1
+        + incomingY * 0.1
+        + incomingNegY * 0.1;
+      vec3 currentDetail = texture2D(uCurrentTexture, currentDetailUv).rgb;
+      vec3 incomingDetail = texture2D(uIncomingTexture, incomingDetailUv).rgb;
 
-      float softWeight = isProcess * 0.62 + isArtist * 0.24 + isContact * 0.56;
+      float softWeight = isProcess * 0.12 + isArtist * 0.34 + isContact * 0.18;
       vec3 currentPigment = mix(currentCenter, currentSoft, softWeight);
       vec3 memoryPigment = mix(memoryCenter, memorySoft, softWeight);
       vec3 incomingPigment = mix(incomingCenter, incomingSoft, softWeight);
       vec3 activePigment = mix(currentPigment, incomingPigment, transitionReveal);
+      vec3 activeCenterPigment = mix(currentCenter, incomingCenter, transitionReveal);
+      vec3 activeDetailPigment = mix(currentDetail, incomingDetail, transitionReveal);
       float transitionEdge = (
         1.0 - smoothstep(0.025, 0.18, abs(transitionCoordinate - transitionThreshold))
       ) * transitionPressure;
@@ -609,125 +753,378 @@ const memoryTexture =
       );
       float activeLight = luminance(activePigment);
       float memoryLight = luminance(memoryPigment);
+      vec2 currentReliefGradient = vec2(
+        luminance(currentX) - luminance(currentNegX),
+        luminance(currentY) - luminance(currentNegY)
+      );
+      vec2 incomingReliefGradient = vec2(
+        luminance(incomingX) - luminance(incomingNegX),
+        luminance(incomingY) - luminance(incomingNegY)
+      );
+      vec2 activeReliefGradient = mix(currentReliefGradient, incomingReliefGradient, transitionReveal);
       float strata = fbm(
         uv * vec2(1.42, 1.2) - flow * 0.7 + vec2(-time * 0.009, time * 0.011) + 18.0
       );
 
-      float processRakeAxis = dot(spatial, vec2(0.78, -0.22));
-      float processRakeCenter = -0.08 + sin(time * 0.075 + uJourney * 0.34) * 0.2;
-      float processRake = 1.0 - smoothstep(0.14, 0.66, abs(processRakeAxis - processRakeCenter));
-      float processShadow = 1.0 - smoothstep(
-        0.08,
-        0.38,
-        abs(dot(spatial, vec2(0.22, 0.94)) + 0.2 - sin(time * 0.052) * 0.08)
+      vec2 processLightDirection = normalize(mix(vec2(0.78, -0.22), vec2(0.48, 0.58), scene));
+      float processRakeAxis = dot(spatial, processLightDirection);
+      float processRakeCenter = mix(-0.24, 0.2, scene)
+        + sin(time * 0.068 + uJourney * 0.34) * (0.14 + reforming * 0.035);
+      float processRake = 1.0 - smoothstep(0.075, 0.39, abs(processRakeAxis - processRakeCenter));
+      float processRakeCore = 1.0 - smoothstep(0.025, 0.145, abs(processRakeAxis - processRakeCenter));
+      float processRelief = clamp(dot(activeReliefGradient, processLightDirection) * 5.4, -1.0, 1.0);
+      float processSideLight = 1.0 - smoothstep(
+        0.16,
+        0.6,
+        length(spatial - mix(vec2(0.4, -0.16), vec2(0.06, 0.29), scene))
       );
-      vec3 processPigment = mix(vec3(activeLight), activePigment, 0.42);
-      processPigment = clamp((processPigment - vec3(0.38)) * 0.92 + vec3(0.42), 0.0, 1.0);
-      vec3 processMemory = mix(vec3(memoryLight), memoryPigment, 0.28);
-      vec3 processBase = mix(vec3(0.004, 0.007, 0.006), vec3(0.019, 0.022, 0.015), strata * 0.7);
+      float processFarWindow = 1.0 - smoothstep(
+        0.34,
+        1.04,
+        length(spatial - mix(vec2(-0.12, 0.18), vec2(0.3, -0.17), scene))
+      );
+      float processShadow = 1.0 - smoothstep(
+        0.055,
+        0.29,
+        abs(dot(spatial, normalize(vec2(0.22, 0.94))) + mix(0.3, -0.1, scene) - sin(time * 0.048) * 0.065)
+      );
+      float processOccluder = 1.0 - smoothstep(
+        0.035,
+        0.19,
+        abs(dot(spatial, normalize(vec2(-0.38, 0.92))) - mix(-0.08, 0.18, scene))
+      );
+      float processMidWindow = clamp(
+        0.22 + processRake * 0.42 + processSideLight * 0.16 + processFarWindow * 0.06,
+        0.22,
+        0.82
+      );
+      float processNearWindow = processRakeCore
+        * (0.48 + processSideLight * 0.52)
+        * (0.72 + pigmentEdge * 0.28);
+
+      vec3 processPigment = mix(vec3(activeLight), activePigment, 0.86);
+      processPigment = clamp((processPigment - vec3(0.38)) * 1.06 + vec3(0.42), 0.0, 1.0);
+      processPigment = pow(max(processPigment, vec3(0.0)), vec3(0.93)) * 1.07;
+      vec3 processDetail = mix(vec3(luminance(activeDetailPigment)), activeDetailPigment, 0.87);
+      processDetail = clamp((processDetail - vec3(0.39)) * 1.08 + vec3(0.42), 0.0, 1.0) * 1.06;
+      vec3 processMemory = mix(vec3(memoryLight), memoryPigment, 0.34) * vec3(0.86, 0.91, 0.83);
+      processMemory = clamp((processMemory - vec3(0.39)) * 1.02 + vec3(0.39), 0.0, 1.0);
+      vec3 processBase = mix(vec3(0.006, 0.011, 0.008), vec3(0.021, 0.027, 0.017), strata * 0.52);
       vec3 processColor = mix(
         processBase,
-        mix(processPigment, processMemory, 0.12 + uPresence * 0.08),
-        0.17 + processRake * 0.43 + uPresence * 0.055
+        processMemory,
+        0.03 + processFarWindow * 0.07 + gathering * 0.012
       );
-      processColor *= 1.0 - processShadow * 0.12;
-      processColor = mix(processColor, processColor * vec3(0.48, 0.52, 0.45), pigmentEdge * 0.24);
-      processColor += vec3(0.055, 0.062, 0.044) * processRake * (0.06 + fieldEnergy * 0.035);
-      processColor += mix(processPigment, vec3(0.15, 0.16, 0.1), 0.62) * transitionEdge * 0.045;
-      processColor *= mix(0.56, 1.0, smoothstep(0.04, 0.52, uv.x));
-      processColor *= 1.14;
+      processColor = mix(
+        processColor,
+        processPigment,
+        processMidWindow + uPresence * 0.018
+      );
+      processColor = mix(
+        processColor,
+        processDetail,
+        processNearWindow * (0.09 + fieldEnergy * 0.035 + reforming * 0.018)
+      );
+      processColor += mix(vec3(0.15, 0.17, 0.12), processDetail, 0.38)
+        * processRakeCore
+        * max(processRelief, 0.0)
+        * 0.075;
+      float processNegative = clamp(
+        max(-processRelief, 0.0) * processNearWindow * 0.085
+          + processShadow * (0.055 + dispersing * 0.012)
+          + processOccluder * 0.05,
+        0.0,
+        0.14
+      );
+      processColor *= 1.0 - processNegative;
+      processColor += mix(processPigment, vec3(0.2, 0.21, 0.14), 0.62)
+        * transitionEdge
+        * processRake
+        * 0.035;
+      processColor *= mix(0.84, 1.0, smoothstep(0.025, 0.46, uv.x));
+      processColor *= 1.08;
 
-      float artistCurrentMask = containMask(artistCurrentRaw, 0.055);
-      float artistMemoryMask = containMask(artistMemoryRaw, 0.07);
-      float artistDissolve = smoothstep(
-        0.28,
-        0.72,
-        fbm(uv * vec2(1.16, 1.04) + vec2(time * 0.008, -time * 0.006) + 51.0)
-          + sin(dot(spatial, vec2(0.48, -0.72)) * 1.6 - time * 0.065) * 0.12
+      vec2 artistKeyCenter = vec2(
+        0.68 + cos(artistScenePhase * 0.83 + 0.3) * 0.13,
+        0.48 + sin(artistScenePhase * 0.7 - 0.8) * 0.2
       );
-      float artistMemoryDissolve = smoothstep(
-        0.3,
-        0.72,
-        fbm(uv * vec2(1.08, 1.18) + vec2(-time * 0.006, time * 0.007) + 67.0)
+      artistKeyCenter = mix(
+        artistKeyCenter,
+        vec2(
+          0.52 + (artistKeyCenter.x - 0.5) * 0.48,
+          0.5 + (artistKeyCenter.y - 0.5) * 0.78
+        ),
+        portrait
       );
-      float artistExposureA = 1.0 - smoothstep(
-        0.13,
-        0.56,
-        abs(dot(spatial, vec2(0.54, -0.34)) - 0.18 - sin(time * 0.043) * 0.12)
+      vec2 artistFillCenter = vec2(
+        0.92 - artistKeyCenter.x * 0.58,
+        0.92 - artistKeyCenter.y * 0.52
       );
-      float artistExposureB = 1.0 - smoothstep(
+      float artistKeyLight = 1.0 - smoothstep(
+        0.065,
+        0.46,
+        length((uv - artistKeyCenter) * vec2(0.86, 1.24))
+      );
+      float artistKeyCore = 1.0 - smoothstep(
+        0.018,
+        0.19,
+        length((uv - artistKeyCenter) * vec2(0.92, 1.3))
+      );
+      float artistFillLight = 1.0 - smoothstep(
         0.1,
+        0.54,
+        length((uv - artistFillCenter) * vec2(0.98, 1.16))
+      );
+      vec2 artistLightDirection = normalize(vec2(
+        0.72 + cos(artistScenePhase * 0.64) * 0.16,
+        -0.34 + sin(artistScenePhase * 0.78) * 0.42
+      ));
+      float artistRakeAxis = dot(spatial, artistLightDirection);
+      float artistRakeCenter = sin(artistScenePhase * 0.76 - 0.45) * 0.24
+        + sin(time * 0.018 + uJourney * 0.075) * 0.045;
+      float artistRake = 1.0 - smoothstep(
+        0.07,
         0.42,
-        abs(dot(spatial, vec2(0.3, 0.82)) + 0.24 - cos(time * 0.036) * 0.09)
+        abs(artistRakeAxis - artistRakeCenter)
       );
-      artistCurrentMask *= clamp(0.05 + artistDissolve * 0.67 + artistExposureA * 0.38, 0.0, 1.0);
-      artistMemoryMask *= clamp(0.035 + artistMemoryDissolve * 0.56 + artistExposureB * 0.34, 0.0, 0.9);
-      float artistStageAxis = dot(spatial, vec2(0.62, -0.46));
-      float artistStageLight = 1.0 - smoothstep(
-        0.16,
+      float artistRakeCore = 1.0 - smoothstep(
+        0.02,
+        0.14,
+        abs(artistRakeAxis - artistRakeCenter)
+      );
+
+      float artistMacroNoise = fbm(
+        uv * vec2(1.36, 1.12)
+          + flow * 1.55
+          + vec2(time * 0.01, -time * 0.007)
+          + scene * vec2(1.8, -1.1)
+          + 51.0
+      );
+      float artistMiddleNoise = fbm(
+        uv * vec2(2.34, 1.88)
+          - flow * 1.92
+          + vec2(-time * 0.012, time * 0.009)
+          + scene * vec2(-2.1, 1.6)
+          + 67.0
+      );
+      float artistMicroNoise = fbm(
+        uv * vec2(4.2, 3.35)
+          + flow * 2.25
+          + vec2(time * 0.015, time * 0.011)
+          + scene * vec2(3.4, 2.2)
+          + 83.0
+      );
+      float artistMaterialWave = 0.5 + 0.5 * sin(
+        dot(spatial, vec2(0.82, -0.46)) * 2.35
+          - time * 0.042
+          + uJourney * 0.14
+          + artistMacroNoise * 2.1
+      );
+      float artistWashField = smoothstep(
+        0.23,
         0.78,
-        abs(artistStageAxis - 0.14 - sin(time * 0.052 + uJourney * 0.2) * 0.16)
+        artistMacroNoise
+          + (artistMaterialWave - 0.5) * 0.3
+          + artistKeyLight * 0.08
       );
-      vec3 artistActive = mix(vec3(activeLight), activePigment, 1.02);
-      vec3 artistMemory = mix(vec3(memoryLight), memoryPigment, 0.84);
-      artistActive = clamp((artistActive - vec3(0.36)) * 1.04 + vec3(0.41), 0.0, 1.0);
-      artistMemory = clamp((artistMemory - vec3(0.38)) * 0.98 + vec3(0.4), 0.0, 1.0);
-      vec3 artistBase = mix(vec3(0.004, 0.007, 0.006), vec3(0.014, 0.012, 0.008), strata * 0.55);
-      vec3 artistAmbient = mix(artistActive, artistMemory, 0.42);
-      vec3 artistColor = mix(artistBase, artistAmbient, 0.035 + artistStageLight * 0.035);
-      float artistLayerWeight = clamp(artistCurrentMask * 0.72 + artistMemoryMask * 0.52, 0.0, 1.0);
-      vec3 artistLayer = mix(
+      float artistMemoryField = smoothstep(
+        0.31,
+        0.77,
+        artistMiddleNoise
+          + (0.5 - artistMaterialWave) * 0.22
+          + artistFillLight * 0.09
+          + gathering * 0.035
+      ) * (1.0 - artistWashField * 0.24);
+      float artistDetailField = smoothstep(
+        0.45,
+        0.8,
+        artistMicroNoise
+          + artistKeyCore * 0.25
+          + artistRakeCore * 0.16
+          + reforming * 0.045
+      );
+      artistDetailField *= 0.38 + artistKeyLight * 0.44 + artistRake * 0.18;
+      float artistMetamorphField = smoothstep(
+        0.28,
+        0.76,
+        artistTransitionDetail
+          + (artistMaterialWave - 0.5) * 0.26
+          + transitionPressure * 0.08
+      );
+
+      float artistRelief = clamp(dot(activeReliefGradient, artistLightDirection) * 3.4, -1.0, 1.0);
+      float artistOccluder = 1.0 - smoothstep(
+        0.035,
+        0.17,
+        abs(
+          dot(spatial, normalize(vec2(-0.48, 0.88)))
+            - sin(artistScenePhase * 0.82 + 0.6) * 0.19
+        )
+      );
+      float artistCopyOpen = mix(0.72, 1.0, smoothstep(0.12, 0.48, uv.x));
+
+      vec3 artistWash = mix(vec3(activeLight), activePigment, 0.78);
+      artistWash = clamp((artistWash - vec3(0.42)) * 1.18 + vec3(0.4), 0.0, 1.0);
+      artistWash = pow(max(artistWash, vec3(0.0)), vec3(1.025));
+      artistWash *= mix(vec3(0.86, 0.94, 0.92), vec3(1.055, 0.99, 0.86), artistKeyLight * 0.34);
+
+      vec3 artistMemory = mix(vec3(memoryLight), memoryPigment, 0.58);
+      artistMemory = clamp((artistMemory - vec3(0.42)) * 1.1 + vec3(0.38), 0.0, 1.0);
+      artistMemory = pow(max(artistMemory, vec3(0.0)), vec3(1.035))
+        * vec3(0.78, 0.9, 0.89);
+
+      float artistDetailLight = luminance(activeDetailPigment);
+      vec3 artistDetail = mix(vec3(artistDetailLight), activeDetailPigment, 0.91);
+      artistDetail = clamp((artistDetail - vec3(0.4)) * 1.16 + vec3(0.4), 0.0, 1.0);
+      artistDetail = pow(max(artistDetail, vec3(0.0)), vec3(1.015));
+
+      vec3 artistMetamorph = mix(
+        artistWash,
         artistMemory,
-        artistActive,
-        clamp(artistCurrentMask / max(artistCurrentMask + artistMemoryMask, 0.001), 0.0, 1.0)
+        artistMemoryField * (0.2 + artistMetamorphField * 0.22)
       );
-      artistLayer *= mix(vec3(0.9, 0.94, 0.9), vec3(1.05, 0.93, 0.75), artistStageLight * 0.42);
+      artistMetamorph = mix(
+        artistMetamorph,
+        artistDetail,
+        artistDetailField * (0.075 + artistKeyCore * 0.11 + fieldEnergy * 0.025)
+      );
+
+      vec3 artistBase = mix(
+        vec3(0.008, 0.014, 0.012),
+        vec3(0.025, 0.024, 0.017),
+        strata * 0.4
+      );
+      float artistLightGate = max(artistKeyLight, artistRake * 0.72);
+      float artistMaterialPresence = 0.16
+        + artistWashField * 0.14
+        + artistKeyLight * 0.205
+        + artistRake * 0.105
+        + uPresence * 0.012;
+      vec3 artistColor = mix(
+        artistBase,
+        artistMetamorph,
+        clamp(artistMaterialPresence * artistCopyOpen, 0.0, 0.61)
+      );
       artistColor = mix(
         artistColor,
-        artistLayer,
-        artistLayerWeight * (0.28 + artistStageLight * 0.26 + uPresence * 0.05)
+        artistMemory,
+        artistMemoryField * (0.028 + artistFillLight * 0.038 + gathering * 0.008)
       );
-      artistColor += artistLayer * transitionEdge * artistCurrentMask * 0.055;
-      artistColor *= mix(0.58, 1.0, smoothstep(0.08, 0.56, uv.x));
+      artistColor = mix(
+        artistColor,
+        artistDetail,
+        artistDetailField * artistKeyCore * (0.075 + max(artistRelief, 0.0) * 0.055)
+      );
+      artistColor += vec3(0.21, 0.15, 0.075)
+        * artistKeyLight
+        * (0.085 + artistKeyCore * 0.075 + artistDetailField * 0.035);
+      artistColor += vec3(0.047, 0.082, 0.088)
+        * artistFillLight
+        * (0.018 + artistMemoryField * 0.018);
+      artistColor += mix(vec3(0.24, 0.16, 0.065), artistDetail, 0.24)
+        * artistRakeCore
+        * (0.055 + max(artistRelief, 0.0) * 0.055 + reforming * 0.008);
+      artistColor += mix(artistWash, artistDetail, 0.4)
+        * transitionEdge
+        * (0.01 + artistMetamorphField * 0.008);
+      float artistCharcoal = pigmentEdge
+        * artistDetailField
+        * (0.45 + artistKeyLight * 0.55);
+      artistColor *= 1.0 - artistCharcoal * 0.038;
+      float artistNegative = clamp(
+        max(-artistRelief, 0.0) * artistDetailField * artistKeyCore * 0.028
+          + artistOccluder * (0.014 + dispersing * 0.006),
+        0.0,
+        0.043
+      );
+      artistColor *= 1.0 - artistNegative;
+      artistColor *= mix(0.82, 1.0, artistLightGate);
+      artistColor *= mix(0.86, 1.0, smoothstep(0.07, 0.48, uv.x));
+      artistColor = pow(max(artistColor, vec3(0.0)), vec3(1.025)) * 1.025;
 
-      float contactAxis = dot(spatial, vec2(0.92, 0.12));
+      vec2 contactLightDirection = normalize(mix(vec2(0.92, 0.12), vec2(0.7, -0.42), scene));
+      float contactAxis = dot(spatial, contactLightDirection);
       float contactBeamA = 1.0 - smoothstep(
-        0.12,
-        0.44,
-        abs(contactAxis - 0.18 - sin(time * 0.055 + uJourney * 0.11) * 0.12)
+        0.025,
+        0.19,
+        abs(contactAxis - mix(0.22, -0.2, scene) - sin(time * 0.047 + uJourney * 0.11) * 0.085)
       );
       float contactBeamB = 1.0 - smoothstep(
-        0.08,
-        0.3,
-        abs(dot(spatial, vec2(0.74, -0.32)) + 0.34 - cos(time * 0.041) * 0.08)
+        0.018,
+        0.12,
+        abs(dot(spatial, normalize(vec2(0.74, -0.32))) + 0.36 - cos(time * 0.037) * 0.055)
       );
-      float contactSignal = clamp(contactBeamA * 0.76 + contactBeamB * 0.28, 0.0, 1.0);
-      float contactPulse = 0.78 + 0.22 * sin(time * 0.13 + uPresence * 1.7);
-      vec3 contactPigment = mix(vec3(activeLight), activePigment, 0.5);
-      contactPigment = clamp((contactPigment - vec3(0.4)) * 0.88 + vec3(0.39), 0.0, 1.0);
-      contactPigment *= vec3(1.02, 0.76, 0.68);
-      vec3 contactBase = mix(vec3(0.003, 0.005, 0.005), vec3(0.012, 0.007, 0.006), strata * 0.42);
+      float contactColumn = 1.0 - smoothstep(
+        0.12,
+        0.62,
+        length(spatial - mix(vec2(0.36, 0.02), vec2(0.04, -0.2), scene))
+      );
+      float contactFarWindow = 1.0 - smoothstep(
+        0.28,
+        0.94,
+        length(spatial - mix(vec2(-0.08, 0.2), vec2(0.28, -0.04), scene))
+      );
+      float contactSignal = contactBeamA * (0.34 + contactColumn * 0.66);
+      float contactEcho = contactBeamB * (1.0 - contactSignal * 0.82);
+      float contactPulse = 0.86 + 0.14 * sin(time * 0.11 + uPresence * 1.3);
+      float contactRelief = clamp(dot(activeReliefGradient, contactLightDirection) * 5.8, -1.0, 1.0);
+      float contactOccluder = 1.0 - smoothstep(
+        0.035,
+        0.15,
+        abs(dot(spatial, normalize(vec2(-0.58, 0.82))) - mix(-0.12, 0.2, scene))
+      );
+      float contactRouteWarmth = smoothstep(0.72, 0.98, scene);
+
+      vec3 contactPigment = mix(vec3(activeLight), activePigment, 0.7);
+      contactPigment = clamp((contactPigment - vec3(0.41)) * 1.1 + vec3(0.42), 0.0, 1.0);
+      vec3 contactMineral = contactPigment * vec3(0.78, 0.98, 1.04);
+      vec3 contactBone = mix(vec3(activeLight), activeCenterPigment, 0.56) * vec3(1.01, 0.93, 0.75);
+      contactPigment = mix(contactMineral, contactBone, contactRouteWarmth * 0.42);
+      vec3 contactDetail = mix(vec3(luminance(activeDetailPigment)), activeDetailPigment, 0.74)
+        * mix(vec3(0.76, 0.98, 1.05), vec3(1.0, 0.92, 0.72), contactRouteWarmth * 0.44);
+      contactDetail = clamp((contactDetail - vec3(0.41)) * 1.14 + vec3(0.43), 0.0, 1.0);
+      vec3 contactMemory = mix(vec3(memoryLight), memoryPigment, 0.28) * vec3(0.76, 0.88, 0.91);
+      contactMemory = clamp((contactMemory - vec3(0.42)) * 1.04 + vec3(0.39), 0.0, 1.0);
+      vec3 contactBase = mix(vec3(0.002, 0.006, 0.007), vec3(0.008, 0.016, 0.017), strata * 0.4);
       vec3 contactColor = mix(
         contactBase,
-        contactPigment,
-        0.04 + contactSignal * (0.24 + contactPulse * 0.1 + uPresence * 0.035)
+        contactMemory,
+        0.035 + contactFarWindow * (0.075 + gathering * 0.015)
       );
-      contactColor += mix(vec3(0.06, 0.016, 0.012), contactPigment, 0.18)
-        * contactBeamA
-        * (0.05 + fieldEnergy * 0.024);
-      contactColor += contactPigment * transitionEdge * contactSignal * 0.025;
-      contactColor *= mix(0.6, 1.0, smoothstep(0.14, 0.62, uv.x));
-      contactColor *= mix(0.7, 1.0, 1.0 - smoothstep(0.86, 1.0, uv.x));
-      contactColor *= 1.18;
+      contactColor = mix(
+        contactColor,
+        contactPigment,
+        contactSignal * (0.42 + contactPulse * 0.12 + uPresence * 0.03)
+          + contactColumn * 0.075
+          + contactFarWindow * 0.025
+          + contactEcho * 0.14
+          + transitionPressure * (0.018 + contactColumn * 0.025)
+      );
+      contactColor = mix(
+        contactColor,
+        contactDetail,
+        contactBeamA * contactColumn * (0.14 + fieldEnergy * 0.055 + reforming * 0.025)
+      );
+      contactColor += mix(vec3(0.2, 0.36, 0.38), contactDetail, 0.34)
+        * max(contactRelief, 0.0)
+        * contactSignal
+        * 0.085;
+      contactColor *= 1.0 - max(-contactRelief, 0.0) * contactSignal * 0.19;
+      contactColor *= 1.0 - contactOccluder * (0.12 + (1.0 - contactColumn) * 0.08);
+      contactColor *= 1.0 - pigmentEdge * contactSignal * (0.04 + dispersing * 0.025);
+      contactColor += contactPigment * transitionEdge * contactSignal * 0.045;
+      contactColor *= mix(0.62, 1.0, smoothstep(0.07, 0.56, uv.x));
+      contactColor *= mix(0.74, 1.0, 1.0 - smoothstep(0.88, 1.0, uv.x));
+      contactColor *= 1.2;
 
       vec3 color = processColor * isProcess + artistColor * isArtist + contactColor * isContact;
       vec3 base = vec3(0.003, 0.005, 0.004);
       float edgeDistance = length((uv - 0.5) * vec2(0.8, 1.02));
       float vignette = 1.0 - smoothstep(0.43, 0.82, edgeDistance);
-      float vignetteFloor = isProcess * 0.74 + isArtist * 0.68 + isContact * 0.58;
+      float vignetteFloor = isProcess * 0.82 + isArtist * 0.86 + isContact * 0.64;
       color *= mix(vignetteFloor, 1.025, vignette);
       color *= 0.985 + breath * (isProcess * 0.018 + isArtist * 0.025 + isContact * 0.01);
-      color = pow(max(color, vec3(0.0)), vec3(0.94 - isArtist * 0.025));
+      color = pow(max(color, vec3(0.0)), vec3(0.985 + isArtist * 0.015));
       color = mix(base, color, smoothstep(0.0, 1.0, uTextureMix));
 
       gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
@@ -746,11 +1143,11 @@ const memoryTexture =
     },
     artist: {
       index: 1,
-      duration: 6400,
-      dwell: 420,
-      timeScale: 0.56,
+      duration: 10800,
+      dwell: 980,
+      timeScale: 0.32,
       dpr: 1.45,
-      autoCycle: 62000,
+      autoCycle: 108000,
       scrollTargets: true,
     },
     contact: {
@@ -763,6 +1160,55 @@ const memoryTexture =
       scrollTargets: true,
     },
   };
+
+  const ROUTE_SCENES = {
+    process: {
+      "process-field": 0.08,
+      "process-trace": 0.34,
+      "process-structure": 0.68,
+      "process-study": 0.94,
+    },
+    artist: {
+      "artist-origin": 0.08,
+      "artist-pressure": 0.34,
+      "artist-field-memory": 0.64,
+      "artist-body-memory": 0.92,
+    },
+    contact: {
+      "contact-signal": 0.12,
+      "contact-quiet": 0.54,
+      "contact-field": 0.72,
+      "contact-route": 0.9,
+    },
+  };
+
+  const DREAM_WEIGHTS = {
+    gathering: [1, 0, 0],
+    dispersing: [0, 1, 0],
+    reforming: [0, 0, 1],
+  };
+
+  const ROUTE_LIGHT_PATHS = {
+    process: { from: [74, 28], to: [56, 72] },
+    artist: { from: [78, 34], to: [58, 68] },
+    contact: { from: [64, 49], to: [48, 61] },
+  };
+
+  function resolveRouteLightPosition(profile, scene) {
+    if (profile === 'artist') {
+      const phase = scene * Math.PI * 2;
+      return [
+        68 + Math.cos(phase * 0.83 + 0.3) * 13,
+        48 + Math.sin(phase * 0.7 - 0.8) * 20,
+      ];
+    }
+
+    const lightPath = ROUTE_LIGHT_PATHS[profile] || ROUTE_LIGHT_PATHS.artist;
+    return [
+      lightPath.from[0] + (lightPath.to[0] - lightPath.from[0]) * scene,
+      lightPath.from[1] + (lightPath.to[1] - lightPath.from[1]) * scene,
+    ];
+  }
 
   const mountedEnvironments = new WeakMap();
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -852,6 +1298,11 @@ const memoryTexture =
     host.prepend(renderer.domElement);
     document.documentElement.dataset.livingRouteProfile = profile;
     document.documentElement.dataset.livingRouteMode = mode;
+    document.documentElement.dataset.livingRouteTarget = initialSlug;
+    const initialPresencePhase = document.documentElement.dataset.presencePhase || "awake";
+    const initialDreamWeights = initialPresencePhase === "dreaming"
+      ? (DREAM_WEIGHTS[document.documentElement.dataset.presenceDreamCycle] ?? DREAM_WEIGHTS.gathering)
+      : [0, 0, 0];
 
     const uniforms = {
       uTime: { value: 0 },
@@ -873,6 +1324,10 @@ const memoryTexture =
       uScrollDirection: { value: 1 },
       uImpulse: { value: 0 },
       uProfile: { value: config.index },
+      uScene: { value: ROUTE_SCENES[profile]?.[initialSlug] ?? 0 },
+      uDreamWeights: {
+        value: new THREE.Vector3(...initialDreamWeights),
+      },
     };
 
     const material = new THREE.RawShaderMaterial({
@@ -906,10 +1361,15 @@ const memoryTexture =
     let transitionProgress = 0;
     let transitionActive = false;
     let transitionLoading = false;
+    let memoryTextureReady = initialMemorySlug === initialSlug;
     let targetTextureMix = 0;
     let currentTextureMix = 0;
-    let targetPresence = phaseTargets[document.documentElement.dataset.presencePhase] ?? phaseTargets.awake;
+    let targetPresence = phaseTargets[initialPresencePhase] ?? phaseTargets.awake;
     let currentPresence = targetPresence;
+    let targetScene = ROUTE_SCENES[profile]?.[initialSlug] ?? 0;
+    let currentScene = targetScene;
+    let targetDreamWeights = [...initialDreamWeights];
+    let currentDreamWeights = [...targetDreamWeights];
     let targetScroll = 0;
     let currentScroll = 0;
     let targetJourney = 0;
@@ -934,8 +1394,12 @@ const memoryTexture =
     let autoCycleTimer = 0;
     let lastFrame = 0;
     let lastReducedFrame = 0;
+    let lastDomLightUpdate = 0;
     let destroyed = false;
     let dominantSlug = currentSlug;
+    let dominantCueKey = `${currentSlug}:${targetScene.toFixed(3)}`;
+
+    host.dataset.livingRouteTarget = currentSlug;
 
     const setTextureSize = (uniform, texture) => {
       uniform.value.set(
@@ -968,6 +1432,23 @@ const memoryTexture =
       texture.dispose();
     };
 
+    const resolveScene = (slug, sceneHint) => {
+      const parsedScene = Number.parseFloat(sceneHint);
+      return Number.isFinite(parsedScene)
+        ? clamp(parsedScene, 0, 1)
+        : (ROUTE_SCENES[profile]?.[slug] ?? targetScene);
+    };
+
+    const directSceneTo = (slug, sceneHint) => {
+      if (!slug || !sourcesBySlug.has(slug)) return;
+      targetScene = resolveScene(slug, sceneHint);
+      host.dataset.livingRouteTarget = slug;
+      host.dataset.livingRouteScene = targetScene.toFixed(3);
+      if (document.documentElement.dataset.livingRouteProfile === profile) {
+        document.documentElement.dataset.livingRouteTarget = slug;
+      }
+    };
+
     const finishTransition = () => {
       if (!transitionActive || !pendingTexture) return;
       const previousCurrent = uniforms.uCurrentTexture.value;
@@ -984,6 +1465,7 @@ const memoryTexture =
       uniforms.uTransition.value = 0;
 
       memorySlug = currentSlug;
+      memoryTextureReady = true;
       currentSlug = pendingSlug;
       dominantSlug = currentSlug;
       pendingSlug = "";
@@ -1018,6 +1500,16 @@ const memoryTexture =
       impulse = Math.max(impulse, profile === "contact" ? 0.2 : 0.34);
       host.dataset.livingRouteIncoming = slug;
       host.dataset.livingRouteState = "transitioning";
+
+      if (profile === 'artist') impulse = Math.min(impulse, 0.12);
+
+      // Reduced-motion users should not sit through the authored multi-second
+      // directional wipe. Swap the texture atomically; the light field still
+      // resolves to the new scene without shear, travel, or flashing.
+      if (reducedMotion.matches) {
+        uniforms.uTransition.value = 1;
+        finishTransition();
+      }
     };
 
     const requestTarget = async (slug) => {
@@ -1031,7 +1523,7 @@ const memoryTexture =
         return;
       }
 
-      if (slug === memorySlug) {
+      if (slug === memorySlug && memoryTextureReady) {
         beginTransition(slug, uniforms.uMemoryTexture.value);
         return;
       }
@@ -1054,35 +1546,43 @@ const memoryTexture =
       }
     };
 
-    const scheduleTarget = (slug, delay = config.dwell) => {
-      if (!slug || !sourcesBySlug.has(slug) || slug === dominantSlug) return;
+    const scheduleTarget = (slug, delay = config.dwell, sceneHint) => {
+      if (!slug || !sourcesBySlug.has(slug)) return;
+      const sceneValue = resolveScene(slug, sceneHint);
+      const cueKey = `${slug}:${sceneValue.toFixed(3)}`;
+      if (cueKey === dominantCueKey) return;
       window.clearTimeout(targetTimer);
       targetTimer = window.setTimeout(() => {
         dominantSlug = slug;
-        requestTarget(slug);
+        dominantCueKey = cueKey;
+        directSceneTo(slug, sceneValue);
+        if (slug !== currentSlug) requestTarget(slug);
       }, reducedMotion.matches ? Math.max(delay, 720) : delay);
     };
 
     const getTargetFromEvent = (event) => {
       const element = event.target instanceof Element ? event.target.closest("[data-lbe-target]") : null;
-      return element?.getAttribute("data-lbe-target") || "";
+      return {
+        slug: element?.getAttribute("data-lbe-target") || "",
+        scene: element?.getAttribute("data-lbe-scene") || "",
+      };
     };
 
     const handlePointerOver = (event) => {
-      const slug = getTargetFromEvent(event);
-      if (slug) scheduleTarget(slug);
+      const target = getTargetFromEvent(event);
+      if (target.slug) scheduleTarget(target.slug, config.dwell, target.scene);
     };
 
     const handleFocusIn = (event) => {
-      const slug = getTargetFromEvent(event);
-      if (slug) scheduleTarget(slug, Math.min(config.dwell, 180));
+      const target = getTargetFromEvent(event);
+      if (target.slug) scheduleTarget(target.slug, Math.min(config.dwell, 180), target.scene);
     };
 
     const updateDominantTarget = () => {
       targetRaf = 0;
       if (!config.scrollTargets) return;
       const viewportCenter = window.innerHeight * 0.52;
-      let closestSlug = "";
+      let closestTarget = null;
       let closestDistance = Number.POSITIVE_INFINITY;
 
       document.querySelectorAll("[data-lbe-target]").forEach((element) => {
@@ -1094,11 +1594,14 @@ const memoryTexture =
         const distance = Math.abs(center - viewportCenter);
         if (distance < closestDistance) {
           closestDistance = distance;
-          closestSlug = slug;
+          closestTarget = {
+            slug,
+            scene: element.getAttribute("data-lbe-scene") || "",
+          };
         }
       });
 
-      if (closestSlug) scheduleTarget(closestSlug);
+      if (closestTarget) scheduleTarget(closestTarget.slug, config.dwell, closestTarget.scene);
     };
 
     const requestDominantTargetUpdate = () => {
@@ -1121,16 +1624,24 @@ const memoryTexture =
           0,
           1,
         );
-        targetScrollVelocity = Math.max(targetScrollVelocity, normalizedVelocity);
+        const velocityScale = profile === 'artist' ? 0.38 : 1;
+        targetScrollVelocity = Math.max(targetScrollVelocity, normalizedVelocity * velocityScale);
         targetScrollDirection = deltaY >= 0 ? 1 : -1;
-        impulse = Math.max(impulse, 0.06 + normalizedVelocity * 0.2);
+        const scrollImpulse = profile === 'artist'
+          ? 0.025 + normalizedVelocity * 0.065
+          : 0.06 + normalizedVelocity * 0.2;
+        impulse = Math.max(impulse, scrollImpulse);
       }
       lastScrollY = nextScrollY;
       lastScrollAt = now;
       requestDominantTargetUpdate();
     };
 
-    const handleTarget = (event) => requestTarget(event.detail?.slug || "");
+    const handleTarget = (event) => {
+      const slug = event.detail?.slug || "";
+      directSceneTo(slug, event.detail?.scene);
+      requestTarget(slug);
+    };
 
     const handlePointerMove = (event) => {
       if (reducedMotion.matches) return;
@@ -1151,13 +1662,24 @@ const memoryTexture =
     const handlePresence = (event) => {
       const phase = event.detail?.phase || document.documentElement.dataset.presencePhase || "awake";
       targetPresence = phaseTargets[phase] ?? phaseTargets.awake;
+      if (phase !== "dreaming") {
+        targetDreamWeights = [0, 0, 0];
+      } else if (targetDreamWeights.every((value) => value < 0.001)) {
+        const cycle = document.documentElement.dataset.presenceDreamCycle || "gathering";
+        targetDreamWeights = [...(DREAM_WEIGHTS[cycle] ?? DREAM_WEIGHTS.gathering)];
+      }
       host.dataset.livingRoutePhase = phase;
       if (phase === "waking") impulse = Math.max(impulse, profile === "contact" ? 0.14 : 0.25);
     };
 
     const handleDreamCycle = (event) => {
       const cycle = event.detail?.cycle || document.documentElement.dataset.presenceDreamCycle || "gathering";
+      if ((document.documentElement.dataset.presencePhase || "awake") !== "dreaming") {
+        targetDreamWeights = [0, 0, 0];
+        return;
+      }
       impulse = Math.max(impulse, cycle === "dispersing" ? 0.18 : 0.08);
+      targetDreamWeights = [...(DREAM_WEIGHTS[cycle] ?? DREAM_WEIGHTS.gathering)];
       host.dataset.livingRouteDreamCycle = cycle;
     };
 
@@ -1176,6 +1698,7 @@ const memoryTexture =
         targetPointerX = 0;
         targetPointerY = 0;
         targetInteraction = 0;
+        if (transitionActive) finishTransition();
       }
       resize();
     };
@@ -1184,7 +1707,15 @@ const memoryTexture =
       if (document.hidden || transitionActive || transitionLoading || textureSlugs.length < 3) return;
       const currentIndex = Math.max(textureSlugs.indexOf(currentSlug), 0);
       const nextSlug = textureSlugs[(currentIndex + 1) % textureSlugs.length];
-      if (nextSlug) requestTarget(nextSlug);
+      if (nextSlug) {
+        // Auto-cycling must not leave the current DOM cue marked as already handled.
+        // The visible section needs to be able to reclaim its authored texture on
+        // the next scroll, pointer, or focus interaction.
+        dominantCueKey = "";
+        dominantSlug = nextSlug;
+        directSceneTo(nextSlug);
+        requestTarget(nextSlug);
+      }
     };
 
     const destroy = () => {
@@ -1206,6 +1737,10 @@ const memoryTexture =
       window.removeEventListener("artist-stage:presence-dream-cycle", handleDreamCycle);
       document.removeEventListener("visibilitychange", handleVisibility);
       reducedMotion.removeEventListener?.("change", handleMotionChange);
+      if (initialMemoryTexture && !loadedTextures.has(initialMemoryTexture)) {
+        initialMemoryTexture.dispose();
+        initialMemoryTexture = null;
+      }
       loadedTextures.forEach((texture) => texture.dispose());
       placeholder.dispose();
       geometry.dispose();
@@ -1217,6 +1752,7 @@ const memoryTexture =
       if (document.documentElement.dataset.livingRouteProfile === profile) {
         delete document.documentElement.dataset.livingRouteProfile;
         delete document.documentElement.dataset.livingRouteMode;
+        delete document.documentElement.dataset.livingRouteTarget;
       }
       mountedEnvironments.delete(host);
     };
@@ -1249,6 +1785,11 @@ const memoryTexture =
 
       currentTextureMix = damp(currentTextureMix, targetTextureMix, delta, 1.05);
       currentPresence = damp(currentPresence, targetPresence, delta, 0.54);
+      const sceneSpeed = profile === 'artist' ? 0.24 : 0.72;
+      currentScene = damp(currentScene, targetScene, delta, reducedMotion.matches ? 10 : sceneSpeed);
+      currentDreamWeights = currentDreamWeights.map((value, index) =>
+        damp(value, targetDreamWeights[index], delta, reducedMotion.matches ? 10 : 0.36),
+      );
       currentScroll = damp(currentScroll, targetScroll, delta, 0.68);
       currentJourney = damp(currentJourney, targetJourney, delta, 0.82);
       currentScrollVelocity = damp(currentScrollVelocity, targetScrollVelocity, delta, 5.0);
@@ -1263,6 +1804,8 @@ const memoryTexture =
       uniforms.uTime.value = elapsed;
       uniforms.uTextureMix.value = currentTextureMix;
       uniforms.uPresence.value = currentPresence;
+      uniforms.uScene.value = currentScene;
+      uniforms.uDreamWeights.value.set(...currentDreamWeights);
       uniforms.uScroll.value = currentScroll;
       uniforms.uJourney.value = currentJourney;
       uniforms.uScrollVelocity.value = currentScrollVelocity;
@@ -1270,6 +1813,13 @@ const memoryTexture =
       uniforms.uPointer.value.set(pointerX, pointerY);
       uniforms.uInteraction.value = currentInteraction;
       uniforms.uImpulse.value = impulse;
+      if (!lastDomLightUpdate || now - lastDomLightUpdate >= 66 || reducedMotion.matches) {
+        lastDomLightUpdate = now;
+        host.style.setProperty("--living-route-presence", currentPresence.toFixed(4));
+        const [keyX, keyY] = resolveRouteLightPosition(profile, currentScene);
+        host.style.setProperty("--living-route-key-x", `${keyX.toFixed(3)}%`);
+        host.style.setProperty("--living-route-key-y", `${keyY.toFixed(3)}%`);
+      }
       renderer.render(scene, camera);
     };
 
@@ -1282,9 +1832,15 @@ const memoryTexture =
       setTextureSize(uniforms.uMemoryTextureSize, memoryTexture);
       setTextureSize(uniforms.uIncomingTextureSize, currentTexture);
       targetTextureMix = 1;
+      const initialMix = 1;
+      currentTextureMix = initialMix;
+      uniforms.uTextureMix.value = initialMix;
+      memoryTextureReady = memoryTexture !== currentTexture || initialMemorySlug === initialSlug;
+      memorySlug = memoryTextureReady ? initialMemorySlug : currentSlug;
       host.dataset.livingRouteCurrent = currentSlug;
       host.dataset.livingRouteMemory = memorySlug;
       host.dataset.livingRouteState = "resting";
+      renderer.render(scene, camera);
       host.dataset.livingRouteReady = "true";
 
       const requestedSlug = queuedSlug;
@@ -1297,24 +1853,69 @@ const memoryTexture =
     const initialSource = sourcesBySlug.get(initialSlug);
     const memorySource = sourcesBySlug.get(initialMemorySlug) || initialSource;
     const currentPromise = loadTexture(textureLoader, initialSource);
-    const memoryPromise = initialMemorySlug === initialSlug
-      ? currentPromise
-      : loadTexture(textureLoader, memorySource);
+    let initialCurrentTexture = null;
+    let initialMemoryTexture = null;
+    let initialCurrentFailed = false;
 
-    Promise.all([currentPromise, memoryPromise])
-      .then(([currentTexture, memoryTexture]) => {
+    const installResolvedInitialMemory = () => {
+      if (!initialCurrentTexture || !initialMemoryTexture || destroyed) return;
+      const resolvedMemoryTexture = initialMemoryTexture;
+      initialMemoryTexture = null;
+      loadedTextures.add(resolvedMemoryTexture);
+
+      const canInstallInitialMemory =
+        !transitionActive &&
+        !transitionLoading &&
+        currentSlug === initialSlug &&
+        uniforms.uMemoryTexture.value === initialCurrentTexture;
+
+      if (canInstallInitialMemory) {
+        uniforms.uMemoryTexture.value = resolvedMemoryTexture;
+        setTextureSize(uniforms.uMemoryTextureSize, resolvedMemoryTexture);
+        memorySlug = initialMemorySlug;
+        memoryTextureReady = true;
+        host.dataset.livingRouteMemory = memorySlug;
+      } else {
+        releaseTexture(resolvedMemoryTexture);
+      }
+    };
+
+    if (initialMemorySlug !== initialSlug) {
+      loadTexture(textureLoader, memorySource)
+        .then((resolvedMemoryTexture) => {
+          if (destroyed || initialCurrentFailed) {
+            resolvedMemoryTexture.dispose();
+            return;
+          }
+          initialMemoryTexture = resolvedMemoryTexture;
+          installResolvedInitialMemory();
+        })
+        .catch((error) => {
+          host.dataset.livingRouteMemoryFailed = "true";
+          console.warn("Living route memory texture could not load; current material remains active.", error);
+        });
+    }
+
+    currentPromise
+      .then((currentTexture) => {
         if (destroyed) {
           currentTexture.dispose();
-          if (memoryTexture !== currentTexture) memoryTexture.dispose();
           return;
         }
+
         loadedTextures.add(currentTexture);
-        loadedTextures.add(memoryTexture);
-        establishInitialField(currentTexture, memoryTexture);
+        initialCurrentTexture = currentTexture;
+        establishInitialField(currentTexture, currentTexture);
+        installResolvedInitialMemory();
       })
       .catch((error) => {
+        initialCurrentFailed = true;
+        if (initialMemoryTexture) {
+          initialMemoryTexture.dispose();
+          initialMemoryTexture = null;
+        }
         host.dataset.livingRouteFailed = "true";
-        console.warn("Living route initial textures could not load.", error);
+        console.warn("Living route initial texture could not load.", error);
       });
 
     const resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(resize) : null;
@@ -1381,6 +1982,8 @@ const memoryTexture =
       progress: transitionProgress,
       journey: currentJourney,
       scrollVelocity: currentScrollVelocity,
+      scene: currentScene,
+      dreamWeights: [...currentDreamWeights],
       state: host.dataset.livingRouteState || "initializing",
     });
 
@@ -1405,36 +2008,47 @@ const memoryTexture =
 
 <style>
   .living-route-environment {
+    --living-route-key-x: 72%;
+    --living-route-key-y: 34%;
+    --living-route-presence: 0.48;
+    --living-route-key-color: rgba(189, 205, 151, 0.2);
+    --living-route-depth-color: rgba(78, 105, 69, 0.12);
     position: fixed;
     inset: var(--site-header-height) 0 0;
     z-index: 0;
     overflow: hidden;
     pointer-events: none;
     background: #020504;
-    opacity: var(--living-route-opacity, 0.94);
+    opacity: 1;
   }
 
   .living-route-environment[data-living-route-profile="artist"] {
-    --living-route-opacity: 0.96;
+    --living-route-key-color: rgba(238, 191, 105, 0.42);
+    --living-route-depth-color: rgba(62, 123, 126, 0.12);
   }
 
   .living-route-environment[data-living-route-profile="contact"] {
-    --living-route-opacity: 0.92;
+    --living-route-key-color: rgba(143, 187, 180, 0.17);
+    --living-route-depth-color: rgba(73, 96, 95, 0.1);
   }
 
   .living-route-environment canvas,
-  .living-route-environment__fallback {
+  .living-route-environment__fallback,
+  .living-route-environment__key-light,
+  .living-route-environment__depth-light,
+  .living-route-environment__negative-fill {
     position: absolute;
     inset: 0;
     display: block;
     width: 100%;
     height: 100%;
+    pointer-events: none;
   }
 
   .living-route-environment canvas {
     z-index: 2;
     opacity: 0;
-    transition: opacity 1500ms cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 950ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .living-route-environment::before,
@@ -1442,17 +2056,17 @@ const memoryTexture =
     content: "";
     position: absolute;
     inset: 0;
-    z-index: 3;
+    z-index: 6;
     pointer-events: none;
   }
 
   .living-route-environment[data-living-route-profile="process"]::before {
     background: linear-gradient(
       96deg,
-      rgba(2, 5, 4, 0.52) 0%,
-      rgba(2, 5, 4, 0.22) 31%,
-      transparent 58%,
-      rgba(2, 5, 4, 0.08) 100%
+      rgba(2, 5, 4, 0.2) 0%,
+      rgba(2, 5, 4, 0.075) 27%,
+      transparent 54%,
+      rgba(2, 5, 4, 0.025) 100%
     );
   }
 
@@ -1460,43 +2074,46 @@ const memoryTexture =
     inset: -18% -26%;
     background: linear-gradient(
       112deg,
-      transparent 33%,
-      rgba(202, 211, 184, 0.045) 46%,
-      rgba(149, 159, 132, 0.075) 51%,
-      transparent 63%
+      transparent 41%,
+      rgba(202, 211, 184, 0.028) 47%,
+      rgba(0, 2, 1, 0.2) 51%,
+      transparent 58%
     );
     animation: livingRouteProcessRake 24s ease-in-out infinite alternate;
   }
 
   .living-route-environment[data-living-route-profile="artist"]::before {
-    background: linear-gradient(
-      90deg,
-      rgba(2, 5, 4, 0.6) 0%,
-      rgba(2, 5, 4, 0.28) 29%,
-      transparent 55%,
-      rgba(2, 5, 4, 0.13) 100%
-    );
+    background:
+      radial-gradient(
+        ellipse 46% 94% at 3% 48%,
+        rgba(2, 5, 4, 0.14) 0%,
+        rgba(2, 5, 4, 0.035) 48%,
+        transparent 82%
+      ),
+      linear-gradient(180deg, rgba(2, 5, 4, 0.01), transparent 28%, transparent 74%, rgba(2, 5, 4, 0.018));
   }
 
   .living-route-environment[data-living-route-profile="artist"]::after {
     inset: -14% -22%;
     background: linear-gradient(
       128deg,
-      transparent 30%,
-      rgba(184, 139, 74, 0.055) 46%,
-      rgba(91, 135, 116, 0.045) 55%,
-      transparent 69%
+      transparent 37%,
+      rgba(208, 164, 92, 0.035) 45%,
+      rgba(89, 151, 145, 0.02) 51%,
+      transparent 62%
     );
-    animation: livingRouteArtistMemory 32s ease-in-out infinite alternate;
+    mix-blend-mode: screen;
+    opacity: 0.1;
+    animation: livingRouteArtistMemory 52s ease-in-out infinite alternate;
   }
 
   .living-route-environment[data-living-route-profile="contact"]::before {
     background: linear-gradient(
       90deg,
-      rgba(1, 3, 3, 0.72) 0%,
-      rgba(1, 3, 3, 0.38) 35%,
-      transparent 62%,
-      rgba(1, 3, 3, 0.34) 100%
+      rgba(1, 3, 3, 0.48) 0%,
+      rgba(1, 3, 3, 0.22) 31%,
+      transparent 58%,
+      rgba(1, 3, 3, 0.2) 100%
     );
   }
 
@@ -1504,35 +2121,157 @@ const memoryTexture =
     inset: -10% -18%;
     background: linear-gradient(
       104deg,
-      transparent 37%,
-      rgba(137, 53, 42, 0.07) 49%,
-      rgba(175, 92, 68, 0.11) 55%,
-      transparent 70%
+      transparent 42%,
+      rgba(143, 187, 180, 0.035) 48%,
+      rgba(0, 2, 2, 0.19) 52%,
+      transparent 59%
     );
     animation: livingRouteContactSignal 38s ease-in-out infinite alternate;
   }
 
+  .living-route-environment__key-light {
+    z-index: 3;
+    background:
+      radial-gradient(
+        ellipse 29% 48% at var(--living-route-key-x) var(--living-route-key-y),
+        var(--living-route-key-color) 0%,
+        color-mix(in srgb, var(--living-route-key-color) 38%, transparent) 27%,
+        transparent 58%
+      );
+    mix-blend-mode: screen;
+    opacity: calc(0.18 + (var(--living-route-presence) * 0.12));
+    transition: opacity 900ms ease;
+  }
+
+  .living-route-environment__depth-light {
+    z-index: 4;
+    inset: -12% -16%;
+    width: auto;
+    height: auto;
+    background:
+      linear-gradient(
+        116deg,
+        transparent 41%,
+        var(--living-route-depth-color) 47%,
+        color-mix(in srgb, var(--living-route-key-color) 38%, transparent) 49%,
+        transparent 55%
+      );
+    mix-blend-mode: normal;
+    opacity: calc(0.1 + (var(--living-route-presence) * 0.08));
+    animation: livingRouteDirectedLight 34s ease-in-out infinite alternate;
+  }
+
+  .living-route-environment[data-living-route-profile=artist] .living-route-environment__key-light {
+    background:
+      radial-gradient(
+        ellipse 24% 42% at var(--living-route-key-x) var(--living-route-key-y),
+        var(--living-route-key-color) 0%,
+        color-mix(in srgb, var(--living-route-key-color) 28%, transparent) 25%,
+        transparent 57%
+      ),
+      radial-gradient(
+        ellipse 12% 23% at calc(var(--living-route-key-x) + 5%) calc(var(--living-route-key-y) - 4%),
+        rgba(246, 211, 137, 0.12),
+        transparent 62%
+      );
+    opacity: calc(0.17 + (var(--living-route-presence) * 0.18));
+  }
+
+  .living-route-environment[data-living-route-profile=artist] .living-route-environment__depth-light {
+    background:
+      linear-gradient(
+        116deg,
+        transparent 41%,
+        var(--living-route-depth-color) 47%,
+        color-mix(in srgb, var(--living-route-key-color) 18%, transparent) 50%,
+        transparent 55%
+      ),
+      radial-gradient(
+        ellipse 42% 70% at calc(100% - var(--living-route-key-x)) calc(100% - var(--living-route-key-y)),
+        rgba(65, 130, 132, 0.045),
+        transparent 66%
+      );
+    mix-blend-mode: soft-light;
+    opacity: calc(0.055 + (var(--living-route-presence) * 0.055));
+  }
+
+  .living-route-environment__negative-fill {
+    z-index: 5;
+    background:
+      radial-gradient(
+        ellipse 38% 76% at calc(100% - var(--living-route-key-x)) var(--living-route-key-y),
+        rgba(0, 2, 1, 0.3),
+        rgba(0, 2, 1, 0.08) 54%,
+        transparent 80%
+      ),
+      radial-gradient(ellipse 52% 88% at 2% 52%, rgba(1, 3, 2, 0.32), rgba(1, 3, 2, 0.08) 54%, transparent 82%),
+      linear-gradient(180deg, rgba(1, 3, 2, 0.045), transparent 22%, transparent 78%, rgba(1, 3, 2, 0.08));
+  }
+
+  .living-route-environment[data-living-route-profile="process"] .living-route-environment__negative-fill {
+    background:
+      radial-gradient(
+        ellipse 38% 76% at calc(100% - var(--living-route-key-x)) var(--living-route-key-y),
+        rgba(0, 2, 1, 0.16),
+        rgba(0, 2, 1, 0.045) 54%,
+        transparent 80%
+      ),
+      radial-gradient(ellipse 52% 88% at 2% 52%, rgba(1, 3, 2, 0.18), rgba(1, 3, 2, 0.045) 54%, transparent 82%),
+      linear-gradient(180deg, rgba(1, 3, 2, 0.025), transparent 22%, transparent 78%, rgba(1, 3, 2, 0.045));
+  }
+
+  .living-route-environment[data-living-route-profile="artist"] .living-route-environment__negative-fill {
+    background:
+      radial-gradient(
+        ellipse 36% 74% at calc(100% - var(--living-route-key-x)) var(--living-route-key-y),
+        rgba(0, 2, 1, 0.16),
+        rgba(0, 2, 1, 0.04) 54%,
+        transparent 80%
+      ),
+      radial-gradient(ellipse 43% 82% at 1% 48%, rgba(1, 3, 2, 0.18), rgba(1, 3, 2, 0.045) 58%, transparent 86%),
+      linear-gradient(180deg, rgba(1, 3, 2, 0.025), transparent 24%, transparent 76%, rgba(1, 3, 2, 0.04));
+  }
+
+  .living-route-environment[data-living-route-profile="contact"] .living-route-environment__negative-fill {
+    background:
+      radial-gradient(
+        ellipse 34% 72% at calc(100% - var(--living-route-key-x)) var(--living-route-key-y),
+        rgba(0, 2, 2, 0.34),
+        rgba(0, 2, 2, 0.08) 56%,
+        transparent 82%
+      ),
+      radial-gradient(ellipse 44% 82% at 0% 46%, rgba(1, 2, 2, 0.4), rgba(1, 2, 2, 0.09) 58%, transparent 86%),
+      radial-gradient(ellipse 24% 50% at 98% 50%, rgba(1, 2, 2, 0.13), transparent 80%);
+  }
+
   .living-route-environment__fallback {
+    --living-route-fallback-scale: 1.16;
+    --living-route-fallback-scale-end: 1.195;
     z-index: 1;
     object-fit: cover;
-    opacity: 0.46;
-    filter: saturate(0.7) brightness(0.42) contrast(1.04);
-    transform: scale(1.02);
-    transition: opacity 1200ms ease;
+    opacity: 0.34;
+    filter: blur(18px) saturate(0.72) brightness(0.46) contrast(1.12);
+    transform: scale(var(--living-route-fallback-scale));
+    transition: opacity 850ms ease;
     animation: livingRouteFallbackDrift 30s ease-in-out infinite alternate;
   }
 
   .living-route-environment[data-living-route-profile="artist"] .living-route-environment__fallback {
-    object-fit: contain;
-    object-position: 72% 50%;
-    opacity: 0.4;
-    filter: saturate(0.78) brightness(0.44) contrast(1.02);
-    transform: scale(0.88);
+    --living-route-fallback-scale: 1.24;
+    --living-route-fallback-scale-end: 1.275;
+    object-fit: cover;
+    object-position: 68% 50%;
+    opacity: 0.24;
+    filter: blur(36px) saturate(0.68) brightness(0.42) contrast(1.12);
+    transform: scale(var(--living-route-fallback-scale));
   }
 
   .living-route-environment[data-living-route-profile="contact"] .living-route-environment__fallback {
-    opacity: 0.36;
-    filter: saturate(0.7) brightness(0.42) contrast(1.08);
+    --living-route-fallback-scale: 1.2;
+    --living-route-fallback-scale-end: 1.235;
+    opacity: 0.26;
+    filter: blur(26px) saturate(0.68) brightness(0.42) contrast(1.12);
+    transform: scale(var(--living-route-fallback-scale));
   }
 
   .living-route-environment[data-living-route-ready="true"] canvas {
@@ -1550,12 +2289,17 @@ const memoryTexture =
 
   @keyframes livingRouteFallbackDrift {
     from {
-      transform: scale(1.02) translate3d(-0.25%, -0.15%, 0);
+      transform: scale(var(--living-route-fallback-scale)) translate3d(-0.25%, -0.15%, 0);
     }
 
     to {
-      transform: scale(1.045) translate3d(0.34%, 0.24%, 0);
+      transform: scale(var(--living-route-fallback-scale-end)) translate3d(0.34%, 0.24%, 0);
     }
+  }
+
+  @keyframes livingRouteDirectedLight {
+    from { transform: translate3d(-2.5%, 1%, 0) skewX(-4deg); }
+    to { transform: translate3d(3%, -1%, 0) skewX(3deg); }
   }
 
   @keyframes livingRouteProcessRake {
@@ -1564,8 +2308,8 @@ const memoryTexture =
   }
 
   @keyframes livingRouteArtistMemory {
-    from { transform: translate3d(-3%, 1%, 0); opacity: 0.6; }
-    to { transform: translate3d(4%, -1%, 0); opacity: 0.96; }
+    from { transform: translate3d(-3%, 1%, 0); }
+    to { transform: translate3d(4%, -1%, 0); }
   }
 
   @keyframes livingRouteContactSignal {
@@ -1576,7 +2320,8 @@ const memoryTexture =
   @media (prefers-reduced-motion: reduce) {
     .living-route-environment canvas,
     .living-route-environment__fallback,
-    .living-route-environment::after {
+    .living-route-environment[data-living-route-profile]::after,
+    .living-route-environment__depth-light {
       transition: none;
       animation: none;
     }

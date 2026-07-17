@@ -34,6 +34,7 @@ const {
 } = Astro.props;
 
 const atmosphereMood = resolveMood(Astro.url.pathname);
+const currentYear = new Date().getFullYear();
 
 const siteUrl = import.meta.env.PUBLIC_SITE_URL?.replace(/\/+$/, "");
 const baseUrl = siteUrl || Astro.url.origin;
@@ -77,6 +78,8 @@ function toAbsoluteUrl(value: string | null | undefined, base: string) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <meta name="author" content={siteMeta.artistName} />
+    <meta name="application-name" content="BRENYCH" />
     {noindex ? <meta name="robots" content="noindex,follow" /> : null}
     {canonicalUrl ? <link rel="canonical" href={canonicalUrl} /> : null}
     {preloadImages.map((image) => <link rel="preload" as="image" href={image} />)}
@@ -139,7 +142,7 @@ function toAbsoluteUrl(value: string | null | undefined, base: string) {
       <div class="site-artwork-atmosphere-field" data-artwork-atmosphere-field aria-hidden="true"></div>
       <header class="site-header" data-site-header>
         <div class="site-header__inner">
-          <a class="site-brand" href="/">ARTIST STAGE</a>
+          <a class="site-brand" href="/" aria-label="Brenych — home">BRENYCH</a>
           <nav class="site-nav" aria-label="Primary navigation">
             <a href="/" aria-current={isActive("/") ? "page" : undefined}>Home</a>
             <a href="/series" aria-current={isActive("/series") ? "page" : undefined}>Series</a>
@@ -158,7 +161,11 @@ function toAbsoluteUrl(value: string | null | undefined, base: string) {
 
       {!hideFooter ? (
         <footer class="site-footer">
-          <p class="site-footer__line">ARTIST STAGE &mdash; works, editions, and spatial continuations.</p>
+          <div class="site-footer__identity">
+            <p class="site-footer__line">&copy; {currentYear} Rostyslav Brenych</p>
+            <p class="site-footer__location">Meta Bodies / Barcelona</p>
+          </div>
+          <p class="site-footer__platform">ARTIST STAGE &mdash; authorial digital platform</p>
           <nav class="site-footer__links" aria-label="Collector and policy links">
             <a href="/process">Process</a>
             <a href="/collectors">Collectors</a>

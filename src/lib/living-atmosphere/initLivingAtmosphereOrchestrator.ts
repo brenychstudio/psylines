@@ -139,33 +139,34 @@ declare global {
   }
 }
 
-const LERP_SPEED = 0.055;
-const WORK_DETAIL_LERP_SPEED = 0.12;
-const SECTION_LERP_SPEED = 0.045;
-const PRESENCE_LERP_SPEED = 0.05;
+const PROFILE_DAMP_RATE = 1.15;
+const WORK_DETAIL_PROFILE_DAMP_RATE = 1.55;
+const SECTION_DAMP_RATE = 0.85;
+const PRESENCE_DAMP_RATE = 1.05;
+const PRESENCE_CURVE_RATE_SCALE = 20;
 const ROUTE_ENTER_DURATION = 900;
 const LAST_SLUG_STORAGE_KEY = "artist-stage:lastArtworkAtmosphereSlug";
 const IDLE_DELAY = 3500;
 const SCROLL_SETTLE_DELAY = 220;
 const ACTIVITY_TIMER_THROTTLE_MS = 240;
-const ACTIVE_FRAME_INTERVAL_MS = 160;
-const PRIORITY_FRAME_INTERVAL_MS = 96;
-const SCROLL_FRAME_INTERVAL_MS = 300;
-const IDLE_FRAME_INTERVAL_MS = 520;
-const HIDDEN_FRAME_INTERVAL_MS = 1200;
+const STYLE_FRAME_INTERVAL_MS = 1000 / 30;
+const REDUCED_MOTION_STYLE_INTERVAL_MS = 180;
 const SCROLL_ACTIVITY_THROTTLE_MS = 180;
 const VIEWPORT_MIN_RATIO = 0.35;
+const VIEWPORT_SWITCH_MARGIN = 0.1;
 const SECTION_MIN_RATIO = 0.22;
 const PRESENCE_SETTLING_MS = 1600;
 const PRESENCE_STILL_MS = 3500;
 const PRESENCE_DEEP_MS = 7000;
 const WORK_DETAIL_HANDOFF_MS = 650;
-const ENVIRONMENT_LERP_SPEED = 0.08;
-const ENVIRONMENT_FOCUS_LERP_SPEED = 0.055;
+const ENVIRONMENT_CURSOR_DAMP_RATE = 5.2;
+const ENVIRONMENT_FOCUS_DAMP_RATE = 3.8;
+const ENVIRONMENT_ACTIVITY_DAMP_RATE = 4.1;
+const ENVIRONMENT_VELOCITY_DAMP_RATE = 6.2;
 const ENVIRONMENT_DECAY = 0.935;
 const ENVIRONMENT_VELOCITY_DECAY = 0.84;
-const ENVIRONMENT_STYLE_INTERVAL_MS = 260;
-const ENVIRONMENT_PRIORITY_STYLE_INTERVAL_MS = 160;
+const ENVIRONMENT_STYLE_INTERVAL_MS = STYLE_FRAME_INTERVAL_MS - 1;
+const ENVIRONMENT_PRIORITY_STYLE_INTERVAL_MS = 24;
 const POINTER_VELOCITY_SCALE = 10;
 const POINTER_SAMPLE_INTERVAL_MS = 96;
 const SCROLL_VELOCITY_SCALE = 0.008;
@@ -238,11 +239,16 @@ export function parseRgba(value: string): RgbaColor | null {
 }
 
 export function formatRgba(color: RgbaColor) {
-  return `rgba(${Math.round(color.r)}, ${Math.round(color.g)}, ${Math.round(color.b)}, ${Number(color.a.toFixed(3))})`;
+  return `rgba(${Number(color.r.toFixed(2))}, ${Number(color.g.toFixed(2))}, ${Number(color.b.toFixed(2))}, ${Number(color.a.toFixed(4))})`;
 }
 
 export function lerpNumber(a: number, b: number, t: number) {
   return a + (b - a) * t;
+}
+
+function getDampingAmount(rate: number, elapsedMs: number) {
+  const deltaSeconds = Math.min(0.1, Math.max(0, elapsedMs / 1000));
+  return 1 - Math.exp(-Math.max(0, rate) * deltaSeconds);
 }
 
 function clampNumber(value: number, min = 0, max = 1) {
@@ -623,8 +629,12 @@ export function initLivingAtmosphereOrchestrator() {
   const root = document.documentElement;
   const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   const initialHandoff = readRouteAtmosphereHandoff();
-  const initialProfile = cloneProfile(getMemoryProfile(initialHandoff));
-  const hasRouteMemory = initialProfile.slug !== defaultArtworkAtmosphere.slug;
+  const memoryProfile = cloneProfile(getMemoryProfile(initialHandoff));
+  const pendingSignal = window.__artistStagePendingArtworkAtmosphere;
+  const initialProfile = pendingSignal?.slug && isKnownProfile(pendingSignal.slug)
+    ? cloneProfile(getArtworkAtmosphereProfile(pendingSignal.slug))
+    : memoryProfile;
+  const hasRouteMemory = memoryProfile.slug !== defaultArtworkAtmosphere.slug;
 
   let currentProfile = initialProfile;
   let targetProfile = cloneProfile(initialProfile);
@@ -633,7 +643,7 @@ export function initLivingAtmosphereOrchestrator() {
   let pageTargetSlug = targetProfile.slug;
   let viewportTargetSlug = "";
   let focusSlug = "";
-  let source = hasRouteMemory ? "route" : "memory";
+  let source = pendingSignal?.source ?? (hasRouteMemory ? "route" : "memory");
   let currentSection = cloneSectionState(defaultSectionAtmosphereState);
   let targetSection = cloneSectionState(defaultSectionAtmosphereState);
   let activeSectionId = "default";
@@ -650,7 +660,7 @@ export function initLivingAtmosphereOrchestrator() {
   let lastStillTargetKey = `${targetSlug}:${activeSectionId}`;
   let isPointerStill = false;
   let routeHandoffSource = hasRouteMemory ? (initialHandoff?.source ?? "session") : "initial";
-  let previousRouteSlug = hasRouteMemory ? initialProfile.slug : defaultArtworkAtmosphere.slug;
+  let previousRouteSlug = hasRouteMemory ? memoryProfile.slug : defaultArtworkAtmosphere.slug;
   let routeEnterUntil = hasRouteMemory ? Date.now() + ROUTE_ENTER_DURATION : 0;
   let handoffFromPath = initialHandoff?.fromPath ?? "";
   let handoffToPath = initialHandoff?.toPath ?? "";
@@ -676,9 +686,11 @@ export function initLivingAtmosphereOrchestrator() {
   let isDocumentVisible = !document.hidden;
   let presenceDirectorActive = root.dataset.presenceDirector === "active";
   let presenceDirectorPhase = (root.dataset.presencePhase || "awake") as PresenceDirectorPhase;
-  let tickTimer = 0;
+  let animationFrame = 0;
+  let lastTickAt = 0;
+  let lastStyleFrameAt = 0;
   const livingEnvironment = createLivingEnvironmentState();
-  const visibleArtwork = new Map<string, number>();
+  const visibleArtwork = new Map<HTMLElement, { slug: string; ratio: number }>();
   const visibleArtworkElements = new Map<string, HTMLElement>();
 
   function getEffectiveState(): AtmosphereInteractionState {
@@ -755,7 +767,7 @@ export function initLivingAtmosphereOrchestrator() {
   }
 
   function updateLivingEnvironment(now: number) {
-    const elapsed = Math.min(96, Math.max(16, now - (lastEnvironmentTickAt || now)));
+    const elapsed = Math.min(100, Math.max(1, now - (lastEnvironmentTickAt || now - 16.67)));
     lastEnvironmentTickAt = now;
 
     if (prefersReducedMotion) {
@@ -770,37 +782,41 @@ export function initLivingAtmosphereOrchestrator() {
       livingEnvironment.counterDriftX = 0;
       livingEnvironment.counterDriftY = 0;
       livingEnvironment.hueRotate = 0;
-      livingEnvironment.cursorX = lerpNumber(livingEnvironment.cursorX, 0.5, 0.06);
-      livingEnvironment.cursorY = lerpNumber(livingEnvironment.cursorY, 0.5, 0.06);
-      livingEnvironment.focusX = lerpNumber(livingEnvironment.focusX, livingEnvironment.targetFocusX, 0.04);
-      livingEnvironment.focusY = lerpNumber(livingEnvironment.focusY, livingEnvironment.targetFocusY, 0.04);
-      livingEnvironment.fieldAX = lerpNumber(livingEnvironment.fieldAX, livingEnvironment.focusX, 0.04);
-      livingEnvironment.fieldAY = lerpNumber(livingEnvironment.fieldAY, livingEnvironment.focusY, 0.04);
-      livingEnvironment.fieldBX = lerpNumber(livingEnvironment.fieldBX, 0.68, 0.04);
-      livingEnvironment.fieldBY = lerpNumber(livingEnvironment.fieldBY, 0.42, 0.04);
-      livingEnvironment.fieldCX = lerpNumber(livingEnvironment.fieldCX, 0.48, 0.04);
-      livingEnvironment.fieldCY = lerpNumber(livingEnvironment.fieldCY, 0.78, 0.04);
+      livingEnvironment.cursorX = 0.5;
+      livingEnvironment.cursorY = 0.5;
+      livingEnvironment.focusX = livingEnvironment.targetFocusX;
+      livingEnvironment.focusY = livingEnvironment.targetFocusY;
+      livingEnvironment.fieldAX = livingEnvironment.focusX;
+      livingEnvironment.fieldAY = livingEnvironment.focusY;
+      livingEnvironment.fieldBX = 0.68;
+      livingEnvironment.fieldBY = 0.42;
+      livingEnvironment.fieldCX = 0.48;
+      livingEnvironment.fieldCY = 0.78;
       livingEnvironment.proximity = 0;
       return;
     }
 
     const decay = Math.pow(ENVIRONMENT_DECAY, elapsed / 16.67);
     const velocityDecay = Math.pow(ENVIRONMENT_VELOCITY_DECAY, elapsed / 16.67);
+    const cursorAmount = getDampingAmount(ENVIRONMENT_CURSOR_DAMP_RATE, elapsed);
+    const focusAmount = getDampingAmount(ENVIRONMENT_FOCUS_DAMP_RATE, elapsed);
+    const activityAmount = getDampingAmount(ENVIRONMENT_ACTIVITY_DAMP_RATE, elapsed);
+    const velocityAmount = getDampingAmount(ENVIRONMENT_VELOCITY_DAMP_RATE, elapsed);
     livingEnvironment.targetActivity *= decay;
     livingEnvironment.targetVelocity *= velocityDecay;
-    livingEnvironment.cursorX = lerpNumber(livingEnvironment.cursorX, livingEnvironment.targetCursorX, ENVIRONMENT_LERP_SPEED);
-    livingEnvironment.cursorY = lerpNumber(livingEnvironment.cursorY, livingEnvironment.targetCursorY, ENVIRONMENT_LERP_SPEED);
-    livingEnvironment.focusX = lerpNumber(livingEnvironment.focusX, livingEnvironment.targetFocusX, ENVIRONMENT_FOCUS_LERP_SPEED);
-    livingEnvironment.focusY = lerpNumber(livingEnvironment.focusY, livingEnvironment.targetFocusY, ENVIRONMENT_FOCUS_LERP_SPEED);
+    livingEnvironment.cursorX = lerpNumber(livingEnvironment.cursorX, livingEnvironment.targetCursorX, cursorAmount);
+    livingEnvironment.cursorY = lerpNumber(livingEnvironment.cursorY, livingEnvironment.targetCursorY, cursorAmount);
+    livingEnvironment.focusX = lerpNumber(livingEnvironment.focusX, livingEnvironment.targetFocusX, focusAmount);
+    livingEnvironment.focusY = lerpNumber(livingEnvironment.focusY, livingEnvironment.targetFocusY, focusAmount);
     livingEnvironment.activity = lerpNumber(
       livingEnvironment.activity,
       livingEnvironment.targetActivity,
-      0.07,
+      activityAmount,
     );
     livingEnvironment.velocity = lerpNumber(
       livingEnvironment.velocity,
       livingEnvironment.targetVelocity,
-      0.12,
+      velocityAmount,
     );
 
     const time = now / 1000;
@@ -939,16 +955,15 @@ export function initLivingAtmosphereOrchestrator() {
   function setTarget(slug: string, options: SetTargetOptions = {}) {
     const profile = getArtworkAtmosphereProfile(slug);
     const nextSlug = profile.slug;
+    const nextSource = options.source ?? "event";
+    const isSameTarget = targetSlug === nextSlug;
+    const shouldApplyImmediately = Boolean(options.immediate || prefersReducedMotion);
 
-    targetProfile = cloneProfile(profile);
-    targetSlug = nextSlug;
-    source = options.source ?? "event";
-    setPresenceCurveForArtwork(nextSlug);
-    bumpEnvironmentActivity(source === "focus" ? 0.92 : source === "viewport" ? 0.48 : 0.38, 0.18);
+    source = nextSource;
 
     if (source === "work-detail") {
       isWorkDetailContext = true;
-      root.dataset.artworkAtmosphereContext = "work-detail";
+      setRootDatasetValue(root, "artworkAtmosphereContext", "work-detail");
       pageTargetSlug = nextSlug;
 
       if (routeEnterUntil) {
@@ -958,8 +973,20 @@ export function initLivingAtmosphereOrchestrator() {
       pageTargetSlug = nextSlug;
     }
 
-    if (options.immediate) {
+    if (isSameTarget && !options.immediate) {
+      storeTargetSlug(nextSlug);
+      applyCurrentProfile();
+      return;
+    }
+
+    targetProfile = cloneProfile(profile);
+    targetSlug = nextSlug;
+    setPresenceCurveForArtwork(nextSlug);
+    bumpEnvironmentActivity(source === "focus" ? 0.92 : source === "viewport" ? 0.48 : 0.38, 0.18);
+
+    if (shouldApplyImmediately) {
       currentProfile = cloneProfile(profile);
+      currentPresenceCurve = clonePresenceCurve(targetPresenceCurve);
       currentSlug = nextSlug;
     }
 
@@ -973,7 +1000,7 @@ export function initLivingAtmosphereOrchestrator() {
     targetSection = cloneSectionState(section);
     activeSectionId = section.id;
 
-    if (options.immediate) {
+    if (options.immediate || prefersReducedMotion) {
       currentSection = cloneSectionState(section);
     }
 
@@ -996,7 +1023,7 @@ export function initLivingAtmosphereOrchestrator() {
     activePresenceId = nextPresenceId;
     presenceSource = options.source ?? "event";
 
-    if (options.immediate) {
+    if (options.immediate || prefersReducedMotion) {
       currentPresence = clonePresenceState(presence);
     }
 
@@ -1059,9 +1086,33 @@ export function initLivingAtmosphereOrchestrator() {
   }
 
   function pickViewportTarget() {
-    const best = [...visibleArtwork.entries()].sort((a, b) => b[1] - a[1])[0];
+    const candidates = new Map<string, { ratio: number; element: HTMLElement }>();
 
-    if (!best || best[1] <= VIEWPORT_MIN_RATIO) return "";
+    visibleArtwork.forEach((entry, element) => {
+      const candidate = candidates.get(entry.slug);
+      if (!candidate || entry.ratio > candidate.ratio) {
+        candidates.set(entry.slug, { ratio: entry.ratio, element });
+      }
+    });
+
+    visibleArtworkElements.clear();
+    candidates.forEach((candidate, slug) => {
+      visibleArtworkElements.set(slug, candidate.element);
+    });
+
+    const best = [...candidates.entries()].sort((a, b) => b[1].ratio - a[1].ratio)[0];
+
+    if (!best || best[1].ratio <= VIEWPORT_MIN_RATIO) return "";
+
+    const current = viewportTargetSlug ? candidates.get(viewportTargetSlug) : undefined;
+    if (
+      current &&
+      current.ratio > VIEWPORT_MIN_RATIO &&
+      best[0] !== viewportTargetSlug &&
+      best[1].ratio < current.ratio + VIEWPORT_SWITCH_MARGIN
+    ) {
+      return viewportTargetSlug;
+    }
 
     return best[0];
   }
@@ -1328,7 +1379,9 @@ export function initLivingAtmosphereOrchestrator() {
   }
 
   function initViewportObserver() {
-    const worksField = document.querySelector("[data-works-atmosphere-field]");
+    const worksField = document.querySelector<HTMLElement>(
+      '[data-works-atmosphere-field]:not([data-atmosphere-manual="true"])',
+    );
     if (!worksField || !("IntersectionObserver" in window)) return;
 
     const observer = new IntersectionObserver(
@@ -1339,11 +1392,9 @@ export function initLivingAtmosphereOrchestrator() {
           if (!slug) return;
 
           if (entry.isIntersecting) {
-            visibleArtwork.set(slug, entry.intersectionRatio);
-            visibleArtworkElements.set(slug, element);
+            visibleArtwork.set(element, { slug, ratio: entry.intersectionRatio });
           } else {
-            visibleArtwork.delete(slug);
-            visibleArtworkElements.delete(slug);
+            visibleArtwork.delete(element);
           }
         });
 
@@ -1351,14 +1402,15 @@ export function initLivingAtmosphereOrchestrator() {
         if (isWorkDetailContext) return;
 
         const bestSlug = pickViewportTarget();
-        if (!bestSlug || bestSlug === viewportTargetSlug) return;
+        if (!bestSlug) return;
 
-        viewportTargetSlug = bestSlug;
         setEnvironmentFocusFromElement(visibleArtworkElements.get(bestSlug));
+        if (bestSlug === viewportTargetSlug) return;
+        viewportTargetSlug = bestSlug;
         setTarget(bestSlug, { source: "viewport" });
       },
       {
-        threshold: [0, 0.2, 0.35, 0.5, 0.75, 1],
+        threshold: Array.from({ length: 21 }, (_, index) => index / 20),
       },
     );
 
@@ -1533,9 +1585,24 @@ export function initLivingAtmosphereOrchestrator() {
   window.addEventListener("pagehide", handlePageHide);
   document.addEventListener("visibilitychange", () => {
     isDocumentVisible = !document.hidden;
+    if (isDocumentVisible) {
+      lastTickAt = 0;
+      lastStyleFrameAt = 0;
+      requestTick();
+    } else if (animationFrame) {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = 0;
+    }
   });
   reducedMotionQuery.addEventListener("change", (event) => {
     prefersReducedMotion = event.matches;
+    if (event.matches) {
+      currentProfile = cloneProfile(targetProfile);
+      currentSection = cloneSectionState(targetSection);
+      currentPresence = clonePresenceState(targetPresence);
+      currentPresenceCurve = clonePresenceCurve(targetPresenceCurve);
+      currentSlug = targetSlug;
+    }
     applyCurrentProfile();
   });
 
@@ -1552,69 +1619,62 @@ export function initLivingAtmosphereOrchestrator() {
     window.requestAnimationFrame(initDomObservers);
   }
 
-  const pending = window.__artistStagePendingArtworkAtmosphere;
-  if (pending?.slug) {
-    setTarget(pending.slug, { source: pending.source ?? "pending" });
+  if (pendingSignal?.slug) {
+    setTarget(pendingSignal.slug, { source: pendingSignal.source ?? "pending" });
   } else {
     applyCurrentProfile();
   }
 
   resetIdleTimer();
 
-  function getFrameInterval() {
-    if (!isDocumentVisible) {
-      return HIDDEN_FRAME_INTERVAL_MS;
-    }
-
-    if (prefersReducedMotion) {
-      return IDLE_FRAME_INTERVAL_MS;
-    }
-
-    if (isRouteLeaving || routeEnterUntil || isInspecting || focusSlug) {
-      return PRIORITY_FRAME_INTERVAL_MS;
-    }
-
-    if (isScrolling) {
-      return SCROLL_FRAME_INTERVAL_MS;
-    }
-
-    if (isIdle) {
-      return IDLE_FRAME_INTERVAL_MS;
-    }
-
-    return ACTIVE_FRAME_INTERVAL_MS;
-  }
-
-  function scheduleTick(delay = getFrameInterval()) {
-    window.clearTimeout(tickTimer);
-    tickTimer = window.setTimeout(() => {
-      window.requestAnimationFrame(tick);
-    }, delay);
+  function requestTick() {
+    if (!isDocumentVisible || animationFrame) return;
+    animationFrame = window.requestAnimationFrame(tick);
   }
 
   function tick(now: number) {
+    animationFrame = 0;
+
     if (!isDocumentVisible) {
-      scheduleTick();
       return;
     }
+
+    const elapsed = Math.min(100, Math.max(1, now - (lastTickAt || now - 16.67)));
+    lastTickAt = now;
 
     if (routeEnterUntil && Date.now() > routeEnterUntil) {
       routeEnterUntil = 0;
     }
 
     updatePresenceFromTime();
-    const curveSpeed = Number.parseFloat(targetPresenceCurve.responseSpeed) || 0.05;
-    currentProfile = lerpProfile(currentProfile, targetProfile, isWorkDetailContext ? WORK_DETAIL_LERP_SPEED : LERP_SPEED);
-    currentSection = lerpSectionState(currentSection, targetSection, SECTION_LERP_SPEED);
-    currentPresence = lerpPresenceState(currentPresence, targetPresence, PRESENCE_LERP_SPEED);
-    currentPresenceCurve = lerpPresenceCurve(currentPresenceCurve, targetPresenceCurve, curveSpeed);
+    const curveRate = (Number.parseFloat(targetPresenceCurve.responseSpeed) || 0.05) * PRESENCE_CURVE_RATE_SCALE;
+    const profileAmount = prefersReducedMotion
+      ? 1
+      : getDampingAmount(isWorkDetailContext ? WORK_DETAIL_PROFILE_DAMP_RATE : PROFILE_DAMP_RATE, elapsed);
+    const sectionAmount = prefersReducedMotion ? 1 : getDampingAmount(SECTION_DAMP_RATE, elapsed);
+    const presenceAmount = prefersReducedMotion ? 1 : getDampingAmount(PRESENCE_DAMP_RATE, elapsed);
+    const curveAmount = prefersReducedMotion ? 1 : getDampingAmount(curveRate, elapsed);
+
+    currentProfile = lerpProfile(currentProfile, targetProfile, profileAmount);
+    currentSection = lerpSectionState(currentSection, targetSection, sectionAmount);
+    currentPresence = lerpPresenceState(currentPresence, targetPresence, presenceAmount);
+    currentPresenceCurve = lerpPresenceCurve(currentPresenceCurve, targetPresenceCurve, curveAmount);
     updateLivingEnvironment(now);
     currentSlug = targetSlug;
-    applyCurrentProfile();
-    scheduleTick();
+
+    const styleInterval = prefersReducedMotion
+      ? REDUCED_MOTION_STYLE_INTERVAL_MS
+      : STYLE_FRAME_INTERVAL_MS;
+
+    if (!lastStyleFrameAt || now - lastStyleFrameAt >= styleInterval - 0.75) {
+      lastStyleFrameAt = now;
+      applyCurrentProfile();
+    }
+
+    requestTick();
   }
 
-  scheduleTick(0);
+  requestTick();
 
   return api;
 }

@@ -7,7 +7,7 @@ import {
 } from "./hostedAssets.js";
 import { normalizeFramePreset } from "./normalizeFramePreset.js";
 
-const DEFAULT_ARTIST = "Concept2048";
+const DEFAULT_ARTIST = "Rostyslav Brenych";
 
 const DEFAULT_MAT_BY_SIZE = {
   "30x40": {

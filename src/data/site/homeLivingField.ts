@@ -210,7 +210,7 @@ export const homeLivingCopy = {
     index: "01-05 / overture",
   },
   meta: {
-    kicker: "Series / Meta-Bodies",
+    kicker: "Series / Meta Bodies",
     title: "Bodies held as pressure.",
     body: "Figures move as inner structures rather than fixed identities.",
     index: "02-04 / body field",

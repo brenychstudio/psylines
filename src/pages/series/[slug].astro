@@ -21,6 +21,9 @@ if (!routeSeries) {
 }
 
 const series = routeSeries;
+const seriesSeoTitle = series.id === "meta-bodies"
+  ? "Inner Structures — Rostyslav Brenych"
+  : `${series.title} — Rostyslav Brenych`;
 const seriesDisplayTitle = series.title.replace(/\s+\/\s+/g, " ");
 const seriesWorks = getSeriesArtworks(series.id);
 const selectedSeriesWorks = seriesWorks.filter(
@@ -90,7 +93,7 @@ const getHeroSlot = (index: number, total: number) => {
 };
 ---
 <BaseLayout
-  title={`${series.title} - ARTIST STAGE`}
+  title={seriesSeoTitle}
   description={series.statement}
   canonicalPath={`/series/${series.slug}`}
   hideFooter
@@ -293,7 +296,7 @@ const getHeroSlot = (index: number, total: number) => {
                 data-series-inspect-label={`${String(index + 1).padStart(2, "0")} / ${series.title}`}
                 data-series-inspect-total={sequenceWorks.length}
                 data-series-inspect-href={`/works/${work.slug}`}
-                data-artwork-slug={work.slug}
+                data-artwork-slug={work.meta.atmosphereProfile || work.slug}
                 data-atmosphere-handoff-slug={work.meta.atmosphereProfile || work.slug}
                 data-series-work-route
                 data-series-work-slug={work.slug}
@@ -333,7 +336,7 @@ const getHeroSlot = (index: number, total: number) => {
             <a
               class="series-register-row"
               href={`/works/${work.slug}`}
-              data-artwork-slug={work.slug}
+              data-artwork-slug={work.meta.atmosphereProfile || work.slug}
               data-atmosphere-handoff-slug={work.meta.atmosphereProfile || work.slug}
               data-series-work-route
               data-series-work-slug={work.slug}
@@ -475,6 +478,10 @@ const getHeroSlot = (index: number, total: number) => {
       let autoplayTimer = 0;
       let pointerStartX = 0;
       let isHeroPaused = false;
+      const heroRect = hero.getBoundingClientRect();
+      let isHeroDominant =
+        heroRect.bottom > window.innerHeight * 0.16 &&
+        heroRect.top < window.innerHeight * 0.78;
 
       const getCircularOffset = (index) => {
         const total = heroFrames.length;
@@ -524,7 +531,7 @@ const getHeroSlot = (index: number, total: number) => {
           }
 
           const atmosphereSlug = activeFrame.dataset.atmosphereHandoffSlug;
-          if (atmosphereSlug) {
+          if (atmosphereSlug && isHeroDominant && !document.hidden) {
             window.ArtistStageAtmosphereOrchestrator?.setTarget?.(atmosphereSlug, {
               source: "series-hero",
               immediate: false,
@@ -548,9 +555,28 @@ const getHeroSlot = (index: number, total: number) => {
         window.clearInterval(autoplayTimer);
         if (prefersReducedMotion || heroFrames.length <= 1) return;
         autoplayTimer = window.setInterval(() => {
-          if (!isHeroPaused) stepHero(1);
-        }, 5200);
+          if (!isHeroPaused && isHeroDominant && !document.hidden) stepHero(1);
+        }, 6800);
       };
+
+      if ("IntersectionObserver" in window) {
+        const heroVisibilityObserver = new IntersectionObserver(
+          ([entry]) => {
+            const wasDominant = isHeroDominant;
+            isHeroDominant = Boolean(entry?.isIntersecting && entry.intersectionRatio >= 0.34);
+
+            if (!wasDominant && isHeroDominant) {
+              syncHero();
+            }
+          },
+          {
+            threshold: [0, 0.2, 0.34, 0.55, 0.75, 1],
+            rootMargin: "-6% 0px -18% 0px",
+          },
+        );
+
+        heroVisibilityObserver.observe(hero);
+      }
 
       heroFrames.forEach((frame, index) => {
         const image = frame.querySelector("img");
@@ -624,6 +650,12 @@ const getHeroSlot = (index: number, total: number) => {
 
       hero.addEventListener("focusout", () => {
         isHeroPaused = false;
+      });
+
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && isHeroDominant) {
+          syncHero();
+        }
       });
 
       syncHero();

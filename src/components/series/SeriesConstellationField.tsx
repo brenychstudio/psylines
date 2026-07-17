@@ -126,8 +126,9 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function easeInOutQuart(value: number) {
-  return value < 0.5 ? 8 * value * value * value * value : 1 - Math.pow(-2 * value + 2, 4) / 2;
+function smootherstep(value: number) {
+  const progress = clamp(value, 0, 1);
+  return progress * progress * progress * (progress * (progress * 6 - 15) + 10);
 }
 
 function getProximity(active: SeriesConstellationNode, node: SeriesConstellationNode) {
@@ -171,6 +172,11 @@ export default function SeriesConstellationField({
   const anchorRefs = useRef(new Map<string, HTMLAnchorElement>());
   const targetPan = useRef({ x: 0, y: 0 });
   const currentPan = useRef({ x: 0, y: 0 });
+  const activeIndexRef = useRef(0);
+  const wheelAccumulator = useRef(0);
+  const wheelCooldownUntil = useRef(0);
+  const wheelResetTimer = useRef(0);
+  const scrollHandoffTimer = useRef(0);
   const cameraMove = useRef({
     active: false,
     startTime: 0,
@@ -272,7 +278,7 @@ export default function SeriesConstellationField({
     if (cameraMove.current.active) {
       const elapsed = timestamp - cameraMove.current.startTime;
       const progress = clamp(elapsed / cameraMove.current.duration, 0, 1);
-      const eased = easeInOutQuart(progress);
+      const eased = smootherstep(progress);
 
       currentPan.current.x =
         cameraMove.current.fromX + (cameraMove.current.toX - cameraMove.current.fromX) * eased;
@@ -325,7 +331,18 @@ export default function SeriesConstellationField({
   const startCinematicPan = useCallback(
     (toX: number, toY: number) => {
       const distance = Math.hypot(toX - currentPan.current.x, toY - currentPan.current.y);
-      const duration = clamp(760 + distance * 0.34, 920, 1680);
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const duration = reducedMotion ? 0 : clamp(1280 + distance * 0.32, 1500, 2300);
+
+      if (reducedMotion) {
+        cameraMove.current.active = false;
+        currentPan.current.x = toX;
+        currentPan.current.y = toY;
+        targetPan.current.x = toX;
+        targetPan.current.y = toY;
+        requestRender();
+        return 0;
+      }
 
       cameraMove.current = {
         active: true,
@@ -338,6 +355,7 @@ export default function SeriesConstellationField({
       };
 
       requestRender();
+      return duration;
     },
     [requestRender],
   );
@@ -357,7 +375,7 @@ export default function SeriesConstellationField({
       targetPan.current.x = bounds.width * centerX - node.x;
       targetPan.current.y = bounds.height * centerY - node.y;
       clampPan();
-      startCinematicPan(targetPan.current.x, targetPan.current.y);
+      return startCinematicPan(targetPan.current.x, targetPan.current.y);
     },
     [clampPan, getBounds, startCinematicPan],
   );
@@ -368,6 +386,9 @@ export default function SeriesConstellationField({
       const node = nodes[nextIndex];
       if (!node) return;
 
+      if (scrollHandoffTimer.current) window.clearTimeout(scrollHandoffTimer.current);
+      scrollHandoffTimer.current = 0;
+      activeIndexRef.current = nextIndex;
       setActiveIndex(nextIndex);
 
       if (options.selected) {
@@ -383,6 +404,33 @@ export default function SeriesConstellationField({
       if (options.pan !== false) {
         panToNode(node);
       }
+    },
+    [nodes, panToNode],
+  );
+
+  const navigateByScroll = useCallback(
+    (direction: number) => {
+      const nextIndex = clamp(activeIndexRef.current + direction, 0, nodes.length - 1);
+      if (nextIndex === activeIndexRef.current) return 0;
+
+      const node = nodes[nextIndex];
+      if (!node) return 0;
+
+      activeIndexRef.current = nextIndex;
+      if (scrollHandoffTimer.current) window.clearTimeout(scrollHandoffTimer.current);
+      const duration = panToNode(node);
+
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        setActiveIndex(nextIndex);
+        return 0;
+      }
+
+      const handoffDelay = clamp(duration * 0.78, 1050, 1600);
+      scrollHandoffTimer.current = window.setTimeout(() => {
+        scrollHandoffTimer.current = 0;
+        setActiveIndex(nextIndex);
+      }, handoffDelay);
+      return duration;
     },
     [nodes, panToNode],
   );
@@ -461,19 +509,23 @@ export default function SeriesConstellationField({
     rootRef.current.style.setProperty("--series-glow-x", `${(activeNode.x / mapWidth) * 100}%`);
     rootRef.current.style.setProperty("--series-glow-y", `${(activeNode.y / mapHeight) * 100}%`);
 
-    window.ArtistStageAtmosphereOrchestrator?.setTarget?.(activeNode.atmosphereSlug, {
-      source: "series-constellation",
-      immediate: false,
-    });
+    const atmosphereOrchestrator = window.ArtistStageAtmosphereOrchestrator;
 
-    window.dispatchEvent(
-      new CustomEvent("artist-stage:artwork-atmosphere:set", {
-        detail: {
-          slug: activeNode.atmosphereSlug,
-          source: "series-constellation",
-        },
-      }),
-    );
+    if (atmosphereOrchestrator?.setTarget) {
+      atmosphereOrchestrator.setTarget(activeNode.atmosphereSlug, {
+        source: "series-constellation",
+        immediate: false,
+      });
+    } else {
+      window.dispatchEvent(
+        new CustomEvent("artist-stage:artwork-atmosphere:set", {
+          detail: {
+            slug: activeNode.atmosphereSlug,
+            source: "series-constellation",
+          },
+        }),
+      );
+    }
 
     const prefetch = document.createElement("link");
     prefetch.rel = "prefetch";
@@ -490,6 +542,8 @@ export default function SeriesConstellationField({
       if (rafId.current) {
         window.cancelAnimationFrame(rafId.current);
       }
+      if (wheelResetTimer.current) window.clearTimeout(wheelResetTimer.current);
+      if (scrollHandoffTimer.current) window.clearTimeout(scrollHandoffTimer.current);
     };
   }, []);
 
@@ -551,10 +605,38 @@ export default function SeriesConstellationField({
   }, [activeIndex, nodes]);
 
   const panByWheel = useCallback(
-    (deltaXValue: number, deltaYValue: number, shiftKey = false) => {
-      const horizontal = Math.abs(deltaXValue) > Math.abs(deltaYValue) || shiftKey;
-      const deltaX = horizontal ? -deltaXValue - deltaYValue * 0.72 : -deltaYValue * 1.04;
-      const deltaY = horizontal ? -deltaYValue * 0.26 : -deltaXValue * 0.5;
+    (deltaXValue: number, deltaYValue: number, deltaMode = 0, shiftKey = false) => {
+      const pageScale = fieldRef.current?.getBoundingClientRect().height || window.innerHeight;
+      const modeScale = deltaMode === 1 ? 16 : deltaMode === 2 ? pageScale : 1;
+      const normalizedX = deltaXValue * modeScale;
+      const normalizedY = deltaYValue * modeScale;
+      const verticalFocusGesture = !shiftKey && Math.abs(normalizedY) >= Math.abs(normalizedX) * 1.15;
+
+      if (verticalFocusGesture) {
+        const now = window.performance.now();
+        if (wheelResetTimer.current) window.clearTimeout(wheelResetTimer.current);
+        wheelResetTimer.current = window.setTimeout(() => {
+          wheelAccumulator.current = 0;
+          wheelResetTimer.current = 0;
+        }, 260);
+
+        if (now < wheelCooldownUntil.current) {
+          wheelAccumulator.current = 0;
+          return;
+        }
+
+        wheelAccumulator.current += normalizedY;
+        if (Math.abs(wheelAccumulator.current) < 88) return;
+
+        const direction = wheelAccumulator.current > 0 ? 1 : -1;
+        wheelAccumulator.current = 0;
+        const duration = navigateByScroll(direction);
+        wheelCooldownUntil.current = now + Math.max(1850, duration + 160);
+        return;
+      }
+
+      const deltaX = clamp(-normalizedX - normalizedY * 0.38, -72, 72);
+      const deltaY = clamp(-normalizedY * 0.18 - normalizedX * 0.3, -34, 34);
 
       cameraMove.current.active = false;
       targetPan.current.x += deltaX;
@@ -562,7 +644,7 @@ export default function SeriesConstellationField({
       clampPan();
       requestRender();
     },
-    [clampPan, requestRender],
+    [clampPan, navigateByScroll, requestRender],
   );
 
   useEffect(() => {
@@ -570,8 +652,9 @@ export default function SeriesConstellationField({
     if (!field) return;
 
     const handleNativeWheel = (event: WheelEvent) => {
+      if (window.innerWidth <= 900) return;
       event.preventDefault();
-      panByWheel(event.deltaX, event.deltaY, event.shiftKey);
+      panByWheel(event.deltaX, event.deltaY, event.deltaMode, event.shiftKey);
     };
 
     field.addEventListener("wheel", handleNativeWheel, { passive: false });
@@ -579,6 +662,24 @@ export default function SeriesConstellationField({
     return () => {
       field.removeEventListener("wheel", handleNativeWheel);
     };
+  }, [panByWheel]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    const handlePanelWheel = (event: WheelEvent) => {
+      if (
+        window.innerWidth <= 900 ||
+        fieldRef.current?.contains(event.target as Node | null)
+      ) return;
+
+      event.preventDefault();
+      panByWheel(event.deltaX, event.deltaY, event.deltaMode, event.shiftKey);
+    };
+
+    root.addEventListener('wheel', handlePanelWheel, { passive: false });
+    return () => root.removeEventListener('wheel', handlePanelWheel);
   }, [panByWheel]);
 
   const panByDrag = useCallback(
@@ -714,6 +815,7 @@ export default function SeriesConstellationField({
       data-active-artwork={activeNode.coverSrc}
       data-active-series-id={activeNode.id}
       data-works-atmosphere-field
+      data-atmosphere-manual="true"
     >
       <div className="series-constellation__atmosphere" aria-hidden="true" />
 

@@ -95,7 +95,7 @@ export function buildCollectorInquiryMailto(
 
   const subjectTarget =
     prefill.inventoryNumber || prefill.workTitle || prefill.seriesTitle || "collector inquiry";
-  const subject = `ARTIST STAGE collector inquiry - ${subjectTarget}`;
+  const subject = `Rostyslav Brenych collector inquiry - ${subjectTarget}`;
 
   const lines = [
     "Hello,",

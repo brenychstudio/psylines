@@ -108,7 +108,7 @@ const workArConfig = {
 const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
 ---
 <BaseLayout
-  title={`${work.title} - ARTIST STAGE`}
+  title={`${work.title} — Rostyslav Brenych`}
   description={workSeoDescription}
   ogImage={coverSrc}
   canonicalPath={`/works/${work.slug}`}
@@ -187,6 +187,17 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
     const returnDisplay = document.querySelector("[data-return-display]");
     const productionDisplay = document.querySelector("[data-production-display]");
     const shippingDisplay = document.querySelector("[data-shipping-display]");
+    const collectorRouteDisplay = document.querySelector("[data-collector-route-display]");
+    const collectorPriceDetailDisplay = document.querySelector("[data-collector-price-display]");
+    const collectorFormatDetail = document.querySelector("[data-collector-format-detail]");
+    const editionDisplay = document.querySelector("[data-edition-display]");
+    const techniqueDetailDisplay = document.querySelector("[data-technique-display] a");
+    const surfaceDetailDisplay = document.querySelector("[data-surface-display]");
+    const paperDetailDisplay = document.querySelector("[data-paper-display]");
+    const materialsDetailDisplay = document.querySelector("[data-materials-detail-display]");
+    const signatureDisplay = document.querySelector("[data-signature-display]");
+    const certificateDisplay = document.querySelector("[data-certificate-display]");
+    const presentationDisplay = document.querySelector("[data-presentation-display]");
     const buyNowButton = document.querySelector("[data-buy-now]");
     const inquiryLinks = Array.from(document.querySelectorAll("[data-collector-inquiry-link]"));
     const checkoutFeedback = document.querySelector("[data-checkout-feedback]");
@@ -198,7 +209,8 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
     const surfaceLensSource = document.querySelector("[data-surface-lens-source]");
     const surfaceLens = document.querySelector("[data-surface-lens]");
     const collectorDetails = document.querySelector("[data-collector-details]");
-    const collectorDetailsClose = document.querySelector("[data-collector-details-close]");
+    const collectorDetailsSummary = document.querySelector("[data-collector-details-summary]");
+    const collectorDetailsCloseButtons = Array.from(document.querySelectorAll("[data-collector-details-close]"));
     const interiorPreviewOpen = document.querySelector("[data-interior-preview-open]");
     const interiorPreviewPanels = Array.from(document.querySelectorAll("[data-interior-preview-panel]"));
     const interiorPreviewPanel =
@@ -365,6 +377,15 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
       const productionTime = chip?.getAttribute("data-size-production-time");
       const returnWindow = chip?.getAttribute("data-size-return-window");
       const shippingNote = chip?.getAttribute("data-size-shipping-note");
+      const collectorFormat = chip?.getAttribute("data-size-collector-format");
+      const editionLabel = chip?.getAttribute("data-size-edition-label");
+      const technique = chip?.getAttribute("data-size-technique");
+      const surface = chip?.getAttribute("data-size-surface");
+      const paper = chip?.getAttribute("data-size-paper");
+      const materials = chip?.getAttribute("data-size-materials");
+      const signature = chip?.getAttribute("data-size-signature");
+      const certificate = chip?.getAttribute("data-size-certificate");
+      const presentation = chip?.getAttribute("data-size-presentation");
 
       applyPreviewOptionState(chip);
 
@@ -398,6 +419,50 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
 
       if (shippingDisplay && shippingNote) {
         shippingDisplay.textContent = shippingNote;
+      }
+
+      if (collectorRouteDisplay && typeLabel) {
+        collectorRouteDisplay.textContent = typeLabel;
+      }
+
+      if (collectorPriceDetailDisplay && price) {
+        collectorPriceDetailDisplay.textContent = `EUR ${price}`;
+      }
+
+      if (collectorFormatDetail && collectorFormat) {
+        collectorFormatDetail.textContent = collectorFormat;
+      }
+
+      if (editionDisplay && editionLabel) {
+        editionDisplay.textContent = editionLabel;
+      }
+
+      if (techniqueDetailDisplay && technique) {
+        techniqueDetailDisplay.textContent = technique;
+      }
+
+      if (surfaceDetailDisplay && surface) {
+        surfaceDetailDisplay.textContent = surface;
+      }
+
+      if (paperDetailDisplay && paper) {
+        paperDetailDisplay.textContent = paper;
+      }
+
+      if (materialsDetailDisplay && materials) {
+        materialsDetailDisplay.textContent = materials;
+      }
+
+      if (signatureDisplay && signature) {
+        signatureDisplay.textContent = signature;
+      }
+
+      if (certificateDisplay && certificate) {
+        certificateDisplay.textContent = certificate;
+      }
+
+      if (presentationDisplay && presentation) {
+        presentationDisplay.textContent = presentation;
       }
 
       if (interiorPreviewSize && dimensions) {
@@ -534,18 +599,107 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
 
     surfaceLensSource?.addEventListener("load", refreshSurfaceLensImage);
 
-    function closeCollectorDetails() {
+    const collectorDetailsReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let collectorDetailsCloseTimer = 0;
+    let collectorDetailsScrollState = null;
+
+    function lockCollectorDetailsScroll() {
+      if (window.innerWidth <= 1100 || collectorDetailsScrollState) return;
+
+      const scrollbarWidth = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
+      collectorDetailsScrollState = {
+        scrollY: window.scrollY,
+        htmlOverflow: document.documentElement.style.overflow,
+        bodyOverflow: document.body.style.overflow,
+        bodyPaddingRight: document.body.style.paddingRight,
+      };
+
+      document.documentElement.classList.add("collector-details-scroll-lock");
+      document.body.classList.add("collector-details-scroll-lock");
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
+    }
+
+    function unlockCollectorDetailsScroll() {
+      if (!collectorDetailsScrollState) return;
+
+      const { scrollY, htmlOverflow, bodyOverflow, bodyPaddingRight } = collectorDetailsScrollState;
+      collectorDetailsScrollState = null;
+      document.documentElement.classList.remove("collector-details-scroll-lock");
+      document.body.classList.remove("collector-details-scroll-lock");
+      document.documentElement.style.overflow = htmlOverflow;
+      document.body.style.overflow = bodyOverflow;
+      document.body.style.paddingRight = bodyPaddingRight;
+      window.scrollTo({ top: scrollY, left: 0, behavior: "auto" });
+    }
+
+    function finishClosingCollectorDetails(restoreFocus = false) {
       if (!collectorDetails?.open) return;
 
       collectorDetails.removeAttribute("open");
+      collectorDetails.removeAttribute("data-closing");
       objectChamber?.classList.remove("is-collector-details-open");
+      collectorDetailsSummary?.setAttribute("aria-expanded", "false");
+      unlockCollectorDetailsScroll();
+
+      if (restoreFocus) {
+        collectorDetailsSummary?.focus?.({ preventScroll: true });
+      }
+    }
+
+    function closeCollectorDetails({ restoreFocus = false } = {}) {
+      if (!collectorDetails?.open || collectorDetails.hasAttribute("data-closing")) return;
+
+      collectorDetails.setAttribute("data-closing", "true");
+      collectorDetailsSummary?.setAttribute("aria-expanded", "false");
+      window.clearTimeout(collectorDetailsCloseTimer);
+
+      const closeDelay = collectorDetailsReducedMotion.matches ? 0 : 420;
+      collectorDetailsCloseTimer = window.setTimeout(
+        () => finishClosingCollectorDetails(restoreFocus),
+        closeDelay,
+      );
     }
 
     collectorDetails?.addEventListener("toggle", () => {
+      if (collectorDetails.open) {
+        window.clearTimeout(collectorDetailsCloseTimer);
+        collectorDetails.removeAttribute("data-closing");
+        lockCollectorDetailsScroll();
+      } else {
+        unlockCollectorDetailsScroll();
+      }
+
       objectChamber?.classList.toggle("is-collector-details-open", collectorDetails.open);
+      collectorDetailsSummary?.setAttribute("aria-expanded", collectorDetails.open ? "true" : "false");
     });
 
-    collectorDetailsClose?.addEventListener("click", closeCollectorDetails);
+    window.addEventListener("resize", () => {
+      if (!collectorDetails?.open) return;
+
+      if (window.innerWidth > 1100) {
+        lockCollectorDetailsScroll();
+      } else {
+        unlockCollectorDetailsScroll();
+      }
+    });
+
+    collectorDetailsSummary?.addEventListener("click", (event) => {
+      if (!collectorDetails?.open) return;
+      event.preventDefault();
+      closeCollectorDetails({ restoreFocus: true });
+    });
+
+    collectorDetailsCloseButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const restoreFocus = !button.classList.contains("collector-details-backdrop");
+        closeCollectorDetails({ restoreFocus });
+      });
+    });
 
     document.addEventListener("pointerdown", (event) => {
       if (!collectorDetails?.open) return;
@@ -609,7 +763,7 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && collectorDetails?.open) {
-        closeCollectorDetails();
+        closeCollectorDetails({ restoreFocus: true });
       }
 
       if (event.key === "Escape" && interiorPreviewPanel?.getAttribute("data-open") === "true") {
@@ -5241,7 +5395,6 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
       radial-gradient(circle at 35% 44%, var(--artwork-wash-strong), transparent 38%),
       radial-gradient(circle at 72% 50%, var(--artwork-glow), transparent 34%),
       rgba(2, 4, 3, 0.72);
-    transition: background 520ms ease;
   }
 
   .inspect-field-object,
@@ -5304,9 +5457,7 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
       radial-gradient(ellipse at 50% 92%, var(--artwork-shadow-wash), transparent 60%);
     filter: none;
     opacity: calc(0.82 + (var(--artwork-density) * 0.16));
-    transition:
-      background 520ms ease,
-      opacity 520ms ease;
+    transition: opacity 520ms ease;
   }
 
   .inspect-artwork-stage::after,
@@ -5792,7 +5943,6 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
       radial-gradient(circle at 49% 39%, var(--artwork-wash-strong), transparent 30%),
       radial-gradient(circle at 70% 60%, var(--artwork-glow), transparent 32%),
       radial-gradient(ellipse at 50% 93%, var(--artwork-shadow-wash), transparent 58%);
-    transition: background 520ms ease;
   }
 
   .object-chamber-v3 .object-chamber-surface__aura {
@@ -5802,9 +5952,7 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
       radial-gradient(ellipse at 50% 92%, var(--artwork-shadow-wash), transparent 66%);
     filter: none;
     opacity: var(--artwork-field-opacity, 0.62);
-    transition:
-      background 520ms ease,
-      opacity 520ms ease;
+    transition: opacity 520ms ease;
   }
 
   .object-chamber-v3 .object-chamber-plane::before {
@@ -5814,9 +5962,7 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
       radial-gradient(ellipse at 50% 92%, var(--artwork-shadow-wash), transparent 66%);
     filter: none;
     opacity: var(--artwork-field-opacity, 0.62);
-    transition:
-      background 520ms ease,
-      opacity 520ms ease;
+    transition: opacity 520ms ease;
   }
 
   .object-chamber-v3 .object-chamber-plane::after {
@@ -5827,7 +5973,6 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
     background: radial-gradient(ellipse at center, var(--artwork-shadow-wash), transparent 72%);
     filter: none;
     opacity: 0.95;
-    transition: background 520ms ease;
   }
 
   .object-chamber-v3 .object-chamber-media,
@@ -6474,6 +6619,388 @@ const workArConfigJson = JSON.stringify(workArConfig).replace(/</g, "\\u003c");
 
     .collector-object-record {
       gap: 0.35rem 0.6rem;
+    }
+  }
+
+  /* V3 Work Detail - Collector Dossier: stable object stage + cinematic reveal */
+  .object-chamber-v3 .collector-details {
+    z-index: 126;
+    overflow-anchor: none;
+  }
+
+  .object-chamber-v3 .collector-details::before {
+    content: none;
+  }
+
+  .object-chamber-v3 .collector-details summary {
+    position: relative;
+    z-index: 128;
+    color: rgba(235, 240, 232, 0.56);
+    text-decoration-color: rgba(235, 240, 232, 0.26);
+    transition:
+      color 320ms ease,
+      letter-spacing 520ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .object-chamber-v3 .collector-details summary:hover,
+  .object-chamber-v3 .collector-details summary:focus-visible,
+  .object-chamber-v3 .collector-details[open] summary {
+    color: rgba(247, 250, 242, 0.9);
+    outline: none;
+    letter-spacing: 0.015em;
+  }
+
+  .collector-details-backdrop {
+    appearance: none;
+    position: fixed;
+    inset: 3.25rem 0 0;
+    z-index: 122;
+    display: block;
+    width: 100%;
+    height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background:
+      radial-gradient(circle at 76% 32%, color-mix(in srgb, var(--artwork-glow), transparent 91%), transparent 34%),
+      linear-gradient(90deg, rgba(1, 4, 2, 0.72), rgba(1, 4, 2, 0.58) 42%, rgba(1, 4, 2, 0.8));
+    opacity: 0;
+    pointer-events: none;
+    cursor: default;
+    transition: opacity 440ms ease;
+  }
+
+  .object-chamber-v3 .collector-details[open] .collector-details-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  html.collector-details-scroll-lock,
+  body.collector-details-scroll-lock {
+    overscroll-behavior: none;
+  }
+
+  .object-chamber-v3 .collector-details[data-closing] .collector-details-backdrop {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .object-chamber-v3 .collector-details-panel {
+    border: 0;
+    border-top: 1px solid rgba(241, 246, 236, 0.16);
+    border-bottom: 1px solid rgba(241, 246, 236, 0.1);
+    border-left: 1px solid rgba(241, 246, 236, 0.2);
+    border-radius: 0.35rem 0 0 0.35rem;
+    background:
+      radial-gradient(circle at 14% 8%, color-mix(in srgb, var(--artwork-glow), transparent 88%), transparent 32%),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.032), transparent 34%),
+      #050806;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow:
+      -2rem 2.4rem 7rem rgba(0, 0, 0, 0.5),
+      inset 1px 0 0 rgba(255, 255, 255, 0.025);
+    overflow: visible;
+  }
+
+  .object-chamber-v3 .collector-details-panel::before {
+    left: 0;
+    right: 22%;
+    background: linear-gradient(90deg, rgba(245, 248, 242, 0.42), rgba(245, 248, 242, 0));
+    opacity: 0.72;
+  }
+
+  .object-chamber-v3 .collector-details-panel::after {
+    background:
+      radial-gradient(circle at 8% 12%, color-mix(in srgb, var(--artwork-glow), transparent 88%), transparent 30%),
+      linear-gradient(180deg, rgba(245, 248, 242, 0.028), transparent 24%);
+    opacity: 0.72;
+  }
+
+  .object-chamber-v3 .collector-details-panel__head {
+    position: relative;
+    z-index: 2;
+    padding-bottom: 0.72rem;
+    border-bottom-color: rgba(245, 248, 242, 0.09);
+  }
+
+  .object-chamber-v3 .collector-details-list {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 1.3rem;
+    margin: 0;
+  }
+
+  .object-chamber-v3 .collector-details-list > .detail-purchase-meta-row {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(5.25rem, 0.34fr) minmax(0, 0.66fr);
+    align-content: start;
+    gap: 0.6rem;
+    padding: 0.5rem 0;
+    border-top: 1px solid rgba(245, 248, 242, 0.065);
+  }
+
+  .object-chamber-v3 .collector-details-list > [data-collector-detail-priority="secondary"] {
+    display: none;
+  }
+
+  .object-chamber-v3 .collector-details-list > [data-collector-detail="availability"],
+  .object-chamber-v3 .collector-details-list > [data-collector-detail="materials"],
+  .object-chamber-v3 .collector-details-list > [data-collector-detail="signature"],
+  .object-chamber-v3 .collector-details-list > [data-collector-detail="production"],
+  .object-chamber-v3 .collector-details-list > [data-collector-detail="routes"],
+  .object-chamber-v3 .collector-details-list > [data-collector-detail="policies"] {
+    grid-column: 1 / -1;
+  }
+
+  .object-chamber-v3 .collector-details-list > [data-collector-detail="materials"],
+  .object-chamber-v3 .collector-details-list > [data-collector-detail="signature"],
+  .object-chamber-v3 .collector-details-list > [data-collector-detail="production"],
+  .object-chamber-v3 .collector-details-list > [data-collector-detail="policies"] {
+    grid-template-columns: minmax(7.2rem, 0.2fr) minmax(0, 0.8fr);
+  }
+
+  .object-chamber-v3 .collector-details-list dt {
+    padding-top: 0.08rem;
+    color: rgba(235, 240, 232, 0.4);
+    font-size: 0.54rem;
+    font-weight: 760;
+    letter-spacing: 0.14em;
+    line-height: 1.35;
+  }
+
+  .object-chamber-v3 .collector-details-list dd {
+    min-width: 0;
+    color: rgba(239, 244, 235, 0.72);
+    font-size: 0.72rem;
+    line-height: 1.4;
+  }
+
+  .object-chamber-v3 .collector-details-list [data-collector-detail="availability"] dd {
+    max-width: 42rem;
+    font-size: 0.76rem;
+  }
+
+  .object-chamber-v3 .collector-details-list [data-collector-detail="method"] dd,
+  .object-chamber-v3 .collector-details-list [data-collector-detail="paper"] dd,
+  .object-chamber-v3 .collector-details-list [data-collector-detail="surface"] dd {
+    display: block !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    text-overflow: clip !important;
+    -webkit-box-orient: initial !important;
+    -webkit-line-clamp: unset !important;
+    line-clamp: unset !important;
+  }
+
+  .collector-details-separator {
+    color: rgba(235, 240, 232, 0.28);
+  }
+
+  .collector-record-stack {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .collector-record-line {
+    margin-top: 0.08rem;
+    padding-top: 0.26rem;
+    border-top: 1px solid rgba(245, 248, 242, 0.055);
+  }
+
+  .collector-record-line--muted {
+    color: rgba(235, 240, 232, 0.5);
+  }
+
+  .collector-record-stack--inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.18rem 0.58rem;
+  }
+
+  .collector-record-stack--inline > span + span::before {
+    content: "·";
+    margin-right: 0.58rem;
+    color: rgba(235, 240, 232, 0.28);
+  }
+
+  .object-chamber-v3 .collector-details-routes {
+    gap: 0.45rem 0.85rem;
+  }
+
+  .object-chamber-v3 .collector-details-routes a {
+    border-bottom-color: rgba(245, 248, 242, 0.18);
+    transition:
+      color 260ms ease,
+      border-color 260ms ease;
+  }
+
+  .object-chamber-v3 .collector-details-routes a:hover,
+  .object-chamber-v3 .collector-details-routes a:focus-visible {
+    color: rgba(255, 255, 250, 0.98);
+    border-bottom-color: rgba(245, 248, 242, 0.52);
+    outline: none;
+  }
+
+  .object-chamber-v3 .collector-details-close {
+    position: relative;
+    z-index: 2;
+    margin-top: 0.05rem;
+  }
+
+  [data-work-detail-atmosphere="dominant"] .object-chamber-v3 [data-collector-rail] .collector-instrument__route::before {
+    inset: -0.65rem -1rem -0.75rem;
+    border: 0;
+    border-top: 1px solid rgba(245, 248, 242, 0.055);
+    border-bottom: 1px solid rgba(245, 248, 242, 0.04);
+    border-radius: 0.25rem;
+    background:
+      radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.032), transparent 34%),
+      linear-gradient(90deg, rgba(8, 12, 8, 0.26), rgba(8, 12, 8, 0.08));
+    box-shadow:
+      0 20px 62px rgba(0, 0, 0, 0.16),
+      inset 0 1px 0 rgba(255, 255, 255, 0.018);
+  }
+
+  @media (min-width: 1101px) {
+    .object-chamber-v3 .floating-acquisition-field {
+      left: calc(clamp(1rem, 3.2vw, 3.4rem) * -1);
+      top: -1svh;
+      transform: none;
+    }
+
+  .object-chamber-v3 .collector-details-panel {
+      position: fixed !important;
+      inset: 50%
+        max(1.5rem, calc((100vw - 1600px) / 2 + 2rem))
+        auto auto !important;
+      z-index: 124;
+      width: min(42rem, calc(100vw - clamp(33rem, 54vw, 49rem)));
+      min-width: min(31rem, calc(100vw - 3rem));
+      max-width: 42rem;
+      max-height: calc(100svh - 7rem) !important;
+      gap: 0.58rem;
+      margin: 0;
+      padding: 0.9rem 1.08rem 0.92rem;
+      opacity: 0;
+      pointer-events: none;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(235, 240, 232, 0.18) transparent;
+      transform: translate3d(1.4rem, -50%, 0) scale(0.988) !important;
+      transform-origin: right center;
+      clip-path: inset(0 0 0 12% round 0.35rem 0 0 0.35rem);
+      transition:
+        opacity 480ms ease,
+        transform 760ms cubic-bezier(0.16, 1, 0.3, 1),
+        clip-path 720ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .object-chamber-v3 .collector-details[open] .collector-details-panel {
+      max-height: calc(100svh - 7rem) !important;
+      gap: 0.58rem;
+      margin: 0;
+      padding: 0.9rem 1.08rem 0.92rem;
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate3d(0, -50%, 0) scale(1) !important;
+      clip-path: inset(0 0 0 0 round 0.35rem 0 0 0.35rem);
+    }
+
+    .object-chamber-v3 .collector-details[data-closing] .collector-details-panel {
+      opacity: 0;
+      pointer-events: none;
+      transform: translate3d(0.8rem, -50%, 0) scale(0.992) !important;
+      clip-path: inset(0 0 0 8% round 0.35rem 0 0 0.35rem);
+      transition-duration: 320ms, 420ms, 420ms;
+    }
+  }
+
+  @media (max-width: 1100px) {
+    .collector-details-backdrop {
+      display: none;
+    }
+
+    .object-chamber-v3 .collector-details-panel,
+    .object-chamber-v3 .collector-details[open] .collector-details-panel {
+      position: relative !important;
+      inset: auto !important;
+      width: 100%;
+      min-width: 0;
+      max-width: none;
+      max-height: none !important;
+      overflow: visible;
+    }
+
+    .object-chamber-v3 .collector-details-panel {
+      margin-top: 0;
+      padding: 0 0.9rem;
+      max-height: 0 !important;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate3d(0, -0.4rem, 0) !important;
+      clip-path: inset(0 0 100% 0 round 0.35rem);
+    }
+
+    .object-chamber-v3 .collector-details[open] .collector-details-panel {
+      gap: 0.75rem;
+      margin-top: 0.78rem;
+      padding: 0.95rem 0.9rem 1rem;
+      max-height: 100rem !important;
+      overflow: visible;
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate3d(0, 0, 0) !important;
+      clip-path: inset(0 0 0 0 round 0.35rem);
+    }
+
+    .object-chamber-v3 .collector-details[data-closing] .collector-details-panel {
+      max-height: 100rem !important;
+      overflow: hidden;
+      opacity: 0;
+      transform: translate3d(0, -0.28rem, 0) !important;
+      clip-path: inset(0 0 100% 0 round 0.35rem);
+    }
+  }
+
+  @media (max-width: 700px) {
+    .object-chamber-v3 .collector-details-list {
+      grid-template-columns: 1fr;
+    }
+
+    .object-chamber-v3 .collector-details-list > [data-collector-detail-priority="primary"] {
+      display: grid !important;
+      grid-column: 1;
+    }
+
+    .object-chamber-v3 .collector-details-list > [data-collector-detail-priority="secondary"] {
+      display: none !important;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .object-chamber-v3 .collector-details-list > .detail-purchase-meta-row {
+      grid-template-columns: 1fr;
+      gap: 0.22rem;
+      padding: 0.56rem 0;
+    }
+
+    .object-chamber-v3 .collector-details-panel {
+      border-left-color: rgba(241, 246, 236, 0.13);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .object-chamber-v3 .collector-details-panel,
+    .object-chamber-v3 .collector-details-backdrop,
+    .object-chamber-v3 .collector-details summary {
+      transition: none !important;
     }
   }
 </style>

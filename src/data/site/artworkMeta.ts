@@ -261,7 +261,7 @@ export const artworkMetaBySlug: Record<string, Partial<ArtworkMeta>> = {
     seriesId: "studies",
     seriesOrder: 1,
     isStandalone: false,
-    atmosphereProfile: "default",
+    atmosphereProfile: "mt-6",
     mood: "studies",
   },
 
@@ -273,7 +273,7 @@ export const artworkMetaBySlug: Record<string, Partial<ArtworkMeta>> = {
     seriesId: "studies",
     seriesOrder: 2,
     isStandalone: false,
-    atmosphereProfile: "default",
+    atmosphereProfile: "mt-7",
     mood: "studies",
   },
 
@@ -309,7 +309,7 @@ export const artworkMetaBySlug: Record<string, Partial<ArtworkMeta>> = {
     seriesId: "meta-bodies",
     seriesOrder: 10,
     isStandalone: false,
-    atmosphereProfile: "default",
+    atmosphereProfile: "mt-10",
     mood: "metaBodies",
   },
 
