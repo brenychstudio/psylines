@@ -9,16 +9,18 @@ import {
 import { getResponsivePublicImage } from "../lib/assets/responsiveImage";
 
 const artistTracePrimary = getResponsivePublicImage("/images/works/p-1.jpg", { defaultWidth: 2000 });
-const artistTraceSecondary = getResponsivePublicImage("/artworks/test-painting-2/mt-5.jpg", { defaultWidth: 2000 });
-const artistTraceGhost = getResponsivePublicImage("/artworks/test-painting-2/mt-3.jpg", { defaultWidth: 2000 });
 const artistStatementTrace = getResponsivePublicImage("/artworks/test-painting-2/mt-2.jpg", { defaultWidth: 2000 });
+const artistEnvironmentOrigin = getResponsivePublicImage("/artworks/test-painting-2/mt-6.jpg", { defaultWidth: 2000 });
+const artistEnvironmentPressure = getResponsivePublicImage("/artworks/test-painting-2/mt-1.jpg", { defaultWidth: 2000 });
+const artistEnvironmentFieldMemory = getResponsivePublicImage("/artworks/test-painting-2/mt-7.jpg", { defaultWidth: 2000 });
+const artistEnvironmentBodyMemory = getResponsivePublicImage("/artworks/test-painting-2/mt-11.jpg", { defaultWidth: 2000 });
 const artistMethodRows = bodyManifestationSteps.slice(0, 4);
 
 const artistEnvironmentTextures = [
-  { slug: "artist-origin", src: artistTracePrimary.src },
-  { slug: "artist-body-memory", src: artistTraceSecondary.src },
-  { slug: "artist-field-memory", src: artistTraceGhost.src },
-  { slug: "artist-pressure", src: artistStatementTrace.src },
+  { slug: "artist-origin", src: artistEnvironmentOrigin.src },
+  { slug: "artist-pressure", src: artistEnvironmentPressure.src },
+  { slug: "artist-field-memory", src: artistEnvironmentFieldMemory.src },
+  { slug: "artist-body-memory", src: artistEnvironmentBodyMemory.src },
 ];
 
 const practiceSignals = [
@@ -38,7 +40,7 @@ const practiceSignals = [
 
 const cycleRows = [
   {
-    title: "Meta-Bodies",
+    title: "Meta Bodies",
     copy: "Figures beyond identity, emerging through structure, pressure, and internal routes.",
   },
   {
@@ -72,9 +74,10 @@ const trustRows = [
 ---
 
 <BaseLayout
-  title="Artist - ARTIST STAGE"
-  description="A practice of bodies, signals, residue, unstable presence, original works, and collector editions."
+  title="About the Practice — Rostyslav Brenych"
+  description="Rostyslav Brenych is a Ukrainian artist based in Barcelona creating post-figurative works on paper through the Meta Bodies practice."
   canonicalPath="/artist"
+  preloadImages={[artistEnvironmentOrigin.src, artistTracePrimary.src]}
 >
   <LivingRouteEnvironment
     profile="artist"
@@ -92,14 +95,14 @@ const trustRows = [
     data-cinematic-idle-settle-duration="3200"
     data-cinematic-idle-dream-duration="8600"
   >
-    <section class="artist-threshold artist-spine-threshold" aria-labelledby="artist-threshold-title" data-atmosphere-section="artist-threshold" data-lbe-target="artist-origin">
+    <section class="artist-threshold artist-spine-threshold" aria-labelledby="artist-threshold-title" data-atmosphere-section="artist-threshold" data-lbe-target="artist-origin" data-lbe-scene="0.06">
       <div class="artist-threshold-copy artist-spine-copy">
-        <p class="artist-kicker" data-cinematic-idle="detail">ARTIST / PRACTICE FIELD</p>
+        <p class="artist-kicker" data-cinematic-idle="detail">ROSTYSLAV BRENYCH / META BODIES</p>
         <h1 class="artist-title" id="artist-threshold-title" data-cinematic-idle="anchor">
-          A practice of bodies, signals, residue, and unstable presence.
+          Ukrainian artist based in Barcelona.
         </h1>
         <p class="artist-copy artist-copy--lead" data-cinematic-idle="voice">
-          The works move between drawing, body-memory, abstraction, and spatial manifestation. They are not portraits or representations, but states of presence translated through line, pressure, surface, and atmosphere.
+          Rostyslav Brenych develops Meta Bodies: post-figurative works on paper exploring the body beyond identity through gesture, surface, color, and inner line.
         </p>
 
         <nav class="artist-route-row artist-route-signals" aria-label="Artist routes" data-cinematic-idle="action">
@@ -114,16 +117,10 @@ const trustRows = [
         <div class="artist-trace artist-trace--primary artist-trace--main" data-cinematic-idle="image">
           <img src={artistTracePrimary.src} srcset={artistTracePrimary.srcset} sizes="(min-width: 980px) 28vw, 72vw" alt="" loading="lazy" decoding="async" />
         </div>
-        <div class="artist-trace artist-trace--secondary artist-trace--crop" data-cinematic-idle="trace">
-          <img src={artistTraceSecondary.src} srcset={artistTraceSecondary.srcset} sizes="(min-width: 980px) 18vw, 42vw" alt="" loading="lazy" decoding="async" />
-        </div>
-        <div class="artist-trace artist-trace--ghost" data-cinematic-idle="trace">
-          <img src={artistTraceGhost.src} srcset={artistTraceGhost.srcset} sizes="(min-width: 980px) 16vw, 38vw" alt="" loading="lazy" decoding="async" />
-        </div>
       </div>
     </section>
 
-    <section class="artist-statement-field artist-statement-spine" aria-labelledby="artist-statement-title" data-atmosphere-section="artist-statement" data-lbe-target="artist-pressure">
+    <section class="artist-statement-field artist-statement-spine" aria-labelledby="artist-statement-title" data-atmosphere-section="artist-statement" data-lbe-target="artist-pressure" data-lbe-scene="0.25">
       <p class="artist-kicker artist-section-kicker" data-cinematic-idle="detail">STATEMENT FIELD</p>
       <div class="statement-spine-grid">
         <h2 class="artist-section-title" id="artist-statement-title" data-cinematic-idle="anchor">Not figures. Manifestations.</h2>
@@ -142,7 +139,7 @@ const trustRows = [
       </div>
     </section>
 
-    <section class="artist-method-route" aria-labelledby="artist-method-title" data-atmosphere-section="artist-practice" data-lbe-target="artist-field-memory">
+    <section class="artist-method-route" aria-labelledby="artist-method-title" data-atmosphere-section="artist-practice" data-lbe-target="artist-field-memory" data-lbe-scene="0.43">
       <div class="artist-method-head">
         <p class="artist-kicker" data-cinematic-idle="detail">METHOD ROUTE</p>
         <h2 class="artist-section-title" id="artist-method-title" data-cinematic-idle="anchor">The body is found inside the line field.</h2>
@@ -165,7 +162,7 @@ const trustRows = [
       </div>
     </section>
 
-    <section class="artist-practice-logic" aria-labelledby="artist-logic-title" data-atmosphere-section="artist-practice" data-lbe-target="artist-body-memory">
+    <section class="artist-practice-logic" aria-labelledby="artist-logic-title" data-atmosphere-section="artist-practice" data-lbe-target="artist-body-memory" data-lbe-scene="0.62">
       <div class="artist-band-head">
         <p class="artist-kicker" data-cinematic-idle="detail">PRACTICE LOGIC</p>
         <h2 class="practice-logic-title" id="artist-logic-title" data-cinematic-idle="anchor">How the work holds presence.</h2>
@@ -182,7 +179,7 @@ const trustRows = [
       </div>
     </section>
 
-    <section class="artist-cycle-register artist-register-section" aria-labelledby="artist-register-title" data-atmosphere-section="artist-practice" data-lbe-target="artist-body-memory">
+    <section class="artist-cycle-register artist-register-section" aria-labelledby="artist-register-title" data-atmosphere-section="artist-practice" data-lbe-target="artist-body-memory" data-lbe-scene="0.74">
       <div>
         <p class="artist-kicker" data-cinematic-idle="detail">CYCLE REGISTER</p>
         <h2 class="artist-register-title" id="artist-register-title" data-cinematic-idle="anchor">Recurring fields, not catalogue categories.</h2>
@@ -198,7 +195,7 @@ const trustRows = [
       </div>
     </section>
 
-    <section class="artist-material-route" aria-labelledby="artist-material-title" data-atmosphere-section="artist-material" data-lbe-target="artist-pressure">
+    <section class="artist-material-route" aria-labelledby="artist-material-title" data-atmosphere-section="artist-material" data-lbe-target="artist-pressure" data-lbe-scene="0.88">
       <div class="artist-material-head">
         <p class="artist-kicker" data-cinematic-idle="detail">MATERIAL ROUTE</p>
         <h2 class="artist-section-title" id="artist-material-title" data-cinematic-idle="anchor">Prepared as collector-facing objects.</h2>
@@ -217,7 +214,7 @@ const trustRows = [
       </div>
     </section>
 
-    <section class="artist-collector-handoff" aria-labelledby="artist-handoff-title" data-atmosphere-section="artist-material" data-lbe-target="artist-origin">
+    <section class="artist-collector-handoff" aria-labelledby="artist-handoff-title" data-atmosphere-section="artist-material" data-lbe-target="artist-origin" data-lbe-scene="1.00">
       <div>
         <p class="artist-kicker" data-cinematic-idle="detail">COLLECTOR HANDOFF</p>
         <h2 id="artist-handoff-title" data-cinematic-idle="anchor">The collector route stays close to the work.</h2>
@@ -239,6 +236,19 @@ const trustRows = [
 <style>
   /* V3 Artist - Practice Field Refoundation Pass 01 */
   .artist-practice-field {
+    --cinematic-idle-veil-opacity: 0;
+    --cinematic-idle-settle-veil-opacity: 0;
+    --cinematic-idle-rest-veil-opacity: 0;
+    --cinematic-presence-settle-opacity: 0;
+    --cinematic-presence-idle-opacity: 0;
+    --cinematic-presence-dream-opacity: 0;
+    --cinematic-presence-gather-opacity: 0;
+    --cinematic-presence-disperse-opacity: 0;
+    --cinematic-presence-reform-opacity: 0;
+    --cinematic-presence-soft-opacity: 0;
+    --cinematic-presence-soft-blur: 0;
+    --cinematic-presence-dispersal-opacity: 0;
+    --cinematic-presence-trace-opacity: 0;
     position: relative;
     z-index: 1;
     isolation: isolate;
@@ -252,8 +262,13 @@ const trustRows = [
     z-index: -1;
     height: auto;
     background:
-      linear-gradient(90deg, rgba(3, 6, 5, 0.66) 0%, rgba(3, 6, 5, 0.28) 32%, transparent 64%),
-      linear-gradient(180deg, rgba(5, 8, 7, 0.035), rgba(5, 8, 7, 0.18));
+      radial-gradient(
+        ellipse 46vw 76vh at 7% 42%,
+        rgba(2, 5, 4, 0.15) 0%,
+        rgba(2, 5, 4, 0.025) 48%,
+        transparent 80%
+      ),
+      linear-gradient(180deg, rgba(5, 8, 7, 0.006), rgba(5, 8, 7, 0.018));
     pointer-events: none;
   }
 
@@ -637,6 +652,17 @@ const trustRows = [
       padding-top: clamp(5.75rem, 16vw, 7rem);
     }
 
+    .artist-practice-field::before {
+      background:
+        radial-gradient(
+          ellipse 92vw 68vh at 4% 34%,
+          rgba(2, 5, 4, 0.18) 0%,
+          rgba(2, 5, 4, 0.03) 50%,
+          transparent 84%
+        ),
+        linear-gradient(180deg, rgba(5, 8, 7, 0.006), rgba(5, 8, 7, 0.018));
+    }
+
     .artist-threshold,
     .artist-statement-field,
     .artist-method-route,
@@ -765,11 +791,15 @@ const trustRows = [
     position: relative;
     min-height: min(58svh, 610px);
     isolation: isolate;
+    perspective: 1450px;
+    perspective-origin: 68% 46%;
   }
 
   .artist-practice-trace-field .artist-trace {
     position: absolute;
     pointer-events: none;
+    filter: none;
+    transform-style: preserve-3d;
   }
 
   .artist-practice-trace-field .artist-trace img {
@@ -777,8 +807,9 @@ const trustRows = [
     width: 100%;
     height: auto;
     object-fit: contain;
+    filter: saturate(1.03) contrast(1.045);
     box-shadow:
-      0 32px 90px rgba(0, 0, 0, 0.46),
+      0 16px 42px rgba(0, 0, 0, 0.18),
       0 0 0 1px rgba(255, 255, 255, 0.018);
   }
 
@@ -786,30 +817,48 @@ const trustRows = [
     width: min(20vw, 300px);
     right: 18%;
     top: 18%;
-    opacity: 0.66;
+    opacity: 0.84;
+    z-index: 3;
+  }
+
+  .artist-trace--main img {
+    transform: translate3d(0, 0, 38px);
+    box-shadow:
+      -14px 26px 72px rgba(0, 0, 0, 0.46),
+      20px 52px 116px rgba(0, 0, 0, 0.38),
+      0 0 0 1px rgba(255, 255, 255, 0.022);
   }
 
   .artist-trace--crop {
     width: min(18vw, 240px);
     left: 3%;
     bottom: 15%;
-    opacity: 0.22;
+    opacity: 0.3;
     overflow: hidden;
     aspect-ratio: 4 / 3;
     transform: translateX(-8%) rotate(-1.5deg);
+    z-index: 1;
   }
 
   .artist-trace--crop img {
     height: 100%;
     object-fit: cover;
     object-position: 50% 28%;
+    transform: translate3d(0, 0, -20px);
+    box-shadow: none;
   }
 
   .artist-trace--ghost {
+    display: none;
     width: min(14vw, 180px);
     right: 0;
     bottom: 8%;
-    opacity: 0.12;
+    opacity: 0;
+    z-index: 0;
+  }
+
+  .artist-trace--ghost img {
+    transform: translate3d(0, 0, -34px);
   }
 
   .artist-statement-spine {
@@ -864,7 +913,7 @@ const trustRows = [
     aspect-ratio: 16 / 10;
     object-fit: cover;
     object-position: 50% 30%;
-    opacity: 0.38;
+    opacity: 0.58;
     box-shadow:
       0 24px 70px rgba(0, 0, 0, 0.42),
       0 0 0 1px rgba(255, 255, 255, 0.025);
@@ -1062,33 +1111,80 @@ const trustRows = [
   }
 
   .artist-practice-field .artist-practice-trace-field [data-cinematic-idle="image"] {
-    opacity: 0.76;
+    opacity: 0.89;
   }
 
   .artist-practice-field .artist-practice-trace-field [data-cinematic-idle="trace"] {
-    opacity: 0.28;
+    opacity: 0.08;
   }
 
   .artist-practice-field[data-cinematic-idle-state="settling"] .artist-practice-trace-field [data-cinematic-idle="image"],
   .artist-practice-field[data-cinematic-idle-state="idle"] .artist-practice-trace-field [data-cinematic-idle="image"],
   .artist-practice-field[data-cinematic-idle-state="dreaming"] .artist-practice-trace-field [data-cinematic-idle="image"] {
-    opacity: 0.88;
-    filter: saturate(1.08) brightness(1.05);
+    opacity: 0.9;
+    filter: saturate(1.02) contrast(1.025) brightness(1.01);
   }
 
   .artist-practice-field[data-cinematic-idle-state="settling"] .artist-practice-trace-field [data-cinematic-idle="trace"] {
-    opacity: 0.34;
-    filter: saturate(1.02) brightness(1.02);
+    opacity: 0.085;
+    filter: saturate(0.94) contrast(1.01);
   }
 
   .artist-practice-field[data-cinematic-idle-state="idle"] .artist-practice-trace-field [data-cinematic-idle="trace"] {
-    opacity: 0.42;
-    filter: saturate(1.05) brightness(1.03);
+    opacity: 0.09;
+    filter: saturate(0.95) contrast(1.015);
   }
 
   .artist-practice-field[data-cinematic-idle-state="dreaming"] .artist-practice-trace-field [data-cinematic-idle="trace"] {
-    opacity: 0.5;
-    filter: saturate(1.08) brightness(1.04);
+    opacity: 0.1;
+    filter: saturate(0.96) contrast(1.015);
+  }
+
+  .artist-practice-field .artist-practice-trace-field .artist-trace--crop {
+    display: none;
+    opacity: 0.08;
+  }
+
+  .artist-practice-field .artist-practice-trace-field .artist-trace--ghost {
+    display: none;
+    opacity: 0;
+  }
+
+  .artist-practice-field[data-cinematic-idle-state="idle"] .artist-practice-trace-field .artist-trace--crop,
+  .artist-practice-field[data-cinematic-idle-state="dreaming"] .artist-practice-trace-field .artist-trace--crop {
+    opacity: 0.09;
+  }
+
+  .artist-practice-field[data-cinematic-idle-state="idle"] .artist-practice-trace-field .artist-trace--ghost,
+  .artist-practice-field[data-cinematic-idle-state="dreaming"] .artist-practice-trace-field .artist-trace--ghost {
+    opacity: 0;
+  }
+
+  .artist-practice-field[data-cinematic-idle-state="idle"] [data-cinematic-idle="voice"] {
+    opacity: 0.36 !important;
+  }
+
+  .artist-practice-field[data-cinematic-idle-state="idle"] [data-cinematic-idle="line"] {
+    opacity: 0.22 !important;
+  }
+
+  .artist-practice-field[data-cinematic-idle-state="idle"] [data-cinematic-idle="detail"] {
+    opacity: 0.24 !important;
+  }
+
+  .artist-practice-field[data-cinematic-idle-state="dreaming"] [data-cinematic-idle="voice"] {
+    opacity: 0.48 !important;
+    filter: none !important;
+  }
+
+  .artist-practice-field[data-cinematic-idle-state="dreaming"] [data-cinematic-idle="line"] {
+    opacity: 0.34 !important;
+    filter: none !important;
+  }
+
+  .artist-practice-field[data-cinematic-idle-state="dreaming"] [data-cinematic-idle="detail"] {
+    opacity: 0.34 !important;
+    filter: none !important;
   }
 
   /* V3 Canonical Frame - align Artist page to the shared header axis. */
@@ -1176,14 +1272,14 @@ const trustRows = [
       width: min(24vw, 420px);
       right: 10%;
       top: 14%;
-      opacity: calc(0.66 + (var(--presence-stillness, 0) * 0.05));
+      opacity: calc(0.82 + (var(--presence-stillness, 0) * 0.06));
     }
 
     .artist-trace--crop {
       width: min(20vw, 330px);
       left: 9%;
       bottom: 18%;
-      opacity: 0.24;
+      opacity: 0.32;
     }
 
     .artist-trace--ghost {

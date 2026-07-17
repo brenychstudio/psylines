@@ -7,7 +7,7 @@ export const cycleOverview = {
 
 export const cycleNotes = [
   {
-    title: "Meta-Bodies / Inner Structures",
+    title: "Meta Bodies / Inner Structures",
     copy:
       "Mutable forms, internal routes, and coded densities where presence appears without resolving into literal anatomy.",
   },

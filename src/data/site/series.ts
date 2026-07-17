@@ -32,11 +32,11 @@ export const artworkSeries: ArtworkSeries[] = [
   {
     id: "meta-bodies",
     slug: "meta-bodies",
-    title: "Meta-Bodies / Inner Structures",
+    title: "Meta Bodies / Inner Structures",
     subtitle: "Bodies beyond identity, held as pressure, signal and internal route.",
     years: "2025-present",
     statement:
-      "Meta-Bodies gathers works created through the Body Manifestation Process, where the figure appears from charcoal gesture, acrylic membrane, color field and inner structure rather than portrait or identity.",
+      "Meta Bodies gathers works created through the Body Manifestation Process, where the figure appears from charcoal gesture, acrylic membrane, color field and inner structure rather than portrait or identity.",
     shortLine: "Bodies emerging from gesture, pressure, membrane and internal route.",
     mood: "metaBodies",
     atmosphereProfile: "mt-3",
@@ -94,7 +94,7 @@ export function getSeriesBySlug(slug?: string | null): ArtworkSeries | null {
 export const series: SeriesItem[] = [
   {
     slug: "meta-bodies-inner-structures",
-    title: "Meta-Bodies / Inner Structures",
+    title: "Meta Bodies / Inner Structures",
     subtitle:
       "Mutable forms, inner routes, and presence carried through non-literal bodies.",
     cover: "/images/series/p-1.jpg",
@@ -103,7 +103,7 @@ export const series: SeriesItem[] = [
     order: 1,
     aspect: "portrait",
 
-    headline: "Meta-bodies emerge as presences, not representations.",
+    headline: "Meta bodies emerge as presences, not representations.",
     intro:
       "This cycle gathers forms that may appear bodily, yet do not resolve into human identity. Internal structures act as routes, coded tensions, and carriers of manifestation rather than descriptive anatomy.",
     keywords: ["manifestation", "inner structures", "signal over identity"],

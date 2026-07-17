@@ -369,10 +369,11 @@
           const initialToken = resolveTone(root);
           const background = window.ArtistStageSeriesField.mount(host, {
             palette: initialToken.palette,
-            field: reducedMotion.matches || compactViewport ? initialToken.reducedField : initialToken.field,
-            maxDpr: compactViewport ? 1 : 1.3,
+            field: reducedMotion.matches ? initialToken.reducedField : initialToken.field,
+            maxDpr: 1,
+            maxFps: compactViewport ? 30 : 36,
             pointer: !compactViewport,
-            reducedMotion: reducedMotion.matches || compactViewport,
+            reducedMotion: reducedMotion.matches,
           });
 
           let lastPan = null;
@@ -385,12 +386,23 @@
           let presencePhase = document.documentElement.dataset.presencePhase || "awake";
           let dreamCycle = document.documentElement.dataset.presenceDreamCycle || "gathering";
           const rootOwner = root.closest("astro-island") || root.parentElement || document.documentElement;
+          let selectionObserver;
 
-          const shouldReduce = () => reducedMotion.matches || window.innerWidth < 900;
+          const shouldReduceMotion = () => reducedMotion.matches;
+          const shouldUseCompactField = () => window.innerWidth < 900;
 
           const resolvePresenceField = (token) => {
-            const source = shouldReduce() ? token.reducedField : token.field;
-            if (shouldReduce()) return source;
+            if (shouldReduceMotion()) return token.reducedField;
+
+            const source = shouldUseCompactField()
+              ? {
+                  ...token.field,
+                  morph: token.field.morph * 0.78,
+                  bloom: token.field.bloom * 0.9,
+                  grain: Math.min(token.field.grain, 0.26),
+                  drift: token.field.drift * 0.58,
+                }
+              : token.field;
 
             if (presencePhase === "dreaming") {
               const cycleAdjustments = {
@@ -429,7 +441,7 @@
           };
 
           const applyField = (token) => {
-            background.setReducedMotion(shouldReduce());
+            background.setReducedMotion(shouldReduceMotion());
             background.setField(resolvePresenceField(token));
           };
 
@@ -489,6 +501,11 @@
 
             if (liveRoot && liveRoot !== root) {
               root = liveRoot;
+              selectionObserver?.disconnect();
+              selectionObserver?.observe(root, {
+                attributes: true,
+                attributeFilter: ["data-active-tone", "data-active-artwork"],
+              });
               lastTone = "";
               lastArtwork = "";
               lastPan = null;
@@ -509,9 +526,15 @@
             lastTone = tone;
             lastArtwork = artwork;
             applyField(token);
-            applyPalette(token.palette);
-            background.pulseField(0.96);
-            background.setEnergy(0.72);
+
+            if (!artwork) {
+              applyPalette(token.palette);
+              background.setEnergy(0.3);
+              background.pulseField(0.46);
+              return;
+            }
+
+            background.setEnergy(0.36);
 
             const requestId = ++paletteRequest;
             extractArtworkPalette(artwork, token.palette).then((palette) => {
@@ -525,12 +548,10 @@
             if (!syncRaf) syncRaf = window.requestAnimationFrame(sync);
           };
 
-          const observer = new MutationObserver(requestSync);
-          observer.observe(rootOwner, {
+          selectionObserver = new MutationObserver(requestSync);
+          selectionObserver.observe(root, {
             attributes: true,
-            childList: true,
-            subtree: true,
-            attributeFilter: ["data-active-tone", "data-active-artwork", "style"],
+            attributeFilter: ["data-active-tone", "data-active-artwork"],
           });
 
           const handleMotionChange = () => {
@@ -538,6 +559,7 @@
             requestSync();
           };
           const handleResize = () => {
+            background.setMaxFps(window.innerWidth < 900 ? 30 : 36);
             applyField(resolveTone(root));
             requestSync();
           };
@@ -561,21 +583,27 @@
             dreamCycle = event.detail?.cycle || document.documentElement.dataset.presenceDreamCycle || "gathering";
             host.dataset.presenceDreamCycle = dreamCycle;
 
-            if (presencePhase !== "dreaming" || shouldReduce()) return;
+            if (presencePhase !== "dreaming" || shouldReduceMotion()) return;
             applyField(resolveTone(root));
             background.setEnergy(dreamCycle === "dispersing" ? 0.2 : 0.13);
             background.pulseField(dreamCycle === "dispersing" ? 0.16 : 0.1);
           };
+          let destroyed = false;
           const handlePageHide = () => {
-            observer.disconnect();
+            if (destroyed) return;
+            destroyed = true;
+            selectionObserver?.disconnect();
             reducedMotion.removeEventListener?.("change", handleMotionChange);
             window.removeEventListener("resize", handleResize);
             window.removeEventListener("artist-stage:presence-phase", handlePresencePhase);
             window.removeEventListener("artist-stage:presence-dream-cycle", handleDreamCycle);
+            window.removeEventListener("pagehide", handlePageHide);
+            document.removeEventListener("astro:before-swap", handlePageHide);
             if (decayRaf) window.cancelAnimationFrame(decayRaf);
             if (syncRaf) window.cancelAnimationFrame(syncRaf);
             background.destroy();
             delete host.dataset.seriesWebglMounted;
+            delete document.documentElement.dataset.seriesWebglActive;
           };
 
           reducedMotion.addEventListener?.("change", handleMotionChange);
@@ -583,8 +611,10 @@
           window.addEventListener("artist-stage:presence-phase", handlePresencePhase);
           window.addEventListener("artist-stage:presence-dream-cycle", handleDreamCycle);
           window.addEventListener("pagehide", handlePageHide, { once: true });
+          document.addEventListener("astro:before-swap", handlePageHide, { once: true });
 
           host.dataset.seriesWebglMounted = "true";
+          document.documentElement.dataset.seriesWebglActive = "true";
           host.dataset.presencePhase = presencePhase;
           if (presencePhase === "dreaming") host.dataset.presenceDreamCycle = dreamCycle;
           host.dataset.seriesWebglLive = "true";
@@ -594,6 +624,7 @@
         .catch((error) => {
           host.dataset.seriesWebglFailed = "true";
           delete host.dataset.seriesWebglMounting;
+          delete document.documentElement.dataset.seriesWebglActive;
           console.warn("Series living pigment field could not mount.", error);
         });
 
@@ -680,6 +711,17 @@
 
   .series-webgl-backdrop[data-series-webgl-mounted="true"] {
     background: var(--series-ink);
+  }
+
+  html[data-series-webgl-active="true"] .site-artwork-atmosphere-field,
+  html[data-series-webgl-active="true"] .site-shell::before,
+  html[data-series-webgl-active="true"] .series-constellation__atmosphere {
+    opacity: 0 !important;
+    visibility: hidden;
+  }
+
+  html[data-series-webgl-active="true"] .series-constellation__atmosphere {
+    animation: none;
   }
 
   @media (max-width: 900px) {

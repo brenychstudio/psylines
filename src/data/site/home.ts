@@ -1,6 +1,6 @@
 export const homeHero = {
-  eyebrow: "contemporary figurative drawing / meta-bodies / core cycles",
-  title: "Meta-bodies emerge here as presences, not representations.",
+  eyebrow: "Rostyslav Brenych / Meta Bodies / Barcelona",
+  title: "Post-figurative works on paper exploring the body beyond identity.",
   copy:
     "This practice moves through forms that may appear human, yet do not belong to the human body in a literal sense. Works, cycles, and editions are arranged as a calm entrance into that field: not a catalogue, but a set of manifestations, states, and returns.",
   primaryHref: "/series",
@@ -27,7 +27,7 @@ export const homeCycles = [
   {
     slug: "meta-bodies-inner-structures",
     kicker: "core cycle",
-    title: "Meta-Bodies / Inner Structures",
+    title: "Meta Bodies / Inner Structures",
     copy:
       "Forms that seem bodily without resolving into anatomy. Internal routes, coded densities, and presence carried through mutable structure.",
     cta: "Enter cycle",
@@ -79,7 +79,7 @@ export const homeSecondaryEntries = [
     kicker: "artist",
     title: "The statement behind the forms.",
     copy:
-      "Read the meta-bodies position as a direct authorial frame for the practice.",
+      "Read the Meta Bodies position as a direct authorial frame for the practice.",
     cta: "Open artist page",
   },
 ];

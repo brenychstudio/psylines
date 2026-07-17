@@ -7,6 +7,7 @@ import { artworkSeries } from "../../data/site/series";
 import { getFlagshipArtworks, getSelectedArtworks } from "../../data/site/artworkCollections";
 import { getWorksIndexContext } from "../../data/site/worksIndex";
 import { resolvePublicAsset } from "../../lib/assets/publicAsset";
+import { getArtworkAtmosphereProfile } from "../../lib/artwork-atmosphere/artworkAtmosphereProfiles";
 import { getResponsivePublicImage } from "../../lib/assets/responsiveImage";
 
 const worksIndex = getWorksIndexContext({
@@ -120,7 +121,7 @@ function getAvailabilityLabel(work: { availableAsPrint: boolean; editionCandidat
 }
 
 function getCycleRegisterLabel(slug: string, title: string) {
-  if (slug === "meta-bodies" || slug === "meta-bodies-inner-structures") return "Meta-Bodies";
+  if (slug === "meta-bodies" || slug === "meta-bodies-inner-structures") return "Meta Bodies";
   if (slug === "night-water" || slug === "night-water-moonwater") return "Night Water";
   if (slug === "studies" || slug === "studies-fragments") return "Studies";
   return title;
@@ -133,17 +134,17 @@ function getManifestationEntryClass(aspect: string) {
 }
 
 function getWorksLightTone(slug: string) {
-  if (["mt-3", "mt-5", "mt-6"].includes(slug)) return "moss";
-  if (["mt-1", "mt-9"].includes(slug)) return "oxide";
-  if (["mt-2", "mt-7", "ash-1"].includes(slug)) return "amber";
-  if (["mt-8", "mt-10", "mt-11"].includes(slug)) return "mineral";
+  if (["mt-3", "mt-5", "mt-8", "mt-11"].includes(slug)) return "moss";
+  if (["mt-1", "mt-9", "quiet-red-interval"].includes(slug)) return "oxide";
+  if (["mt-2", "mt-4", "mt-7", "mt-10"].includes(slug)) return "amber";
+  if (["mt-6", "figure-in-ash-light"].includes(slug)) return "mineral";
   return "neutral";
 }
 ---
 
 <BaseLayout
-  title="Works - ARTIST STAGE"
-  description="A curated field of manifestations, studies, editions, and original works."
+  title="Selected Works — Rostyslav Brenych"
+  description="Selected post-figurative works on paper by Rostyslav Brenych, including Meta Bodies, Inner Structures, studies, and original works."
   canonicalPath="/works"
 >
   <WorksArchiveIllumination mode={worksIndex.viewMode} />
@@ -279,6 +280,8 @@ function getWorksLightTone(slug: string) {
       >
         {fieldEntries.map(({ work, coverSrc, coverImage, seriesEntry }, index) => {
           const availabilityLabel = getAvailabilityLabel(work);
+          const lightProfile = getArtworkAtmosphereProfile(work.meta.atmosphereProfile || work.slug);
+          const hasAuthoredLightProfile = lightProfile.slug !== "default";
 
           return (
             <a
@@ -286,8 +289,15 @@ function getWorksLightTone(slug: string) {
               class={getManifestationEntryClass(work.aspect)}
               data-series={seriesEntry?.slug ?? "independent"}
               data-edition={work.availableAsPrint ? "true" : "false"}
-              data-artwork-slug={work.slug}
+              data-artwork-slug={work.meta.atmosphereProfile || work.slug}
+              data-work-slug={work.slug}
               data-works-light-tone={getWorksLightTone(work.slug)}
+              data-works-light-wash={hasAuthoredLightProfile ? lightProfile.washStrong : undefined}
+              data-works-light-glow={hasAuthoredLightProfile ? lightProfile.glow : undefined}
+              data-works-light-accent={hasAuthoredLightProfile ? lightProfile.accent : undefined}
+              data-works-light-shadow={hasAuthoredLightProfile ? lightProfile.shadowWash : undefined}
+              data-works-light-density={hasAuthoredLightProfile ? lightProfile.density : undefined}
+              data-works-light-pressure={hasAuthoredLightProfile ? lightProfile.pressure : undefined}
               data-atmosphere-handoff-slug={work.meta.atmosphereProfile || work.slug}
               data-register-label={seriesEntry ? getCycleRegisterLabel(seriesEntry.slug, seriesEntry.title) : "Independent"}
             >
@@ -337,6 +347,8 @@ function getWorksLightTone(slug: string) {
       >
         {indexEntries.map(({ work, coverSrc, coverImage, seriesEntry }, index) => {
           const availabilityLabel = getAvailabilityLabel(work);
+          const lightProfile = getArtworkAtmosphereProfile(work.meta.atmosphereProfile || work.slug);
+          const hasAuthoredLightProfile = lightProfile.slug !== "default";
 
           return (
             <a
@@ -344,8 +356,15 @@ function getWorksLightTone(slug: string) {
               class={`works-compact-item aspect-${work.aspect}`}
               data-series={seriesEntry?.slug ?? "independent"}
               data-edition={work.availableAsPrint ? "true" : "false"}
-              data-artwork-slug={work.slug}
+              data-artwork-slug={work.meta.atmosphereProfile || work.slug}
+              data-work-slug={work.slug}
               data-works-light-tone={getWorksLightTone(work.slug)}
+              data-works-light-wash={hasAuthoredLightProfile ? lightProfile.washStrong : undefined}
+              data-works-light-glow={hasAuthoredLightProfile ? lightProfile.glow : undefined}
+              data-works-light-accent={hasAuthoredLightProfile ? lightProfile.accent : undefined}
+              data-works-light-shadow={hasAuthoredLightProfile ? lightProfile.shadowWash : undefined}
+              data-works-light-density={hasAuthoredLightProfile ? lightProfile.density : undefined}
+              data-works-light-pressure={hasAuthoredLightProfile ? lightProfile.pressure : undefined}
               data-atmosphere-handoff-slug={work.meta.atmosphereProfile || work.slug}
               aria-label={`Enter ${work.title}`}
             >

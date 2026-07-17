@@ -600,8 +600,20 @@
     --cinematic-idle-ease: cubic-bezier(0.22, 0.72, 0.18, 1);
     --cinematic-idle-wake-ease: cubic-bezier(0.18, 0.72, 0.18, 1);
     --cinematic-idle-veil-opacity: 0.76;
+    --cinematic-idle-settle-veil-opacity: 0.32;
+    --cinematic-idle-rest-veil-opacity: 0.58;
     --cinematic-idle-duration: 3200ms;
     --cinematic-idle-wake-duration: 3800ms;
+    --cinematic-presence-settle-opacity: 0.18;
+    --cinematic-presence-idle-opacity: 0.42;
+    --cinematic-presence-dream-opacity: 0.68;
+    --cinematic-presence-gather-opacity: 0.58;
+    --cinematic-presence-disperse-opacity: 0.78;
+    --cinematic-presence-reform-opacity: 0.66;
+    --cinematic-presence-soft-opacity: 0.54;
+    --cinematic-presence-soft-blur: 22px;
+    --cinematic-presence-dispersal-opacity: 0.54;
+    --cinematic-presence-trace-opacity: 1;
     --presence-phrase-gather-opacity: 0.052;
     --presence-phrase-disperse-opacity: 0.03;
     position: relative;
@@ -624,12 +636,12 @@
   }
 
   [data-cinematic-idle-root][data-cinematic-idle-state="settling"] > .cinematic-idle-veil {
-    opacity: 0.32;
+    opacity: var(--cinematic-idle-settle-veil-opacity);
     filter: blur(0.08px) saturate(0.96);
   }
 
   [data-cinematic-idle-root][data-cinematic-idle-state="idle"] > .cinematic-idle-veil {
-    opacity: 0.58;
+    opacity: var(--cinematic-idle-rest-veil-opacity);
     filter: blur(0.16px) saturate(0.9);
   }
 
@@ -1019,8 +1031,8 @@
         color-mix(in srgb, var(--artwork-accent, rgba(178, 207, 146, 0.2)), transparent 92%) 62%,
         transparent 84%
       );
-    opacity: 0.54;
-    filter: blur(22px);
+    opacity: var(--cinematic-presence-soft-opacity);
+    filter: blur(var(--cinematic-presence-soft-blur));
     mix-blend-mode: soft-light;
     transform: translate3d(var(--living-counter-drift-x, 0), var(--living-counter-drift-y, 0), 0);
   }
@@ -1096,16 +1108,16 @@
   }
 
   [data-cinematic-idle-root][data-cinematic-idle-state="settling"] > .cinematic-presence-layer {
-    opacity: 0.18;
+    opacity: var(--cinematic-presence-settle-opacity);
   }
 
   [data-cinematic-idle-root][data-cinematic-idle-state="idle"] > .cinematic-presence-layer {
-    opacity: 0.42;
+    opacity: var(--cinematic-presence-idle-opacity);
     filter: saturate(1.08) contrast(1.04);
   }
 
   [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] > .cinematic-presence-layer {
-    opacity: 0.68;
+    opacity: var(--cinematic-presence-dream-opacity);
     filter: saturate(1.18) contrast(1.08);
     animation: presenceContourDrift 52s cubic-bezier(0.45, 0, 0.2, 1) infinite alternate;
   }
@@ -1125,25 +1137,25 @@
   }
 
   [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] > .cinematic-presence-dispersal-field {
-    opacity: 0.54;
+    opacity: var(--cinematic-presence-dispersal-opacity);
   }
 
   [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] .cinematic-presence-text-trace {
-    opacity: 1;
+    opacity: var(--cinematic-presence-trace-opacity);
   }
 
   [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"][data-cinematic-dream-cycle="gathering"] > .cinematic-presence-layer {
-    opacity: 0.58;
+    opacity: var(--cinematic-presence-gather-opacity);
     filter: saturate(1.08) contrast(1.035);
   }
 
   [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"][data-cinematic-dream-cycle="dispersing"] > .cinematic-presence-layer {
-    opacity: 0.78;
+    opacity: var(--cinematic-presence-disperse-opacity);
     filter: saturate(1.22) contrast(1.08) brightness(1.025);
   }
 
   [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"][data-cinematic-dream-cycle="reforming"] > .cinematic-presence-layer {
-    opacity: 0.66;
+    opacity: var(--cinematic-presence-reform-opacity);
     filter: saturate(1.14) contrast(1.055);
   }
 
@@ -1530,11 +1542,11 @@
     }
 
     [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] > .cinematic-presence-layer {
-      opacity: 0.48;
+      opacity: min(var(--cinematic-presence-dream-opacity), 0.48);
     }
 
     [data-cinematic-idle-root][data-cinematic-idle-state="dreaming"] > .cinematic-presence-dispersal-field {
-      opacity: 0.34;
+      opacity: min(var(--cinematic-presence-dispersal-opacity), 0.34);
     }
 
     html[data-presence-route="works"][data-presence-phase="dreaming"] [data-artwork-slug]:not([data-presence-subject="true"]),

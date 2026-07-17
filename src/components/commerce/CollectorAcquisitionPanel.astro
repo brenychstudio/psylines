@@ -155,6 +155,32 @@ const defaultRouteLabel = defaultCommerceOption
 const defaultFormatLabel = defaultCommerceOption?.label ?? artworkMeta?.format ?? "Original work";
 const defaultDimensions = defaultCommerceOption?.dimensions ?? artworkMeta?.dimensions ?? work.dimensions ?? "";
 const defaultPriceLabel = defaultCommerceOption ? `EUR ${defaultCommerceOption.priceEUR}` : "Shared on request";
+const defaultCollectorFormatLine = [
+  defaultCommerceOption?.dimensions ?? formatDetails,
+  artworkMeta?.orientation,
+].filter(Boolean).join(" / ");
+const defaultEditionLine = defaultCommerceOption?.editionNumberLabel ?? defaultRouteLabel;
+const defaultTechniqueLine = defaultCommerceOption?.type === "original"
+  ? artworkMeta?.technique
+  : defaultCommerceOption?.printMethod;
+const defaultSurfaceLine = defaultCommerceOption?.type === "original"
+  ? artworkMeta?.surfaceTreatment
+  : [defaultCommerceOption?.printMethod, defaultCommerceOption?.paper].filter(Boolean).join(" / ");
+const defaultPaperLine = defaultCommerceOption?.type === "original"
+  ? artworkMeta?.paper
+  : defaultCommerceOption?.paper;
+const defaultMaterialsLine = defaultCommerceOption?.type === "original"
+  ? materialsLine
+  : [defaultCommerceOption?.printMethod, defaultCommerceOption?.paper].filter(Boolean).join(" / ");
+const defaultSignatureLine = defaultCommerceOption
+  ? (defaultCommerceOption.signed ? "Signed" : "Signature not included")
+  : (artworkMeta?.signature === "signed" ? "Signed" : "Signature status pending");
+const defaultCertificateLine = defaultCommerceOption
+  ? (defaultCommerceOption.certificateIncluded ? "Certificate of authenticity included" : "Certificate not included")
+  : (artworkMeta?.certificate ? "Certificate of authenticity included" : "Certificate context pending");
+const defaultPresentationLine = defaultCommerceOption?.framedOption
+  ? "Framing option available"
+  : "Unframed";
 const inquiryHref = buildCollectorInquiryHref({
   context: "collector",
   workTitle: work.title,
@@ -212,6 +238,24 @@ const inquiryHref = buildCollectorInquiryHref({
                 data-size-production-time={option.productionTime ?? ""}
                 data-size-return-window={option.returnWindow ?? ""}
                 data-size-shipping-note={option.shippingNote ?? ""}
+                data-size-collector-format={[
+                  option.dimensions,
+                  artworkMeta?.orientation,
+                ].filter(Boolean).join(" / ")}
+                data-size-edition-label={option.editionNumberLabel ?? getCommerceOptionTypeLabel(option)}
+                data-size-technique={option.type === "original" ? artworkMeta?.technique ?? "" : option.printMethod ?? ""}
+                data-size-surface={option.type === "original"
+                  ? artworkMeta?.surfaceTreatment ?? ""
+                  : [option.printMethod, option.paper].filter(Boolean).join(" / ")}
+                data-size-paper={option.type === "original" ? artworkMeta?.paper ?? "" : option.paper ?? ""}
+                data-size-materials={option.type === "original"
+                  ? materialsLine
+                  : [option.printMethod, option.paper].filter(Boolean).join(" / ")}
+                data-size-signature={option.signed ? "Signed" : "Signature not included"}
+                data-size-certificate={option.certificateIncluded
+                  ? "Certificate of authenticity included"
+                  : "Certificate not included"}
+                data-size-presentation={option.framedOption ? "Framing option available" : "Unframed"}
               >
                 {option.label}
               </button>
@@ -301,9 +345,28 @@ const inquiryHref = buildCollectorInquiryHref({
   )}
 
   <details class="detail-purchase-meta collector-instrument__logistics collector-details" data-collector-details>
-    <summary data-collector-details-summary>Collector details</summary>
+    <summary
+      data-collector-details-summary
+      aria-controls="collector-details-panel"
+      aria-expanded="false"
+    >
+      Collector details
+    </summary>
 
-    <div class="collector-details-panel" aria-label="Collector object record">
+    <button
+      type="button"
+      class="collector-details-backdrop"
+      data-collector-details-close
+      aria-label="Close collector details"
+    ></button>
+
+    <div
+      id="collector-details-panel"
+      class="collector-details-panel"
+      data-collector-details-panel
+      aria-label="Collector object record"
+      tabindex="-1"
+    >
       <div class="collector-details-panel__head">
         <p>Collector record</p>
         <span>{inventoryNumber} / {artworkMeta?.year ?? work.year ?? "field"}</span>
@@ -313,6 +376,20 @@ const inquiryHref = buildCollectorInquiryHref({
         <div class="detail-purchase-meta-row" data-collector-detail="availability" data-collector-detail-priority="primary">
           <dt>Availability</dt>
           <dd>{availabilityLabel} - {availabilityCopy}</dd>
+        </div>
+
+        <div class="detail-purchase-meta-row" data-collector-detail="selected-route" data-collector-detail-priority="primary">
+          <dt>Selected route</dt>
+          <dd>
+            <span data-collector-route-display>{defaultRouteLabel}</span>
+            <span class="collector-details-separator" aria-hidden="true"> / </span>
+            <span data-collector-price-display>{defaultPriceLabel}</span>
+          </dd>
+        </div>
+
+        <div class="detail-purchase-meta-row" data-collector-detail="edition" data-collector-detail-priority="primary">
+          <dt>Edition</dt>
+          <dd data-edition-display>{defaultEditionLine}</dd>
         </div>
 
         {artworkSeries ? (
@@ -330,14 +407,14 @@ const inquiryHref = buildCollectorInquiryHref({
         )}
 
         {artworkMeta?.inventoryNumber ? (
-          <div class="detail-purchase-meta-row" data-collector-detail="inventory" data-collector-detail-priority="primary">
+          <div class="detail-purchase-meta-row" data-collector-detail="inventory" data-collector-detail-priority="secondary">
             <dt>Inventory</dt>
             <dd>{artworkMeta.inventoryNumber}</dd>
           </div>
         ) : null}
 
         {artworkMeta?.year ? (
-          <div class="detail-purchase-meta-row" data-collector-detail="year" data-collector-detail-priority="primary">
+          <div class="detail-purchase-meta-row" data-collector-detail="year" data-collector-detail-priority="secondary">
             <dt>Year</dt>
             <dd>{artworkMeta.year}</dd>
           </div>
@@ -346,15 +423,15 @@ const inquiryHref = buildCollectorInquiryHref({
         {formatDetails ? (
           <div class="detail-purchase-meta-row" data-collector-detail="format" data-collector-detail-priority="primary">
             <dt>Format</dt>
-            <dd>{formatDetails}</dd>
+            <dd data-collector-format-detail>{defaultCollectorFormatLine || formatDetails}</dd>
           </div>
         ) : null}
 
         {artworkMeta?.technique ? (
           <div class="detail-purchase-meta-row" data-collector-detail="method" data-collector-detail-priority="primary">
-            <dt>Method</dt>
-            <dd>
-              <a href="/process">{artworkMeta.technique}</a>
+            <dt>Technique</dt>
+            <dd data-technique-display>
+              <a href="/process">{defaultTechniqueLine || artworkMeta.technique}</a>
             </dd>
           </div>
         ) : null}
@@ -381,37 +458,41 @@ const inquiryHref = buildCollectorInquiryHref({
         ) : null}
 
         {artworkMeta?.surfaceTreatment ? (
-          <div class="detail-purchase-meta-row" data-collector-detail="surface" data-collector-detail-priority="primary">
+          <div class="detail-purchase-meta-row" data-collector-detail="surface" data-collector-detail-priority="secondary">
             <dt>Surface</dt>
-            <dd>{artworkMeta.surfaceTreatment}</dd>
+            <dd>{defaultSurfaceLine || artworkMeta.surfaceTreatment}</dd>
           </div>
         ) : null}
 
         {artworkMeta?.paper ? (
-          <div class="detail-purchase-meta-row" data-collector-detail="paper" data-collector-detail-priority="primary">
+          <div class="detail-purchase-meta-row" data-collector-detail="paper" data-collector-detail-priority="secondary">
             <dt>Paper</dt>
-            <dd>{artworkMeta.paper}</dd>
+            <dd data-paper-display>{defaultPaperLine || artworkMeta.paper}</dd>
           </div>
         ) : null}
 
         {materialsLine ? (
-          <div class="detail-purchase-meta-row" data-collector-detail="materials" data-collector-detail-priority="secondary">
-            <dt>Materials</dt>
-            <dd>{materialsLine}</dd>
+          <div class="detail-purchase-meta-row" data-collector-detail="materials" data-collector-detail-priority="primary">
+            <dt>Materials / surface</dt>
+            <dd class="collector-record-stack">
+              <span data-materials-detail-display>{defaultMaterialsLine || materialsLine}</span>
+              <span class="collector-record-line collector-record-line--muted" data-surface-display>
+                {defaultSurfaceLine || artworkMeta?.surfaceTreatment || "Surface treatment documented with the work."}
+              </span>
+            </dd>
           </div>
         ) : null}
 
-        <div class="detail-purchase-meta-row" data-collector-detail="signature" data-collector-detail-priority="secondary">
-          <dt>Signature</dt>
-          <dd>{artworkMeta?.signature === "signed" ? "Signed" : "Signature status pending"}</dd>
+        <div class="detail-purchase-meta-row" data-collector-detail="signature" data-collector-detail-priority="primary">
+          <dt>Collector package</dt>
+          <dd class="collector-record-stack collector-record-stack--inline">
+            <span data-signature-display>{defaultSignatureLine}</span>
+            <span data-certificate-display>{defaultCertificateLine}</span>
+            <span data-presentation-display>{defaultPresentationLine}</span>
+          </dd>
         </div>
 
-        <div class="detail-purchase-meta-row" data-collector-detail="certificate" data-collector-detail-priority="primary">
-          <dt>Certificate</dt>
-          <dd>{artworkMeta?.certificate ? "Certificate context included" : "Certificate context pending"}</dd>
-        </div>
-
-        <div class="detail-purchase-meta-row" data-collector-detail="routes" data-collector-detail-priority="primary">
+        <div class="detail-purchase-meta-row" data-collector-detail="routes" data-collector-detail-priority="secondary">
           <dt>Routes</dt>
           <dd class="collector-details-routes">
             {seriesChapterHref ? <a href={seriesChapterHref}>Series chapter</a> : null}
@@ -433,28 +514,32 @@ const inquiryHref = buildCollectorInquiryHref({
 
         {canCheckout ? (
           <>
-            <div class="detail-purchase-meta-row" data-collector-detail="production" data-collector-detail-priority="secondary">
-              <dt>Production</dt>
-              <dd data-production-display>
-                {defaultCommerceOption?.productionTime ?? "Production timing confirmed inside the collector route."}
-              </dd>
-            </div>
-
-            <div class="detail-purchase-meta-row" data-collector-detail="shipping" data-collector-detail-priority="secondary">
-              <dt>Shipping</dt>
-              <dd data-shipping-display>
-                {defaultCommerceOption?.shippingNote ?? "Shipping route confirmed after checkout."}
-              </dd>
-            </div>
-
-            <div class="detail-purchase-meta-row" data-collector-detail="returns" data-collector-detail-priority="secondary">
-              <dt>Returns</dt>
-              <dd data-return-display>
-                {defaultCommerceOption?.returnWindow ?? "Return terms confirmed by selected option."}
+            <div class="detail-purchase-meta-row" data-collector-detail="production" data-collector-detail-priority="primary">
+              <dt>Delivery & terms</dt>
+              <dd class="collector-record-stack">
+                <span data-production-display>
+                  {defaultCommerceOption?.productionTime ?? "Production timing confirmed inside the collector route."}
+                </span>
+                <span class="collector-record-line" data-shipping-display>
+                  {defaultCommerceOption?.shippingNote ?? "Shipping route confirmed after checkout."}
+                </span>
+                <span class="collector-record-line collector-record-line--muted" data-return-display>
+                  {defaultCommerceOption?.returnWindow ?? "Return terms confirmed by selected option."}
+                </span>
               </dd>
             </div>
           </>
         ) : null}
+
+        <div class="detail-purchase-meta-row" data-collector-detail="policies" data-collector-detail-priority="primary">
+          <dt>Collector terms</dt>
+          <dd class="collector-details-routes">
+            <a href="/collectors">Collector process</a>
+            <a href="/policies/shipping">Shipping</a>
+            <a href="/policies/returns">Returns</a>
+            <a href="/policies/terms">Terms</a>
+          </dd>
+        </div>
       </dl>
 
       <button type="button" class="collector-details-close" data-collector-details-close aria-label="Close collector details">
